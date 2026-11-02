@@ -1,0 +1,33 @@
+{
+	"pages": [
+		{
+			"path": "pages/index/index",
+			"style": {
+				"navigationBarTitleText": "勇敢人生",
+				"h5": { "titleNView": false }
+			}
+		},
+		{
+			"path": "pages/create/create",
+			"style": {
+				"navigationBarTitleText": "创建角色",
+				"h5": { "titleNView": false }
+			}
+		},
+		{
+			"path": "pages/game/game",
+			"style": {
+				"navigationBarTitleText": "勇敢人生",
+				"h5": { "titleNView": false }
+			}
+		}
+	],
+	"globalStyle": {
+		"navigationBarTextStyle": "white",
+		"navigationBarTitleText": "勇敢人生",
+		"navigationBarBackgroundColor": "#1d1b33",
+		"backgroundColor": "#f4efe6",
+		"rpxCalcMaxDeviceWidth": 480,
+		"rpxCalcBaseDeviceWidth": 375
+	}
+}

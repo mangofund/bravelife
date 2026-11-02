@@ -1,0 +1,27 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+.DS_Store
+dist
+*.local
+
+# AI 生成的插画原图（约 270MB），压缩后的版本在 src/static/h5/art
+images/
+# 临时测试工具与 Cloudflare 本地缓存
+.tools/
+.wrangler/
+
+# Editor directories and files
+.idea
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
