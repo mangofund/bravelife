@@ -1,6 +1,6 @@
 <template>
-  <view :class="docked ? 'dock' : 'mask'" @click="onMask">
-    <view class="sheet" :class="{ docked }" @click.stop="noop">
+  <view :class="fullscreen ? 'fullscreen-mask' : docked ? 'dock' : 'mask'" @click="onMask">
+    <view class="sheet" :class="{ docked, fullscreen }" @click.stop="noop">
       <view class="head">
         <text class="h-icon">{{ loc.icon }}</text>
         <view class="h-text">
@@ -102,7 +102,9 @@ import { ITEMS } from '../../game/data/world.js'
 const props = defineProps({
   locId: { type: String, required: true },
   // 宽屏时固定在右栏显示，不弹出遮罩
-  docked: { type: Boolean, default: false }
+  docked: { type: Boolean, default: false },
+  // 网页宽屏地点详情：覆盖地图、任务和两侧布局
+  fullscreen: { type: Boolean, default: false }
 })
 const emit = defineEmits(['close', 'gohome', 'go'])
 
@@ -118,7 +120,7 @@ function arrive(hours) {
 function noop() {}
 
 function onMask() {
-  if (!props.docked) emit('close')
+  if (!props.docked || props.fullscreen) emit('close')
 }
 
 function onTravel(o) {
@@ -146,6 +148,18 @@ function onAction(id) {
   display: flex;
   align-items: flex-end;
   justify-content: center;
+}
+.fullscreen-mask {
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  z-index: 100;
+  background: rgba(20, 18, 34, 0.58);
+  display: flex;
+  align-items: stretch;
+  justify-content: stretch;
 }
 .sheet {
   width: 100%;
@@ -193,6 +207,26 @@ function onAction(id) {
 .sheet.docked .body {
   flex: 1;
   height: 0;
+}
+.sheet.fullscreen {
+  width: 100%;
+  max-width: none;
+  height: 100vh;
+  border-radius: 0;
+  padding-bottom: env(safe-area-inset-bottom);
+  display: flex;
+  flex-direction: column;
+}
+.sheet.fullscreen .head {
+  flex-shrink: 0;
+  padding-left: 48rpx;
+  padding-right: 48rpx;
+}
+.sheet.fullscreen .body {
+  flex: 1;
+  height: 0;
+  padding-left: 48rpx;
+  padding-right: 48rpx;
 }
 .body {
   height: 66vh;

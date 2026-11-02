@@ -2,10 +2,16 @@
   <view v-if="ready" class="game theme-root" :class="['theme-' + settings.theme, wide ? 'wide' : 'narrow']">
     <!-- 宽屏：左状态 / 中地图或家 / 右地点面板或手机 -->
     <block v-if="wide">
-      <view class="col-left">
-        <game-hud />
-        <guide-bar />
-        <scroll-view scroll-y class="col-scroll"><side-status /></scroll-view>
+      <view class="col-left" :class="{ collapsed: ui.leftPanelCollapsed }">
+        <template v-if="!ui.leftPanelCollapsed">
+          <game-hud />
+          <guide-bar />
+          <scroll-view scroll-y class="col-scroll"><side-status /></scroll-view>
+        </template>
+        <view class="panel-toggle left-toggle" @click="ui.leftPanelCollapsed = !ui.leftPanelCollapsed">
+          <text>{{ ui.leftPanelCollapsed ? '▶' : '◀' }}</text>
+          <text class="toggle-label">{{ ui.leftPanelCollapsed ? '展开任务' : '收起任务' }}</text>
+        </view>
       </view>
       <view class="col-main">
         <view class="seg">
@@ -16,9 +22,14 @@
           <scroll-view v-else scroll-y class="pane"><home-view wide /></scroll-view>
         </view>
       </view>
-      <view class="col-right">
-        <location-sheet v-if="sheet" docked :loc-id="sheet" @close="sheet = ''" @gohome="goHome" @go="onGo" />
-        <scroll-view v-else scroll-y class="col-scroll"><phone-view /></scroll-view>
+      <view class="col-right" :class="{ collapsed: ui.rightPanelCollapsed }">
+        <template v-if="!ui.rightPanelCollapsed">
+          <scroll-view scroll-y class="col-scroll"><phone-view /></scroll-view>
+        </template>
+        <view class="panel-toggle right-toggle" @click="ui.rightPanelCollapsed = !ui.rightPanelCollapsed">
+          <text>{{ ui.rightPanelCollapsed ? '◀' : '▶' }}</text>
+          <text class="toggle-label">{{ ui.rightPanelCollapsed ? '展开布局' : '收起布局' }}</text>
+        </view>
       </view>
     </block>
 
@@ -45,6 +56,14 @@
       <location-sheet v-if="sheet" :loc-id="sheet" @close="sheet = ''" @gohome="goHome" @go="onGo" />
     </block>
 
+    <location-sheet
+      v-if="sheet && wide"
+      fullscreen
+      :loc-id="sheet"
+      @close="sheet = ''"
+      @gohome="goHome"
+      @go="onGo"
+    />
     <event-modal />
   </view>
 </template>
@@ -264,6 +283,7 @@ function onGo(id, mode) {
   border: var(--bw) solid var(--line);
   border-radius: 22px 16px 24px 18px / 18px 24px 16px 22px;
   box-shadow: var(--shadow), 0 10px 30px rgba(40, 30, 20, 0.18);
+  transition: width 180ms ease;
 }
 .col-left {
   left: 16px;
@@ -272,6 +292,65 @@ function onGo(id, mode) {
 .col-right {
   right: 16px;
   width: 390px;
+}
+.col-left.collapsed,
+.col-right.collapsed {
+  width: 58px;
+  background: var(--card);
+}
+.panel-toggle {
+  position: absolute;
+  top: 14px;
+  bottom: 14px;
+  width: 42px;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: var(--accent);
+  font-family: var(--title-font);
+  font-size: 20px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.panel-toggle:hover {
+  background: var(--paper-deep);
+  border-radius: 18px;
+}
+.toggle-label {
+  writing-mode: vertical-rl;
+  font-size: 12px;
+  color: var(--muted);
+}
+.left-toggle {
+  right: 8px;
+}
+.right-toggle {
+  left: 8px;
+}
+.col-left:not(.collapsed) .panel-toggle,
+.col-right:not(.collapsed) .panel-toggle {
+  top: 12px;
+  bottom: auto;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--card);
+  border: var(--bw) solid var(--line);
+  box-shadow: var(--shadow);
+  gap: 0;
+}
+.col-left:not(.collapsed) .left-toggle {
+  right: -1px;
+}
+.col-right:not(.collapsed) .right-toggle {
+  left: -1px;
+}
+.col-left:not(.collapsed) .toggle-label,
+.col-right:not(.collapsed) .toggle-label {
+  display: none;
 }
 .col-scroll {
   flex: 1;

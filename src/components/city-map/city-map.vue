@@ -78,7 +78,15 @@ const view = reactive({ w: 0, h: 0, bw: 0, bh: 0 })
 const PANEL_L = 346
 const PANEL_R = 406
 const PAD_TOP = 72
-const pad = computed(() => (ui.layout === 'wide' ? { l: PANEL_L, r: PANEL_R, t: PAD_TOP, b: 16 } : { l: 0, r: 0, t: 0, b: 0 }))
+const pad = computed(() => {
+  if (ui.layout !== 'wide') return { l: 0, r: 0, t: 0, b: 0 }
+  return {
+    l: ui.leftPanelCollapsed ? 78 : PANEL_L,
+    r: ui.rightPanelCollapsed ? 78 : PANEL_R,
+    t: PAD_TOP,
+    b: 16
+  }
+})
 const padStyle = computed(() => {
   const p = pad.value
   return { padding: p.t + 'px ' + p.r + 'px ' + p.b + 'px ' + p.l + 'px', display: 'inline-block' }
@@ -151,7 +159,7 @@ function measure(done) {
 }
 
 function centerX() {
-  return ui.layout === 'wide' ? (view.w + PANEL_L - PANEL_R) / 2 : view.w / 2
+  return ui.layout === 'wide' ? (view.w + pad.value.l - pad.value.r) / 2 : view.w / 2
 }
 
 function centerCamera(xPct, yPct) {
@@ -311,6 +319,10 @@ watch(
 watch(
   () => ui.width,
   () => nextTick(() => measure())
+)
+watch(
+  () => [ui.leftPanelCollapsed, ui.rightPanelCollapsed],
+  () => nextTick(() => measure(() => centerCamera(hero.x, hero.y)))
 )
 
 // 网页版直接在 DOM 上监听鼠标和滚轮（uni 组件不转发 wheel 事件；滚轮需要 passive: false 才能阻止页面滚动）

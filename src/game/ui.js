@@ -8,7 +8,9 @@ export const ui = reactive({
   nonce: 0,
   // 'mobile'：竖屏单栏；'wide'：电脑/平板横屏三栏
   layout: 'mobile',
-  width: 375
+  width: 375,
+  leftPanelCollapsed: false,
+  rightPanelCollapsed: false
 })
 
 // 宽于这个值（且是网页版）用三栏布局；iPad 横屏 1024 起也会进入宽屏
