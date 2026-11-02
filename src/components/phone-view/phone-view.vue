@@ -111,7 +111,7 @@
 </template>
 
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import AvatarCard from '../avatar-card/avatar-card.vue'
 import SavePanel from '../save-panel/save-panel.vue'
 import { state, fmtMoney, fmtHour, netWorth, wishInfo, deposit, withdraw, useItem, describe, save, clearSave, rel, stageName } from '../../game/index.js'
@@ -133,8 +133,18 @@ const AMOUNTS = [10000, 100000, 1000000]
 const skillKeys = Object.keys(SKILL_NAMES)
 const statKeys = Object.keys(STAT_NAMES)
 
-const app = ref('msg')
+const props = defineProps({
+  initialApp: { type: String, default: 'msg' }
+})
+const app = ref(props.initialApp)
 state.unread = 0
+
+watch(
+  () => props.initialApp,
+  (value) => {
+    app.value = value || 'msg'
+  }
+)
 
 function openApp(id) {
   app.value = id

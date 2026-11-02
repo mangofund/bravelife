@@ -1,34 +1,59 @@
 <template>
   <view v-if="ready" class="game theme-root" :class="['theme-' + settings.theme, wide ? 'wide' : 'narrow']">
-    <!-- 宽屏：左状态 / 中地图或家 / 右地点面板或手机 -->
+    <!-- 宽屏端游 HUD：全屏场景 + 左状态栏 + 右工具栏 + 底部快捷栏 -->
     <block v-if="wide">
-      <view class="col-left" :class="{ collapsed: ui.leftPanelCollapsed }">
-        <template v-if="!ui.leftPanelCollapsed">
+      <view class="scene-layer">
+        <city-map v-if="tab === 'map'" @open="onOpen" @arrive-home="tab = 'home'" />
+        <scroll-view v-else scroll-y class="scene-scroll"><home-view wide /></scroll-view>
+      </view>
+
+      <view class="left-rail">
+        <view class="rail-handle">PLAYER</view>
+        <view class="left-rail-scroll">
           <game-hud />
           <guide-bar />
-          <scroll-view scroll-y class="col-scroll"><side-status /></scroll-view>
-        </template>
-        <view class="panel-toggle left-toggle" @click="ui.leftPanelCollapsed = !ui.leftPanelCollapsed">
-          <text>{{ ui.leftPanelCollapsed ? '▶' : '◀' }}</text>
-          <text class="toggle-label">{{ ui.leftPanelCollapsed ? '展开任务' : '收起任务' }}</text>
+          <side-status />
         </view>
       </view>
-      <view class="col-main">
-        <view class="seg">
-          <view v-for="t in WIDE_TABS" :key="t.id" class="seg-item" :class="{ on: tab === t.id }" @click="tab = t.id">{{ t.icon }} {{ t.name }}</view>
+
+      <view class="right-rail">
+        <view class="rail-handle">ACTIONS</view>
+        <view class="rail-actions">
+          <view class="rail-action" :class="{ on: rightPanel === 'phone' }" @click="openPhone('msg')">
+            <text class="rail-icon">📱</text><text>手机</text>
+            <text v-if="state.unread" class="rail-badge">{{ state.unread }}</text>
+          </view>
+          <view class="rail-action" :class="{ on: rightPanel === 'bag' }" @click="openPhone('bag')">
+            <text class="rail-icon">🎒</text><text>背包</text>
+          </view>
+          <view class="rail-action" :class="{ on: rightPanel === 'contacts' }" @click="openPhone('contacts')">
+            <text class="rail-icon">👥</text><text>关系</text>
+          </view>
+          <view class="rail-action" @click="focusCurrentLocation">
+            <text class="rail-icon">📍</text><text>当前位置</text>
+          </view>
         </view>
-        <view class="content">
-          <city-map v-if="tab === 'map'" @open="onOpen" @arrive-home="tab = 'home'" />
-          <scroll-view v-else scroll-y class="pane"><home-view wide /></scroll-view>
+        <view v-if="rightPanel === 'phone'" class="right-drawer">
+          <view class="drawer-head">
+            <text>手机</text>
+            <text class="drawer-close" @click="rightPanel = ''">✕</text>
+          </view>
+          <scroll-view scroll-y class="drawer-scroll"><phone-view :initial-app="phoneApp" /></scroll-view>
         </view>
       </view>
-      <view class="col-right" :class="{ collapsed: ui.rightPanelCollapsed }">
-        <template v-if="!ui.rightPanelCollapsed">
-          <scroll-view scroll-y class="col-scroll"><phone-view /></scroll-view>
-        </template>
-        <view class="panel-toggle right-toggle" @click="ui.rightPanelCollapsed = !ui.rightPanelCollapsed">
-          <text>{{ ui.rightPanelCollapsed ? '◀' : '▶' }}</text>
-          <text class="toggle-label">{{ ui.rightPanelCollapsed ? '展开布局' : '收起布局' }}</text>
+
+      <view class="bottom-toolbar">
+        <view class="bottom-group">
+          <view v-for="t in WIDE_TABS" :key="t.id" class="bottom-action" :class="{ on: tab === t.id }" @click="tab = t.id">
+            <text class="bottom-icon">{{ t.icon }}</text><text>{{ t.name }}</text>
+          </view>
+        </view>
+        <view class="bottom-divider" />
+        <view class="bottom-group">
+          <view class="bottom-action" :class="{ on: settings.speed === 0 }" @click="togglePause">
+            <text class="bottom-icon">{{ settings.speed === 0 ? '▶' : '⏸' }}</text><text>{{ settings.speed === 0 ? '继续' : '暂停' }}</text>
+          </view>
+          <view v-for="v in [1, 2, 3]" :key="v" class="speed-action" :class="{ on: settings.speed === v }" @click="setSpeed(v)">{{ v }}×</view>
         </view>
       </view>
     </block>
@@ -95,6 +120,8 @@ const WIDE_TABS = TABS.slice(0, 2)
 const ready = ref(false)
 const tab = ref('map')
 const sheet = ref('')
+const rightPanel = ref('')
+const phoneApp = ref('msg')
 const wide = computed(() => ui.layout === 'wide')
 
 // 从手机布局切到宽屏时，中间栏不显示手机
@@ -172,6 +199,26 @@ function onOpen(id) {
     return
   }
   sheet.value = id
+  rightPanel.value = ''
+}
+
+function openPhone(app) {
+  const sameApp = rightPanel.value === 'phone' && phoneApp.value === app
+  phoneApp.value = app
+  rightPanel.value = sameApp ? '' : 'phone'
+}
+
+function focusCurrentLocation() {
+  tab.value = 'map'
+  rightPanel.value = ''
+  requestNudge(0, 0)
+}
+
+function togglePause() {
+  if (settings.speed) {
+    lastSpeed = settings.speed
+    setSpeed(0)
+  } else setSpeed(lastSpeed || 1)
 }
 
 function goHome() {
@@ -253,141 +300,228 @@ function onGo(id, mode) {
   margin: 0 auto;
 }
 
-/* ---------- 宽屏：地图铺满全屏，左右栏浮在地图上 ---------- */
+/* ---------- 宽屏端游 HUD：场景铺满全屏，工具栏锚定在视口边缘 ---------- */
 .game.wide {
   position: relative;
 }
-.col-main {
+.scene-layer {
   position: absolute;
   left: 0;
   top: 0;
   right: 0;
   bottom: 0;
-  display: flex;
-  flex-direction: column;
+  z-index: 1;
+  overflow: hidden;
 }
-.col-main .content {
-  flex: 1;
+.scene-scroll {
+  width: 100%;
   height: 100%;
 }
-.col-left,
-.col-right {
+.left-rail,
+.right-rail {
   position: absolute;
-  top: 16px;
-  bottom: 16px;
+  top: 18px;
+  bottom: 94px;
   z-index: 40;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
-  background: var(--paper);
-  border: var(--bw) solid var(--line);
-  border-radius: 22px 16px 24px 18px / 18px 24px 16px 22px;
-  box-shadow: var(--shadow), 0 10px 30px rgba(40, 30, 20, 0.18);
-  transition: width 180ms ease;
+  width: 286px;
+  overflow: visible;
+  pointer-events: none;
 }
-.col-left {
-  left: 16px;
-  width: 330px;
+.left-rail {
+  left: 18px;
 }
-.col-right {
-  right: 16px;
-  width: 390px;
+.right-rail {
+  right: 18px;
+  align-items: flex-end;
 }
-.col-left.collapsed,
-.col-right.collapsed {
-  width: 58px;
-  background: var(--card);
+.left-rail-scroll,
+.rail-actions,
+.right-drawer {
+  pointer-events: auto;
 }
-.panel-toggle {
-  position: absolute;
-  top: 14px;
-  bottom: 14px;
-  width: 42px;
-  z-index: 2;
+.left-rail-scroll {
+  min-height: 0;
+  overflow-y: auto;
+  padding: 12px;
+  border-radius: 20px;
+  background: rgba(42, 34, 28, 0.86);
+  border: var(--bw) solid rgba(255, 250, 240, 0.5);
+  box-shadow: 0 12px 36px rgba(20, 14, 10, 0.28);
+  backdrop-filter: blur(8px);
+}
+.rail-handle {
+  align-self: flex-start;
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: var(--hud);
+  color: #ffd166;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  box-shadow: var(--shadow);
+}
+.right-rail .rail-handle {
+  align-self: flex-end;
+}
+.rail-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 82px;
+  margin-top: 12px;
+  padding: 8px;
+  border-radius: 18px;
+  background: rgba(42, 34, 28, 0.86);
+  border: var(--bw) solid rgba(255, 250, 240, 0.5);
+  box-shadow: 0 12px 36px rgba(20, 14, 10, 0.28);
+  backdrop-filter: blur(8px);
+}
+.rail-action {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: 8px;
-  color: var(--accent);
-  font-family: var(--title-font);
-  font-size: 20px;
-  font-weight: 800;
+  gap: 3px;
+  padding: 10px 4px;
+  border-radius: 12px;
+  color: #fffaf0;
+  font-size: 12px;
   cursor: pointer;
 }
-.panel-toggle:hover {
-  background: var(--paper-deep);
-  border-radius: 18px;
+.rail-action:hover,
+.rail-action.on {
+  background: var(--accent);
 }
-.toggle-label {
-  writing-mode: vertical-rl;
-  font-size: 12px;
-  color: var(--muted);
+.rail-icon {
+  font-size: 24px;
 }
-.left-toggle {
-  right: 8px;
-}
-.right-toggle {
-  left: 8px;
-}
-.col-left:not(.collapsed) .panel-toggle,
-.col-right:not(.collapsed) .panel-toggle {
-  top: 12px;
-  bottom: auto;
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background: var(--card);
-  border: var(--bw) solid var(--line);
-  box-shadow: var(--shadow);
-  gap: 0;
-}
-.col-left:not(.collapsed) .left-toggle {
-  right: -1px;
-}
-.col-right:not(.collapsed) .right-toggle {
-  left: -1px;
-}
-.col-left:not(.collapsed) .toggle-label,
-.col-right:not(.collapsed) .toggle-label {
-  display: none;
-}
-.col-scroll {
-  flex: 1;
-  height: 0;
-}
-.col-right .col-scroll {
-  height: 100%;
-}
-/* 地图/家切换浮在中间上方 */
-.seg {
+.rail-badge {
   position: absolute;
-  top: 16px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 41;
-  display: flex;
-  padding: 6px;
+  top: 4px;
+  right: 7px;
+  min-width: 16px;
+  padding: 1px 4px;
+  border-radius: 999px;
+  background: var(--warn);
+  color: #fff;
+  font-size: 10px;
+  text-align: center;
+}
+.right-drawer {
+  position: absolute;
+  top: 112px;
+  right: 0;
+  bottom: 0;
+  width: 360px;
+  overflow: hidden;
+  border-radius: 20px;
   background: var(--paper);
   border: var(--bw) solid var(--line);
-  border-radius: 999px;
-  box-shadow: var(--shadow);
+  box-shadow: 0 12px 36px rgba(20, 14, 10, 0.32);
 }
-.seg-item {
-  padding: 6px 18px;
-  margin: 0 3px;
-  border-radius: 999px;
-  font-family: var(--title-font);
-  font-weight: 700;
-  font-size: 15px;
+.drawer-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: var(--hud);
+  color: #fff;
+  font-weight: 800;
 }
-.seg-item.on {
+.drawer-close {
+  padding: 4px 8px;
+  cursor: pointer;
+}
+.drawer-scroll {
+  height: calc(100% - 52px);
+}
+.bottom-toolbar {
+  position: absolute;
+  left: 50%;
+  bottom: 18px;
+  z-index: 45;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  border-radius: 18px;
+  background: rgba(42, 34, 28, 0.9);
+  border: var(--bw) solid rgba(255, 250, 240, 0.5);
+  box-shadow: 0 12px 36px rgba(20, 14, 10, 0.3);
+  backdrop-filter: blur(8px);
+  color: #fffaf0;
+}
+.bottom-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.bottom-action,
+.speed-action {
+  min-width: 56px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  text-align: center;
+  font-size: 12px;
+  cursor: pointer;
+}
+.bottom-action:hover,
+.bottom-action.on,
+.speed-action:hover,
+.speed-action.on {
   background: var(--accent);
   color: #fff;
 }
-/* 家的页面在两侧浮层之间显示 */
-.game.wide .pane {
+.bottom-action {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.bottom-icon {
+  font-size: 20px;
+}
+.bottom-divider {
+  width: 1px;
+  height: 28px;
+  background: rgba(255, 250, 240, 0.35);
+}
+.game.wide .left-rail .hud {
+  margin: -12px -12px 0;
+  border-radius: 18px 18px 0 0;
+}
+.game.wide .left-rail .hud > .row.between {
+  align-items: flex-start;
+}
+.game.wide .left-rail .hud .clock {
+  align-items: flex-end;
+}
+.game.wide .left-rail .hud .bars {
+  flex-direction: column;
+}
+.game.wide .left-rail .hud .bar {
+  margin: 4px 0;
+}
+.game.wide .left-rail .guide {
+  margin: 0 -12px;
+  padding-left: 12px;
+  padding-right: 12px;
+}
+.game.wide .left-rail .side {
+  padding: 12px 0 0;
+}
+.game.wide .left-rail .side .card,
+.game.wide .left-rail .side .notice {
+  margin-bottom: 10px;
+}
+.game.wide .left-rail .keys {
+  display: none;
+}
+.game.wide .home.wide {
+  min-height: 100%;
   box-sizing: border-box;
-  padding: 72px 422px 16px 362px;
+  padding: 24px;
 }
 </style>

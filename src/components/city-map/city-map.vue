@@ -9,7 +9,7 @@
     @scroll="onScroll"
     :style="{ height: viewH }"
   >
-    <!-- 宽屏时四周留出浮层的宽度，地图边缘的地点也能滚到两块浮层之间 -->
+    <!-- 地图始终占满场景层，HUD 作为上层覆盖，不参与地图布局 -->
     <view class="world-wrap" :style="padStyle">
     <view
       class="world"
@@ -68,24 +68,17 @@ const instance = getCurrentInstance()
 
 // 世界尺寸与地图底图同为 3:4；地点坐标仍用百分比
 // 网页版可以用滚轮缩放：缩放只改变地图尺寸，建筑贴纸和人物大小不变
-// 宽屏默认放大一些，让地图铺满中间栏
+// 宽屏默认放大一些，让地图铺满整个场景层
 const zoom = ref(ui.layout === 'wide' ? 1.5 : 1)
 const W = computed(() => Math.round(1400 * zoom.value))
 const H = computed(() => Math.round(1866 * zoom.value))
 // w/h：可视区域像素；bw/bh：缩放为 1 时地图的像素尺寸（rpx 换算在网页和小程序不同，直接量出来最准）
 const view = reactive({ w: 0, h: 0, bw: 0, bh: 0 })
-// 宽屏两侧浮层的宽度（含边距），镜头要把人物放在两块浮层之间的中间
-const PANEL_L = 346
-const PANEL_R = 406
-const PAD_TOP = 72
+// 地图不为 HUD 预留布局空间，镜头始终以整个场景层为中心
+const PAD_TOP = 0
 const pad = computed(() => {
   if (ui.layout !== 'wide') return { l: 0, r: 0, t: 0, b: 0 }
-  return {
-    l: ui.leftPanelCollapsed ? 78 : PANEL_L,
-    r: ui.rightPanelCollapsed ? 78 : PANEL_R,
-    t: PAD_TOP,
-    b: 16
-  }
+  return { l: 0, r: 0, t: PAD_TOP, b: 0 }
 })
 const padStyle = computed(() => {
   const p = pad.value
@@ -159,7 +152,7 @@ function measure(done) {
 }
 
 function centerX() {
-  return ui.layout === 'wide' ? (view.w + pad.value.l - pad.value.r) / 2 : view.w / 2
+  return view.w / 2
 }
 
 function centerCamera(xPct, yPct) {
@@ -320,11 +313,6 @@ watch(
   () => ui.width,
   () => nextTick(() => measure())
 )
-watch(
-  () => [ui.leftPanelCollapsed, ui.rightPanelCollapsed],
-  () => nextTick(() => measure(() => centerCamera(hero.x, hero.y)))
-)
-
 // 网页版直接在 DOM 上监听鼠标和滚轮（uni 组件不转发 wheel 事件；滚轮需要 passive: false 才能阻止页面滚动）
 let mapEl = null
 onMounted(() => {
