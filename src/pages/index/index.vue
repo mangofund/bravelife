@@ -1,5 +1,5 @@
 <template>
-  <view class="title-page theme-root" :class="'theme-' + settings.theme">
+  <view class="title-page theme-root narrow" :class="'theme-' + settings.theme">
     <image v-if="!artFailed" class="cover" :src="art('title')" mode="aspectFill" @error="artFailed = true" />
     <view v-else class="cover cover-fallback"><text class="skyline">🏯🏢🗼🌆⛩️</text></view>
 

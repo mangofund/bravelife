@@ -5,10 +5,15 @@
     scroll-y
     :scroll-left="cam.left"
     :scroll-top="cam.top"
-    scroll-with-animation
+    :scroll-with-animation="!drag.active"
+    @scroll="onScroll"
     :style="{ height: viewH }"
   >
-    <view class="world" :style="{ width: W + 'rpx', height: H + 'rpx' }" @tap="onGround">
+    <view
+      class="world"
+      :style="{ width: W + 'rpx', height: H + 'rpx' }"
+      @tap="onGround"
+    >
       <image v-if="!mapFailed" class="map-img" :src="art('map')" mode="aspectFill" @error="mapFailed = true" />
       <view v-else class="map-fallback">
         <view class="fb-water fb-bay" />
@@ -47,7 +52,7 @@
 </template>
 
 <script setup>
-import { computed, reactive, ref, watch, onBeforeUnmount, getCurrentInstance, nextTick } from 'vue'
+import { computed, reactive, ref, watch, onMounted, onBeforeUnmount, getCurrentInstance, nextTick } from 'vue'
 import HeroDoll from '../hero-doll/hero-doll.vue'
 import { state, isOpen, travel, npcsAt, defaultMode } from '../../game/index.js'
 import { MODE_MAP } from '../../game/data/transport.js'
@@ -59,8 +64,14 @@ const emit = defineEmits(['open', 'arrive-home'])
 const instance = getCurrentInstance()
 
 // 世界尺寸与地图底图同为 3:4；地点坐标仍用百分比
-const W = 1400
-const H = 1866
+// 网页版可以用滚轮缩放：缩放只改变地图尺寸，建筑贴纸和人物大小不变
+// 宽屏默认放大一些，让地图铺满中间栏
+const zoom = ref(ui.layout === 'wide' ? 1.5 : 1)
+const W = computed(() => Math.round(1400 * zoom.value))
+const H = computed(() => Math.round(1866 * zoom.value))
+const view = reactive({ w: 0, h: 0 })
+const scrollPos = reactive({ left: 0, top: 0 })
+const drag = reactive({ active: false, moved: false, x: 0, y: 0, left: 0, top: 0 })
 const SPEED = 500 // rpx / 秒
 const viewH = '100%'
 
@@ -93,11 +104,25 @@ function door(locId) {
   return { x: l.x + 6, y: Math.min(l.y + 10, 99) }
 }
 
+// 量一下地图可视区域的实际大小（手机和宽屏不一样，窗口缩放后也会变）
+function measure() {
+  uni.createSelectorQuery()
+    .in(instance.proxy)
+    .select('.map-scroll')
+    .boundingClientRect((rect) => {
+      if (rect && rect.width) {
+        view.w = rect.width
+        view.h = rect.height
+      }
+    })
+    .exec()
+}
+
 function centerCamera(xPct, yPct) {
-  const vw = uni.upx2px(750)
-  const vh = uni.getSystemInfoSync().windowHeight - uni.upx2px(330)
-  const px = uni.upx2px((W * xPct) / 100)
-  const py = uni.upx2px((H * yPct) / 100)
+  const vw = view.w || uni.upx2px(750)
+  const vh = view.h || uni.getSystemInfoSync().windowHeight - uni.upx2px(330)
+  const px = uni.upx2px((W.value * xPct) / 100)
+  const py = uni.upx2px((H.value * yPct) / 100)
   // 小程序里相同的值不会触发滚动，加一点抖动保证每次都生效
   const jitter = cam.left % 1 === 0 ? 0.5 : 0
   cam.left = Math.max(0, px - vw / 2) + jitter
@@ -113,8 +138,8 @@ function place(xPct, yPct) {
 
 function walk(xPct, yPct, done, mode) {
   if (walking) return
-  const dx = ((xPct - hero.x) * W) / 100
-  const dy = ((yPct - hero.y) * H) / 100
+  const dx = ((xPct - hero.x) * W.value) / 100
+  const dy = ((yPct - hero.y) * H.value) / 100
   const dist = Math.sqrt(dx * dx + dy * dy)
   const mul = ANIM_SPEED[mode] || 1
   const dur = Math.min(3, Math.max(0.35, dist / (SPEED * mul)))
@@ -136,8 +161,63 @@ function walk(xPct, yPct, done, mode) {
 }
 
 // 点空地：主人公散步过去（只是走动，不消耗游戏时间）
+function onScroll(e) {
+  scrollPos.left = e.detail.scrollLeft
+  scrollPos.top = e.detail.scrollTop
+}
+
+// ---------- 网页版：鼠标拖动、滚轮缩放 ----------
+function onDragStart(e) {
+  if (e.button !== undefined && e.button !== 0) return
+  drag.active = true
+  drag.moved = false
+  drag.x = e.clientX
+  drag.y = e.clientY
+  drag.left = scrollPos.left
+  drag.top = scrollPos.top
+  // #ifdef H5
+  window.addEventListener('mousemove', onDragMove)
+  window.addEventListener('mouseup', onDragEnd)
+  // #endif
+}
+
+function onDragMove(e) {
+  if (!drag.active) return
+  const dx = e.clientX - drag.x
+  const dy = e.clientY - drag.y
+  if (Math.abs(dx) + Math.abs(dy) > 5) drag.moved = true
+  cam.left = Math.max(0, drag.left - dx)
+  cam.top = Math.max(0, drag.top - dy)
+}
+
+function onDragEnd() {
+  drag.active = false
+  // #ifdef H5
+  window.removeEventListener('mousemove', onDragMove)
+  window.removeEventListener('mouseup', onDragEnd)
+  // #endif
+  // 拖动结束后紧跟着的 click 不算点空地
+  if (drag.moved) setTimeout(() => (drag.moved = false), 50)
+}
+
+function onWheel(e) {
+  if (!e.deltaY) return
+  if (e.preventDefault) e.preventDefault()
+  const old = zoom.value
+  const next = Math.min(1.8, Math.max(0.6, Math.round((old * (e.deltaY < 0 ? 1.1 : 1 / 1.1)) * 100) / 100))
+  if (next === old) return
+  // 以视野中心为基准缩放
+  const vw = view.w || 400
+  const vh = view.h || 600
+  const cx = (scrollPos.left + vw / 2) / old
+  const cy = (scrollPos.top + vh / 2) / old
+  zoom.value = next
+  cam.left = Math.max(0, cx * next - vw / 2)
+  cam.top = Math.max(0, cy * next - vh / 2)
+}
+
 function onGround(e) {
-  if (walking) return
+  if (walking || drag.moved) return
   const d = e.detail || {}
   if (d.x === undefined) return
   uni.createSelectorQuery()
@@ -180,13 +260,50 @@ watch(
   }
 )
 
+// 键盘方向键：主人公在地图上散步
+watch(
+  () => ui.nudge && ui.nudge.nonce,
+  () => {
+    const n = ui.nudge
+    if (!n || walking) return
+    walk(Math.min(99, Math.max(1, hero.x + n.dx)), Math.min(99, Math.max(1, hero.y + n.dy)))
+  }
+)
+
+watch(
+  () => ui.width,
+  () => nextTick(measure)
+)
+
+// 网页版直接在 DOM 上监听鼠标和滚轮（uni 组件不转发 wheel 事件；滚轮需要 passive: false 才能阻止页面滚动）
+let mapEl = null
+onMounted(() => {
+  // #ifdef H5
+  mapEl = instance.proxy.$el && instance.proxy.$el.querySelector ? instance.proxy.$el : document.querySelector('.map-scroll')
+  if (mapEl) {
+    mapEl.addEventListener('wheel', onWheel, { passive: false })
+    mapEl.addEventListener('mousedown', onDragStart)
+  }
+  // #endif
+})
+
 const start = door(state.location)
 place(start.x, start.y)
-nextTick(() => centerCamera(start.x, start.y))
+nextTick(() => {
+  measure()
+  setTimeout(() => centerCamera(start.x, start.y), 60)
+})
 
 onBeforeUnmount(() => {
   if (timer) clearTimeout(timer)
   walking = false
+  onDragEnd()
+  // #ifdef H5
+  if (mapEl) {
+    mapEl.removeEventListener('wheel', onWheel)
+    mapEl.removeEventListener('mousedown', onDragStart)
+  }
+  // #endif
 })
 </script>
 
@@ -197,6 +314,7 @@ onBeforeUnmount(() => {
 }
 .world {
   position: relative;
+  cursor: grab;
 }
 .map-img,
 .map-fallback {

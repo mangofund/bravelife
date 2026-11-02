@@ -1,5 +1,6 @@
 <template>
-  <view class="home">
+  <view class="home" :class="{ wide }">
+    <view class="home-a">
     <view class="card">
       <view class="row between">
         <text class="act-name">{{ home.icon }} {{ home.name }}</text>
@@ -34,6 +35,8 @@
       </view>
     </view>
 
+    </view>
+    <view class="home-b">
     <view class="section-title">家具仓库</view>
     <view v-if="!invList.length" class="muted">仓库空了。去家具城买些家具吧。</view>
     <view class="inv">
@@ -79,6 +82,7 @@
       </view>
     </block>
   </view>
+  </view>
 </template>
 
 <script setup>
@@ -90,6 +94,8 @@ import {
   bestBed, kitchenLevel, decorScore
 } from '../../game/index.js'
 import { FURNITURE, HOMES, ITEMS, DELIVERY, CHORES, DIRTY_LINE } from '../../game/data/world.js'
+
+defineProps({ wide: { type: Boolean, default: false } })
 
 const selected = ref('')
 const choreList = Object.keys(CHORES).map((id) => Object.assign({ id }, CHORES[id]))
@@ -243,6 +249,20 @@ onBeforeUnmount(() => {
 <style>
 .home {
   padding: 20rpx;
+}
+/* 宽屏：房间在左，仓库和在家行动在右 */
+.home.wide {
+  display: flex;
+  align-items: flex-start;
+}
+.home.wide .home-a {
+  flex: 1.2;
+  min-width: 0;
+  margin-right: 20px;
+}
+.home.wide .home-b {
+  flex: 1;
+  min-width: 0;
 }
 .room {
   position: relative;

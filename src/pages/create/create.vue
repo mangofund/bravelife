@@ -1,5 +1,5 @@
 <template>
-  <view class="create theme-root" :class="'theme-' + settings.theme">
+  <view class="create theme-root narrow" :class="'theme-' + settings.theme">
     <view class="steps">
       <text v-for="(s, i) in STEPS" :key="s" class="step" :class="{ on: i <= step }">{{ i + 1 }}. {{ s }}</text>
     </view>

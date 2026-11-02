@@ -1,10 +1,12 @@
 <script>
 import { save, state } from './game/index.js'
 import { loadSettings } from './game/themes.js'
+import { initLayout } from './game/ui.js'
 
 export default {
   onLaunch() {
     loadSettings()
+    initLayout()
   },
   onHide() {
     if (state.started) save()
@@ -93,9 +95,12 @@ body {
 }
 uni-page-body,
 uni-page-wrapper {
+  min-height: 100vh;
+}
+/* 手机布局在电脑上显示时，居中成一列手机宽度 */
+.narrow {
   max-width: 480px;
   margin: 0 auto;
-  min-height: 100vh;
 }
 /* #endif */
 

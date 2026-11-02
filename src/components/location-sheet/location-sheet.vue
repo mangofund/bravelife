@@ -1,6 +1,6 @@
 <template>
-  <view class="mask" @click="emit('close')">
-    <view class="sheet" @click.stop="noop">
+  <view :class="docked ? 'dock' : 'mask'" @click="onMask">
+    <view class="sheet" :class="{ docked }" @click.stop="noop">
       <view class="head">
         <text class="h-icon">{{ loc.icon }}</text>
         <view class="h-text">
@@ -99,7 +99,11 @@ import {
 import { LOCATION_MAP } from '../../game/data/locations.js'
 import { ITEMS } from '../../game/data/world.js'
 
-const props = defineProps({ locId: { type: String, required: true } })
+const props = defineProps({
+  locId: { type: String, required: true },
+  // 宽屏时固定在右栏显示，不弹出遮罩
+  docked: { type: Boolean, default: false }
+})
 const emit = defineEmits(['close', 'gohome', 'go'])
 
 const loc = computed(() => LOCATION_MAP[props.locId])
@@ -112,6 +116,10 @@ function arrive(hours) {
 }
 
 function noop() {}
+
+function onMask() {
+  if (!props.docked) emit('close')
+}
 
 function onTravel(o) {
   if (!o.ok) {
@@ -168,6 +176,23 @@ function onAction(id) {
   font-size: 36rpx;
   padding: 12rpx;
   color: var(--muted);
+}
+.dock {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+.sheet.docked {
+  flex: 1;
+  height: 0;
+  display: flex;
+  flex-direction: column;
+  border-radius: 0;
+  max-width: none;
+}
+.sheet.docked .body {
+  flex: 1;
+  height: 0;
 }
 .body {
   height: 66vh;

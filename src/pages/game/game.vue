@@ -1,33 +1,56 @@
 <template>
-  <view v-if="ready" class="game theme-root" :class="'theme-' + settings.theme">
-    <view class="top">
-      <game-hud />
-      <guide-bar />
-    </view>
-
-    <view class="content">
-      <city-map v-if="tab === 'map'" @open="onOpen" @arrive-home="tab = 'home'" />
-      <scroll-view v-else scroll-y class="pane">
-        <home-view v-if="tab === 'home'" />
-        <phone-view v-if="tab === 'phone'" />
-      </scroll-view>
-    </view>
-
-    <view class="tabs">
-      <view v-for="t in TABS" :key="t.id" class="tab" :class="{ on: tab === t.id }" @click="tab = t.id">
-        <text class="tab-icon">{{ t.icon }}</text>
-        <text class="tab-name">{{ t.name }}</text>
-        <text v-if="t.id === 'phone' && state.unread" class="tab-dot" />
+  <view v-if="ready" class="game theme-root" :class="['theme-' + settings.theme, wide ? 'wide' : 'narrow']">
+    <!-- 宽屏：左状态 / 中地图或家 / 右地点面板或手机 -->
+    <block v-if="wide">
+      <view class="col-left">
+        <game-hud />
+        <guide-bar />
+        <scroll-view scroll-y class="col-scroll"><side-status /></scroll-view>
       </view>
-    </view>
+      <view class="col-main">
+        <view class="seg">
+          <view v-for="t in WIDE_TABS" :key="t.id" class="seg-item" :class="{ on: tab === t.id }" @click="tab = t.id">{{ t.icon }} {{ t.name }}</view>
+        </view>
+        <view class="content">
+          <city-map v-if="tab === 'map'" @open="onOpen" @arrive-home="tab = 'home'" />
+          <scroll-view v-else scroll-y class="pane"><home-view wide /></scroll-view>
+        </view>
+      </view>
+      <view class="col-right">
+        <location-sheet v-if="sheet" docked :loc-id="sheet" @close="sheet = ''" @gohome="goHome" @go="onGo" />
+        <scroll-view v-else scroll-y class="col-scroll"><phone-view /></scroll-view>
+      </view>
+    </block>
 
-    <location-sheet v-if="sheet" :loc-id="sheet" @close="sheet = ''" @gohome="goHome" @go="onGo" />
+    <!-- 手机：竖屏单栏 + 底部标签 -->
+    <block v-else>
+      <view class="top">
+        <game-hud />
+        <guide-bar />
+      </view>
+      <view class="content">
+        <city-map v-if="tab === 'map'" @open="onOpen" @arrive-home="tab = 'home'" />
+        <scroll-view v-else scroll-y class="pane">
+          <home-view v-if="tab === 'home'" />
+          <phone-view v-if="tab === 'phone'" />
+        </scroll-view>
+      </view>
+      <view class="tabs">
+        <view v-for="t in TABS" :key="t.id" class="tab" :class="{ on: tab === t.id }" @click="tab = t.id">
+          <text class="tab-icon">{{ t.icon }}</text>
+          <text class="tab-name">{{ t.name }}</text>
+          <text v-if="t.id === 'phone' && state.unread" class="tab-dot" />
+        </view>
+      </view>
+      <location-sheet v-if="sheet" :loc-id="sheet" @close="sheet = ''" @gohome="goHome" @go="onGo" />
+    </block>
+
     <event-modal />
   </view>
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { onLoad, onShow, onHide, onUnload } from '@dcloudio/uni-app'
 import GameHud from '../../components/game-hud/game-hud.vue'
 import GuideBar from '../../components/guide-bar/guide-bar.vue'
@@ -36,19 +59,28 @@ import HomeView from '../../components/home-view/home-view.vue'
 import PhoneView from '../../components/phone-view/phone-view.vue'
 import LocationSheet from '../../components/location-sheet/location-sheet.vue'
 import EventModal from '../../components/event-modal/event-modal.vue'
+import SideStatus from '../../components/side-status/side-status.vue'
 import { state, load, tickClock } from '../../game/index.js'
-import { settings } from '../../game/themes.js'
-import { requestWalk } from '../../game/ui.js'
+import { settings, setSpeed } from '../../game/themes.js'
+import { ui, requestWalk, requestNudge } from '../../game/ui.js'
 
 const TABS = [
   { id: 'map', name: '地图', icon: '🗺️' },
   { id: 'home', name: '家', icon: '🏠' },
   { id: 'phone', name: '手机', icon: '📱' }
 ]
+// 宽屏里手机固定在右栏，中间只切换地图和家
+const WIDE_TABS = TABS.slice(0, 2)
 
 const ready = ref(false)
 const tab = ref('map')
 const sheet = ref('')
+const wide = computed(() => ui.layout === 'wide')
+
+// 从手机布局切到宽屏时，中间栏不显示手机
+watch(wide, (w) => {
+  if (w && tab.value === 'phone') tab.value = 'map'
+})
 
 onLoad(() => {
   // 刷新页面或直接打开时从存档恢复
@@ -72,9 +104,43 @@ function stopClock() {
   if (clock) clearInterval(clock)
   clock = null
 }
-onShow(startClock)
-onHide(stopClock)
-onUnload(stopClock)
+
+// 电脑键盘快捷键（只在网页版生效）
+let lastSpeed = 1
+function onKey(e) {
+  const tag = e.target && e.target.tagName
+  if (tag === 'INPUT' || tag === 'TEXTAREA') return
+  if (e.key === ' ') {
+    e.preventDefault()
+    if (settings.speed) {
+      lastSpeed = settings.speed
+      setSpeed(0)
+    } else setSpeed(lastSpeed || 1)
+  } else if (e.key === '1') tab.value = 'map'
+  else if (e.key === '2') tab.value = 'home'
+  else if (e.key === '3' && !wide.value) tab.value = 'phone'
+  else if (e.key === 'Escape') sheet.value = ''
+  else if (e.key.indexOf('Arrow') === 0 && tab.value === 'map') {
+    e.preventDefault()
+    const d = { ArrowUp: [0, -3], ArrowDown: [0, 3], ArrowLeft: [-4, 0], ArrowRight: [4, 0] }[e.key]
+    if (d) requestNudge(d[0], d[1])
+  }
+}
+
+onShow(() => {
+  startClock()
+  // #ifdef H5
+  window.addEventListener('keydown', onKey)
+  // #endif
+})
+function teardown() {
+  stopClock()
+  // #ifdef H5
+  window.removeEventListener('keydown', onKey)
+  // #endif
+}
+onHide(teardown)
+onUnload(teardown)
 
 function onOpen(id) {
   if (id === 'home' && state.location === 'home') {
@@ -157,5 +223,61 @@ function onGo(id, mode) {
   height: 16rpx;
   border-radius: 50%;
   background: var(--warn);
+}
+.narrow {
+  max-width: 480px;
+  margin: 0 auto;
+}
+
+/* ---------- 宽屏三栏 ---------- */
+.game.wide {
+  flex-direction: row;
+}
+.col-left {
+  width: 340px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  border-right: var(--bw) solid var(--line);
+}
+.col-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.col-right {
+  width: 400px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  border-left: var(--bw) solid var(--line);
+  background: var(--paper);
+}
+.col-scroll {
+  flex: 1;
+  height: 0;
+}
+.col-right .col-scroll {
+  height: 100%;
+}
+.seg {
+  display: flex;
+  padding: 10px 16px;
+  flex-shrink: 0;
+}
+.seg-item {
+  padding: 6px 18px;
+  margin-right: 10px;
+  border-radius: 999px;
+  border: var(--bw) solid var(--line);
+  background: var(--card);
+  font-family: var(--title-font);
+  font-weight: 700;
+  font-size: 15px;
+}
+.seg-item.on {
+  background: var(--accent);
+  color: #fff;
 }
 </style>
