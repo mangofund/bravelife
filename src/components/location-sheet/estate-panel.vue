@@ -28,7 +28,7 @@ import { state, fmtMoney, moveHome, buyPlot, buildOnPlot } from '../../game/inde
 import { HOMES, PLOTS, BUILD_COST, BUILD_INCOME } from '../../game/data/world.js'
 
 const homes = computed(() =>
-  Object.keys(HOMES).map((id) => Object.assign({ id, current: state.home === id }, HOMES[id]))
+  Object.keys(HOMES).filter((id) => !HOMES[id].family).map((id) => Object.assign({ id, current: state.home === id }, HOMES[id]))
 )
 const plots = computed(() =>
   PLOTS.map((p) => ({ id: p.id, price: p.price, own: !!state.plots[p.id], built: !!(state.plots[p.id] && state.plots[p.id].built) }))

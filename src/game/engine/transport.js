@@ -2,6 +2,9 @@ import { state, addMoney, addStats, fmtMoney, round1 } from './core.js'
 import { passTime, finish, fail } from './time.js'
 import { LOCATION_MAP } from '../data/locations.js'
 import { EVENTS, EVENT_CHANCE } from '../data/events.js'
+import { age, isMinor } from './calendar.js'
+import { locVisible, first } from './courage.js'
+import { osEnter } from './fun.js'
 import { MODES, MODE_MAP, VEHICLES, KM_PER_PCT_X, KM_PER_PCT_Y, FAR_EXTRA_KM, EVENT_RATE } from '../data/transport.js'
 
 export function distanceKm(fromId, toId) {
@@ -28,7 +31,9 @@ export function travelOptions(toId) {
     const cost = Math.round((m.base + m.perKm * km) / 10) * 10
     let reason = ''
     let warn = ''
-    if (m.needs && !hasVehicle(m.needs)) reason = '还没有' + VEHICLES[m.needs].name
+    if (m.id === 'car' && age() < 18) reason = '未满 18 岁不能开车'
+    else if (m.id === 'taxi' && age() < 12) reason = '小学生不能一个人打车'
+    else if (m.needs && !hasVehicle(m.needs)) reason = '还没有' + VEHICLES[m.needs].name
     else if (m.maxKm && km > m.maxKm) {
       // 走路永远可选，保证没钱时也能回家；其他方式太远就不能用
       if (m.id === 'walk') warn = '很远，会非常累'
@@ -58,6 +63,7 @@ function rollEvent(mode) {
 export function travel(toId, modeId) {
   const to = LOCATION_MAP[toId]
   if (!to || to.soon) return fail('这里还没开放')
+  if (!locVisible(toId)) return fail(toId === 'courage' ? '小巷里黑漆漆的，找不到那家店' : '现在去不了这里')
   if (state.location === toId) return fail('你已经在这里了')
   const mode = modeId || defaultMode(toId)
   const opt = travelOptions(toId).filter((o) => o.id === mode)[0]
@@ -68,7 +74,10 @@ export function travel(toId, modeId) {
   const m = MODE_MAP[mode]
   if (m.energyPerHour) addStats({ energy: -Math.round(m.energyPerHour * opt.hours) })
   state.location = toId
-  rollEvent(mode)
+  if (!state.visited[toId]) state.visited[toId] = mode
+  if (mode === 'train' && isMinor()) first('solo_train', 10)
+  if (toId !== 'courage' && toId !== 'home') rollEvent(mode)
+  osEnter(toId)
   const minutes = Math.round(opt.hours * 60)
   const time = minutes >= 60 ? Math.floor(minutes / 60) + ' 小时 ' + (minutes % 60) + ' 分' : minutes + ' 分钟'
   return finish(m.icon + ' ' + opt.name + ' ' + time + (opt.cost ? '，花了 ' + fmtMoney(opt.cost) : '') + '，到达 ' + to.name)
@@ -81,6 +90,7 @@ export function buyVehicle(id) {
     return fail('要在银座百货营业时间购买')
   }
   if (hasVehicle(id)) return fail('你已经有' + v.name + '了')
+  if (id === 'car' && age() < 18) return fail('未满 18 岁不能买车')
   if (state.money < v.price) return fail('钱不够，需要 ' + fmtMoney(v.price))
   addMoney(-v.price, '购买' + v.name)
   if (!state.vehicles) state.vehicles = {}

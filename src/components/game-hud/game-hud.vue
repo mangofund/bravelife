@@ -1,16 +1,16 @@
 <template>
   <view class="hud">
     <view class="row between">
-      <view class="row">
+      <view class="row hud-left">
         <avatar-card :profile="state.profile" :size="76" />
         <view class="who">
-          <text class="name">{{ state.profile.name }}<text v-if="state.election.governor" class="gov"> 🏛️都知事</text></text>
+          <text class="name">{{ state.profile.name }}<text v-if="title" class="gov"> {{ title }}</text><text v-if="state.election.governor" class="gov"> 🏛️都知事</text></text>
           <text class="job">{{ jobText }}</text>
         </view>
       </view>
       <view class="clock">
         <text class="time">{{ fmtHour(state.hour) }}</text>
-        <text class="date">第 {{ state.day }} 天 · {{ weekday(state.day) }}</text>
+        <text class="date">{{ dateText }} {{ weekday(state.day) }} {{ weatherInfo().icon }}</text>
         <view class="speeds">
           <text
             v-for="v in SPEEDS"
@@ -19,6 +19,7 @@
             :class="{ on: settings.speed === v }"
             @click="setSpeed(v)"
           >{{ v === 0 ? '⏸' : v + '×' }}</text>
+          <text class="speed skip" @click="onSkip">⏭ {{ skipsLeft() }}</text>
         </view>
       </view>
     </view>
@@ -40,17 +41,40 @@
 <script setup>
 import { computed } from 'vue'
 import AvatarCard from '../avatar-card/avatar-card.vue'
-import { state, fmtHour, fmtMoney, weekday } from '../../game/index.js'
+import {
+  state, fmtHour, fmtMoney, weekday, dateOf, weatherInfo, age, isMinor, schoolName, titleText, skipDay, skipReason, skipsLeft
+} from '../../game/index.js'
 import { CAREERS } from '../../game/data/jobs.js'
 import { LOCATION_MAP } from '../../game/data/locations.js'
 import { settings, SPEEDS, setSpeed } from '../../game/themes.js'
 
+const title = computed(() => titleText())
+const dateText = computed(() => {
+  const d = dateOf(state.day)
+  return d.y + '/' + d.m + '/' + d.d
+})
 const jobText = computed(() => {
-  if (!state.job) return '无业游民'
+  if (isMinor()) return age() + ' 岁 · ' + schoolName() + (state.job ? ' · 打工中' : '')
+  if (!state.job) return age() + ' 岁 · 无业游民'
   const c = CAREERS[state.job.career]
-  return c.icon + ' ' + c.levels[state.job.level].title
+  return age() + ' 岁 · ' + c.icon + ' ' + c.levels[state.job.level].title
 })
 const locName = computed(() => LOCATION_MAP[state.location].name)
+
+function onSkip() {
+  const why = skipReason()
+  if (why) {
+    uni.showToast({ title: why, icon: 'none' })
+    return
+  }
+  uni.showModal({
+    title: '跳过今天？',
+    content: '按平淡的一天结算到明早 7:00，这一天不会发生任何剧情和邀约。本月还能跳 ' + skipsLeft() + ' 次。',
+    success(res) {
+      if (res.confirm) skipDay()
+    }
+  })
+}
 const bars = computed(() => [
   { key: 'hunger', icon: '🍙', color: '#f5a524', value: state.stats.hunger },
   { key: 'energy', icon: '⚡', color: '#3e9bff', value: state.stats.energy },
@@ -65,7 +89,13 @@ const bars = computed(() => [
   color: #fff;
   padding: 20rpx 24rpx 16rpx;
 }
+.hud-left {
+  flex: 1;
+  min-width: 0;
+}
 .who {
+  flex: 1;
+  min-width: 140rpx;
   display: flex;
   flex-direction: column;
   margin-left: 16rpx;
@@ -83,6 +113,8 @@ const bars = computed(() => [
   opacity: 0.75;
 }
 .clock {
+  flex-shrink: 0;
+  max-width: 60%;
   display: flex;
   flex-direction: column;
   align-items: flex-end;
@@ -98,6 +130,8 @@ const bars = computed(() => [
 }
 .speeds {
   display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   margin-top: 6rpx;
 }
 .speed {
@@ -109,6 +143,9 @@ const bars = computed(() => [
   border-radius: 999rpx;
   border: 2rpx solid rgba(255, 255, 255, 0.4);
   opacity: 0.75;
+}
+.speed.skip {
+  min-width: 56rpx;
 }
 .speed.on {
   background: #ffd166;

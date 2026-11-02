@@ -13,7 +13,7 @@ const MAX_LOG = 60
 
 export function initialState() {
   return {
-    version: 1,
+    version: 2,
     started: false,
     profile: null,
     day: 1,
@@ -43,7 +43,22 @@ export function initialState() {
     tutorial: { step: 0, done: false },
     counters: { meals: 0, sleeps: 0, shifts: 0 },
     vehicles: {},
-    clean: 80
+    clean: 80,
+    weather: 'sun',
+    // 人生：是否和父母同住、章节目标完成日
+    life: { withParents: false, goals: {} },
+    skip: { month: '', used: 0, day: 0 },
+    story: { done: {}, flags: {}, turningDay: 0 },
+    pendingStory: null,
+    courage: {
+      value: 0, total: 0, milestone: 0, burstDay: 0, pages: 0, chapters: 0, firsts: {}, charms: {},
+      quest: null, questsDone: 0, stock: null, retryUsed: 0, catDay: 0
+    },
+    titles: {},
+    visited: {},
+    // 当天的活动统计：用于称号判定
+    dayLog: { day: 1, acts: 0, grind: 0, talks: 0 },
+    family: { gen: 1, heirloom: '' }
   }
 }
 
@@ -85,6 +100,12 @@ export function load() {
     const base = initialState()
     // 旧存档没有新手引导字段，视为已完成
     if (data.tutorial === undefined) base.tutorial.done = true
+    // v1 存档没有年龄：按 22 岁、4 月 2 日生日的成年人处理，跳过童年
+    if (data.profile && !data.profile.birth) {
+      data.profile.birth = { m: 4, d: 2 }
+      data.profile.birthYear = 2003
+      data.profile.startAge = 22
+    }
     Object.keys(base).forEach((k) => {
       if (data[k] !== undefined) base[k] = data[k]
     })
@@ -127,11 +148,6 @@ export function fmtHour(h) {
 export function fmtHours(h) {
   if (h < 1) return Math.round(h * 60) + ' 分钟'
   return round1(h) + ' 小时'
-}
-
-const WEEK = ['一', '二', '三', '四', '五', '六', '日']
-export function weekday(day) {
-  return '周' + WEEK[(day - 1) % 7]
 }
 
 export function pushMessage(from, text) {

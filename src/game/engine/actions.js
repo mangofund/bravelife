@@ -8,22 +8,55 @@ import { CAREERS, PROMOTE_SHIFTS } from '../data/jobs.js'
 import { ITEMS, FURNITURE, HOMES, DELIVERY, CHORES } from '../data/world.js'
 import { BACKGROUNDS, SKILL_NAMES } from '../data/profile.js'
 import { EVENTS } from '../data/events.js'
+import { FAMILY_HOME, MINOR_START } from '../data/calendar.js'
+import { birthYearFor } from './calendar.js'
+import { placeBlock, jobBlock, minorShiftBlock } from './life.js'
+import { charmActive, first } from './courage.js'
+import { os, logAct } from './fun.js'
 
+// profile.startAge：6-17 岁和父母同住、上学；18 岁及以上（或旧版不带年龄）直接一个人在东京生活
 export function newGame(profile) {
   const bg = BACKGROUNDS.filter((b) => b.id === profile.background)[0] || BACKGROUNDS[1]
+  const p = Object.assign({ startAge: 22, birth: { m: 4, d: 2 }, dream: '', title: '' }, profile)
+  p.birthYear = birthYearFor(p.startAge, p.birth)
+  const minor = p.startAge < 18
   const s = initialState()
   s.started = true
-  s.profile = profile
-  s.money = bg.money
-  s.home = bg.home
+  s.profile = p
   s.skills = Object.assign({}, bg.skills)
   s.rep = bg.rep
-  s.furniture.inv = { futon: 1, plant: 1 }
   s.bag = { onigiri: 2 }
+  if (minor) {
+    // 年纪越小，出身带来的能力越少
+    const k = Math.min(1, (p.startAge - 4) / 14)
+    Object.keys(s.skills).forEach((key) => {
+      s.skills[key] = Math.round(s.skills[key] * k)
+    })
+    s.rep = Math.round(bg.rep * k * 0.5)
+    const st = MINOR_START[bg.id] || MINOR_START.normal
+    s.money = st.money
+    s.home = FAMILY_HOME[bg.id] || FAMILY_HOME.normal
+    s.life.withParents = true
+    s.tutorial.done = true
+    s.furniture.inv = {}
+    s.furniture.placed = st.furniture.map((fid, i) => ({ uid: i + 1, fid, x: i % 4, y: Math.floor(i / 4) }))
+    s.nextUid = st.furniture.length + 1
+  } else {
+    s.money = bg.money
+    s.home = bg.home
+    s.furniture.inv = { futon: 1, plant: 1 }
+  }
   resetState(s)
-  pushMessage('妈妈', '到东京了吗？记得按时吃饭，别太累。给你寄了两个饭团，在背包里。')
-  pushMessage('房东', '欢迎入住' + HOMES[s.home].name + '！房租每 7 天扣一次。地铺和盆栽已放在你的家具仓库里，去「家」里摆好吧。')
-  pushNews('欢迎来到东京！今天天气晴，适合出门找份工作。')
+  if (minor) {
+    const parent = bg.id === 'self' ? '妈妈' : '爸爸妈妈'
+    pushMessage(parent, '今天开始放春假啦！4 月 7 日开学，工作日早上 8 点要去樱丘学园上学哦。')
+    pushMessage('人生', '你和' + parent + '住在' + HOMES[s.home].name + '。在手机「人生」里可以看到这个阶段的章节目标。')
+    pushNews('樱花季到了，樱花公园的花见正热闹。')
+  } else {
+    pushMessage('妈妈', '到东京了吗？记得按时吃饭，别太累。给你寄了两个饭团，在背包里。')
+    pushMessage('房东', '欢迎入住' + HOMES[s.home].name + '！房租每 7 天扣一次。地铺和盆栽已放在你的家具仓库里，去「家」里摆好吧。')
+    pushNews('欢迎来到东京！今天天气晴，适合出门找份工作。')
+  }
   save()
 }
 
@@ -52,6 +85,7 @@ function run(def, label) {
   const cost = def.cost || 0
   if (state.money < cost) return fail('钱不够，需要 ' + fmtMoney(cost))
   passTime(def.hours || 0)
+  logAct(def.skills && (def.skills.int || def.paid) ? def.hours : 0)
   if (cost) addMoney(-cost, label || def.name)
   addStats(def.effects)
   if (def.effects && def.effects.hunger > 0) count('meals')
@@ -64,7 +98,7 @@ function canActHere(locId) {
   const loc = LOCATION_MAP[locId]
   if (state.location !== locId) return '你不在' + loc.name
   if (!isOpen(loc)) return loc.name + '现在不营业'
-  return ''
+  return placeBlock(locId)
 }
 
 export function doAction(locId, actionId) {
@@ -74,6 +108,12 @@ export function doAction(locId, actionId) {
   if (!act) return fail('没有这个行动')
   const key = locId + ':' + actionId
   if (act.daily && dailyUsed(key)) return fail('今天已经做过了，明天再来')
+  count('act:' + key)
+  if (act.paid) count('paidClasses')
+  if (locId === 'konbini') {
+    count('konbini')
+    if (state.counters.konbini % 3 === 0) os('konbini')
+  }
   const ok = run(act)
   if (ok && act.daily) {
     markDaily(key)
@@ -103,6 +143,7 @@ export function buyItem(locId, itemId) {
   const item = ITEMS[itemId]
   if (state.money < item.price) return fail('钱不够')
   addMoney(-item.price, '购买 ' + item.name)
+  if (locId === 'konbini') count('konbini')
   state.bag[itemId] = (state.bag[itemId] || 0) + 1
   return finish('买了 ' + item.icon + item.name + '，放进背包')
 }
@@ -127,10 +168,14 @@ export function applyJob(careerId) {
   const err = canActHere(c.location)
   if (err) return fail(err)
   if (state.job && state.job.career === careerId) return fail('你已经在这里工作了')
+  const block = jobBlock(careerId)
+  if (block) return fail(block)
+  count('applies')
   if (!meets(c.levels[0].req)) return fail('还不够格：' + reqText(c.levels[0].req))
   const old = state.job ? CAREERS[state.job.career].name : ''
   state.job = { career: careerId, level: 0, shifts: 0, lastDay: 0 }
   passTime(1)
+  first('job', 10)
   pushMessage(c.name, '恭喜入职！你的职位是「' + c.levels[0].title + '」。上班时间 ' + c.window[0] + ':00 - ' + c.window[1] + ':00 之间开始。')
   return finish((old ? '辞去' + old + '，' : '') + '入职成功：' + c.levels[0].title)
 }
@@ -150,7 +195,7 @@ export function canStartShift() {
   if (job.lastDay === state.day) return '今天已经上过班了'
   if (state.hour < c.window[0] || state.hour >= c.window[1]) return '上班时间是 ' + c.window[0] + ':00 - ' + c.window[1] + ':00 开始'
   if (state.stats.energy < 15) return '太累了，先休息一下'
-  return ''
+  return minorShiftBlock()
 }
 
 export function work() {
@@ -160,8 +205,11 @@ export function work() {
   const c = CAREERS[job.career]
   const lv = c.levels[job.level]
   const bg = BACKGROUNDS.filter((b) => b.id === state.profile.background)[0]
-  const pay = Math.round(lv.pay * (1 + (bg ? bg.payBonus : 0)))
+  const pay = Math.round(lv.pay * (1 + (bg ? bg.payBonus : 0)) * (charmActive('charm_work') ? 1.1 : 1))
   passTime(c.hours)
+  logAct(c.hours)
+  state.counters.workStreak = job.lastDay === state.day - 1 ? (state.counters.workStreak || 0) + 1 : 1
+  if (job.weekShifts !== undefined) job.weekShifts += 1
   addStats({ energy: -c.hours, mood: -c.hours * 0.5 })
   addSkills(c.gain)
   addRep(c.rep)
@@ -169,6 +217,7 @@ export function work() {
   job.lastDay = state.day
   job.shifts += 1
   count('shifts')
+  os('work', 0.5)
   let msg = '下班了，工资 +' + fmtMoney(pay)
   const next = c.levels[job.level + 1]
   if (next && job.shifts >= PROMOTE_SHIFTS && meets(next.req)) {
@@ -217,6 +266,8 @@ export function cook(itemId) {
   state.bag[itemId] -= 1
   if (!state.bag[itemId]) delete state.bag[itemId]
   passTime(1)
+  count('cooks')
+  logAct(0)
   const eff = Object.assign({}, item.cook)
   eff.hunger = Math.round(eff.hunger + state.skills.cook * 0.2)
   addStats(eff)

@@ -76,6 +76,7 @@
             <estate-panel v-if="loc.special === 'estate'" />
             <vehicle-panel v-if="loc.id === 'ginza'" />
             <election-panel v-if="loc.special === 'election'" />
+            <courage-panel v-if="loc.special === 'courage'" />
           </block>
 
           <view class="btn ghost wait" @click="wait(1)">在附近消磨 1 小时</view>
@@ -93,6 +94,7 @@ import FurnitureShop from './furniture-shop.vue'
 import EstatePanel from './estate-panel.vue'
 import ElectionPanel from './election-panel.vue'
 import VehiclePanel from './vehicle-panel.vue'
+import CouragePanel from './courage-panel.vue'
 import {
   state, isOpen, openText, fmtMoney, fmtHours, fmtHour, describe, travelOptions, doAction, omikuji, buyItem, wait
 } from '../../game/index.js'

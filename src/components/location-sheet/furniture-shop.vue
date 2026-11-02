@@ -28,7 +28,7 @@ function tipOf(f) {
 }
 
 const list = computed(() =>
-  Object.keys(FURNITURE).map((id) => {
+  Object.keys(FURNITURE).filter((id) => !FURNITURE[id].courage).map((id) => {
     const f = FURNITURE[id]
     const placed = state.furniture.placed.filter((p) => p.fid === id).length
     return { id, name: f.name, icon: f.icon, price: f.price, tip: tipOf(f), owned: placed + (state.furniture.inv[id] || 0) }

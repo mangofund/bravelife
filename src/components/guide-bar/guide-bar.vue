@@ -1,21 +1,28 @@
 <template>
-  <view v-if="step || warns.length" class="guide">
+  <view v-if="step || goal || warns.length" class="guide">
     <view v-for="w in warns" :key="w" class="warn">{{ w }}</view>
     <view v-if="step" class="tut">
       <text class="tut-text">📖 新手任务 {{ index }}/{{ total }}：{{ step.text }}</text>
       <text class="skip" @click="onSkip">跳过</text>
+    </view>
+    <view v-else-if="goal" class="tut">
+      <text class="tut-text">⭐ {{ lifeStageName() }} {{ goalDone }}/{{ goals.length }}：{{ goal.text }}</text>
     </view>
   </view>
 </template>
 
 <script setup>
 import { computed } from 'vue'
-import { state, tutorialStep, warnings, skipTutorial, save, TUTORIAL } from '../../game/index.js'
+import { state, tutorialStep, warnings, skipTutorial, save, TUTORIAL, currentGoals, lifeStageName } from '../../game/index.js'
 
 const step = computed(() => tutorialStep())
 const index = computed(() => state.tutorial.step + 1)
 const total = TUTORIAL.length
 const warns = computed(() => warnings().slice(0, 2))
+// 新手任务做完后，显示这个人生阶段下一个没完成的章节目标
+const goals = computed(() => currentGoals())
+const goal = computed(() => goals.value.filter((g) => !g.done)[0] || null)
+const goalDone = computed(() => goals.value.filter((g) => g.done).length)
 
 function onSkip() {
   uni.showModal({

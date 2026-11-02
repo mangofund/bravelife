@@ -57,7 +57,7 @@
 <script setup>
 import { computed, reactive, ref, watch, onMounted, onBeforeUnmount, getCurrentInstance, nextTick } from 'vue'
 import HeroDoll from '../hero-doll/hero-doll.vue'
-import { state, isOpen, travel, npcsAt, defaultMode } from '../../game/index.js'
+import { state, isOpen, travel, npcsAt, defaultMode, locVisible } from '../../game/index.js'
 import { MODE_MAP } from '../../game/data/transport.js'
 import { LOCATIONS, LOCATION_MAP } from '../../game/data/locations.js'
 import { art } from '../../game/themes.js'
@@ -99,7 +99,7 @@ let walking = false
 let timer = null
 
 const spots = computed(() =>
-  LOCATIONS.map((l) => ({
+  LOCATIONS.filter((l) => locVisible(l.id)).map((l) => ({
     id: l.id, name: l.name, icon: l.icon, x: l.x, y: l.y,
     soon: !!l.soon,
     open: isOpen(l, state.hour),

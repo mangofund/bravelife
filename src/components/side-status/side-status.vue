@@ -1,8 +1,12 @@
 <template>
   <view class="side">
     <view class="card">
-      <text class="act-name">{{ wish.icon }} 人生愿望：{{ wish.name }}</text>
-      <text class="muted block">{{ wish.desc }} · {{ state.wishDone ? '✅ 已达成' : '进行中' }}</text>
+      <block v-if="state.profile.wish">
+        <text class="act-name">{{ wish.icon }} 人生愿望：{{ wish.name }}</text>
+        <text class="muted block">{{ wish.desc }} · {{ state.wishDone ? '✅ 已达成' : '进行中' }}</text>
+      </block>
+      <text v-else class="act-name block">🌱 人生愿望：18 岁离开家时再决定</text>
+      <text class="muted block">🔥 勇气 {{ state.courage.value }}</text>
       <text class="muted">净资产 {{ fmtMoney(netWorth()) }}</text>
     </view>
     <view v-if="invite" class="notice">📅 {{ invite }}</view>

@@ -2,6 +2,7 @@ import { state, addMoney, addStats, addRep, pushMessage, pushNews, fmtMoney, isO
 import { passTime, finish, fail } from './time.js'
 import { isElectionDay, campaignGain, addSupport } from './election.js'
 import { LOCATION_MAP } from '../data/locations.js'
+import { isMinor } from './calendar.js'
 import { CAMPAIGNS, CANDIDATES, ELECTION_DEPOSIT, ELECTION_MIN_REP } from '../data/events.js'
 
 function atHall() {
@@ -16,6 +17,7 @@ export function registerCandidate() {
   if (err) return fail(err)
   const e = state.election
   if (e.registered) return fail('你已经是候选人了')
+  if (isMinor()) return fail('未成年不能参选')
   if (isElectionDay()) return fail('今天是投票日，报名已截止')
   if (state.rep < ELECTION_MIN_REP) return fail('声望需要达到 ' + ELECTION_MIN_REP)
   if (state.money < ELECTION_DEPOSIT) return fail('需要缴纳保证金 ' + fmtMoney(ELECTION_DEPOSIT))

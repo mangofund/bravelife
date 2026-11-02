@@ -90,6 +90,8 @@
       @go="onGo"
     />
     <event-modal />
+    <story-modal />
+    <inner-os />
   </view>
 </template>
 
@@ -104,6 +106,8 @@ import PhoneView from '../../components/phone-view/phone-view.vue'
 import LocationSheet from '../../components/location-sheet/location-sheet.vue'
 import EventModal from '../../components/event-modal/event-modal.vue'
 import SideStatus from '../../components/side-status/side-status.vue'
+import StoryModal from '../../components/story-modal/story-modal.vue'
+import InnerOs from '../../components/inner-os/inner-os.vue'
 import { state, load, tickClock } from '../../game/index.js'
 import { settings, setSpeed } from '../../game/themes.js'
 import { ui, requestWalk, requestNudge } from '../../game/ui.js'
@@ -138,7 +142,7 @@ onLoad(() => {
   ready.value = true
 })
 
-// 实时时钟：现实每秒走 settings.speed 分钟；弹出随机事件或切到后台时暂停
+// 实时时钟：现实每秒走 settings.speed 分钟；弹出随机事件、播放剧情或切到后台时暂停
 let clock = null
 let seconds = 0
 function startClock() {
@@ -147,7 +151,7 @@ function startClock() {
     // 登录后每 60 秒把进度同步到云端自动存档
     seconds += 1
     if (seconds % 60 === 0) autoCloudSave()
-    if (!ready.value || !settings.speed || state.pendingEvent) return
+    if (!ready.value || !settings.speed || state.pendingEvent || state.pendingStory || ui.reading) return
     tickClock(settings.speed)
   }, 1000)
 }

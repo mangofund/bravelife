@@ -166,6 +166,20 @@ export const LOCATIONS = [
       { id: 'sunbathe', name: '晒太阳', icon: '😎', hours: 2, cost: 0, effects: { mood: 12 } }
     ]
   },
+  {
+    id: 'school', name: '樱丘学园', icon: '🏫', x: 32, y: 18, open: [7, 19], minorOnly: true,
+    desc: '小学、初中、高中连在一起的学校。工作日 8:00 自动上学，放学后也可以留下来。',
+    actions: [
+      { id: 'stay_study', name: '放学后留下自习', icon: '📝', hours: 2, cost: 0, effects: { mood: -3 }, skills: { int: 2 } },
+      { id: 'playground', name: '在操场疯跑', icon: '⚽', hours: 1.5, cost: 0, effects: { mood: 8, energy: -10 }, skills: { fit: 2 } },
+      { id: 'club_room', name: '在美术室涂鸦', icon: '🖍️', hours: 1.5, cost: 0, effects: { mood: 5 }, skills: { cre: 2 } }
+    ]
+  },
+  {
+    id: 'courage', name: '勇气商店', icon: '🏮', x: 26, y: 70, open: [20, 24], hidden: true, special: 'courage',
+    desc: '下町小巷深处的旧式杂货店。只在下雨的夜晚和人生转折点的晚上亮灯。',
+    actions: []
+  },
   { id: 'airport', name: '羽田机场', icon: '✈️', x: 84, y: 96, soon: true, open: [0, 24], desc: '即将开放', actions: [] },
   { id: 'fuji', name: '富士山', icon: '🗻', x: 16, y: 96, soon: true, open: [0, 24], desc: '即将开放', actions: [] }
 ]

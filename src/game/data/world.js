@@ -36,7 +36,13 @@ export const FURNITURE = {
   aquarium: { name: '水族箱', icon: '🐠', price: 70000, decor: 4 },
   art: { name: '浮世绘挂画', icon: '🖼️', price: 120000, decor: 5 },
   robovac: { name: '扫地机器人', icon: '🤖', price: 60000, cleaner: 0.4 },
-  cat: { name: '猫爬架和猫', icon: '🐈', price: 60000, decor: 4, use: { id: 'cat', name: '撸猫', icon: '🐈', hours: 0.5, effects: { mood: 12 } } }
+  cat: { name: '猫爬架和猫', icon: '🐈', price: 60000, decor: 4, use: { id: 'cat', name: '撸猫', icon: '🐈', hours: 0.5, effects: { mood: 12 } } },
+  // 勇气商店的旧物：只能用勇气交换，不在家具城出售
+  old_ticket: { name: '1964 年奥运门票', icon: '🎫', price: 0, decor: 2, courage: true },
+  old_tape: { name: '没拆的磁带', icon: '📼', price: 0, decor: 2, courage: true },
+  old_umbrella: { name: '一把别人的伞', icon: '☂️', price: 0, decor: 2, courage: true },
+  old_postcard: { name: '没寄出的明信片', icon: '💌', price: 0, decor: 2, courage: true },
+  old_camera: { name: '胶片相机', icon: '📷', price: 0, decor: 3, courage: true }
 }
 
 // 外卖：不用出门，比自己做饭贵，等餐期间在家
@@ -61,7 +67,11 @@ export const HOMES = {
   '1k': { name: '1K 公寓', icon: '🏠', rent: 35000, cols: 5, rows: 4 },
   '1ldk': { name: '1LDK 高层公寓', icon: '🏢', rent: 70000, cols: 5, rows: 5 },
   tower: { name: '港区塔楼', icon: '🌆', rent: 150000, cols: 6, rows: 6 },
-  villa: { name: '湾岸海景别墅', icon: '🌊', price: 80000000, cols: 7, rows: 6 }
+  villa: { name: '湾岸海景别墅', icon: '🌊', price: 80000000, cols: 7, rows: 6 },
+  // 18 岁前和父母同住的家：不收房租，不在不动产中介出租
+  family_rich: { name: '世田谷的老宅', icon: '🏯', rent: 0, cols: 6, rows: 5, family: true },
+  family_normal: { name: '江户川的 2DK', icon: '🏡', rent: 0, cols: 5, rows: 4, family: true },
+  family_self: { name: '足立的木造老公寓', icon: '🏚️', rent: 0, cols: 4, rows: 4, family: true }
 }
 
 export const RENT_DAYS = 7

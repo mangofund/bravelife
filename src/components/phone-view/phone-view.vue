@@ -8,6 +8,34 @@
       </view>
     </view>
 
+    <view v-if="app === 'life'">
+      <view class="card">
+        <text class="act-name">{{ lifeStageName() }}</text>
+        <text class="muted block">{{ fmtDate(state.day) }} · {{ age() }} 岁 · {{ isMinor() ? schoolName() + '，和家人住在一起' : '一个人在东京' }}</text>
+        <text class="muted block">{{ dreamText }}</text>
+      </view>
+      <block v-if="goals.length">
+        <view class="section-title">⭐ 章节目标（{{ goalsDone }}/{{ goals.length }}）</view>
+        <view v-for="g in goals" :key="g.id" class="line">
+          <text class="line-main" :class="{ muted: g.done }">{{ g.done ? '✅' : '⬜' }} {{ g.text }}</text>
+        </view>
+      </block>
+      <view class="section-title">🔥 勇气</view>
+      <view class="card">
+        <text class="act-name">勇气 {{ state.courage.value }}<text class="muted"> · 累计 {{ state.courage.total }} · 书页 {{ state.courage.pages }}</text></text>
+        <text class="muted block">{{ questText }}</text>
+        <text class="muted block">{{ state.story.flags.shop_found ? '勇气商店在下雨的夜晚、人生转折点的晚上，以及累计勇气每过一个整百的那天晚上亮灯。' : '听说下雨的晚上，下町的小巷里会多出一家店。' }}</text>
+      </view>
+      <view class="section-title">🏷️ 称号（点击佩戴）</view>
+      <view v-for="t in titles" :key="t.id" class="act" :class="{ disabled: !t.owned, on: t.worn }" @click="onWear(t)">
+        <text class="act-icon">{{ t.owned ? t.icon : '🔒' }}</text>
+        <view class="act-main">
+          <text class="act-name">{{ t.name }}<text v-if="t.worn" class="tag-sm">佩戴中</text></text>
+          <text class="muted">{{ t.desc }}</text>
+        </view>
+      </view>
+    </view>
+
     <view v-if="app === 'bank'">
       <view class="card">
         <text class="muted">钱包余额</text>
@@ -21,7 +49,7 @@
       </view>
       <view class="section-title">交易记录</view>
       <view v-for="(t, i) in state.txns" :key="i" class="line">
-        <text class="line-main">第 {{ t.day }} 天 {{ fmtHour(t.hour) }} · {{ t.text }}</text>
+        <text class="line-main">{{ fmtDay(t.day) }} {{ fmtHour(t.hour) }} · {{ t.text }}</text>
         <text :class="t.amount >= 0 ? 'plus' : 'minus'">{{ t.amount >= 0 ? '+' : '' }}{{ fmtMoney(t.amount) }}</text>
       </view>
     </view>
@@ -29,14 +57,14 @@
     <view v-if="app === 'msg'">
       <view v-if="!state.messages.length" class="muted">还没有消息</view>
       <view v-for="(m, i) in state.messages" :key="i" class="card msg">
-        <view class="row between"><text class="act-name">{{ m.from }}</text><text class="muted">第 {{ m.day }} 天 {{ fmtHour(m.hour) }}</text></view>
+        <view class="row between"><text class="act-name">{{ m.from }}</text><text class="muted">{{ fmtDay(m.day) }} {{ fmtHour(m.hour) }}</text></view>
         <text>{{ m.text }}</text>
       </view>
     </view>
 
     <view v-if="app === 'news'">
       <view v-for="(n, i) in state.news" :key="i" class="card msg">
-        <text class="muted">第 {{ n.day }} 天</text>
+        <text class="muted">{{ fmtDay(n.day) }}</text>
         <text>{{ n.text }}</text>
       </view>
     </view>
@@ -78,8 +106,11 @@
         </view>
       </view>
       <view class="card">
-        <text class="act-name">{{ wish.icon }} 人生愿望：{{ wish.name }}</text>
-        <text class="muted block">{{ wish.desc }} · {{ state.wishDone ? '✅ 已达成' : '进行中' }}</text>
+        <block v-if="state.profile.wish">
+          <text class="act-name">{{ wish.icon }} 人生愿望：{{ wish.name }}</text>
+          <text class="muted block">{{ wish.desc }} · {{ state.wishDone ? '✅ 已达成' : '进行中' }}</text>
+        </block>
+        <text v-else class="act-name">🌱 人生愿望：18 岁离开家时再决定</text>
       </view>
       <view class="card">
         <view class="section-title">能力</view>
@@ -114,14 +145,19 @@
 import { computed, ref, watch } from 'vue'
 import AvatarCard from '../avatar-card/avatar-card.vue'
 import SavePanel from '../save-panel/save-panel.vue'
-import { state, fmtMoney, fmtHour, netWorth, wishInfo, deposit, withdraw, useItem, describe, save, clearSave, rel, stageName } from '../../game/index.js'
+import {
+  state, fmtMoney, fmtHour, netWorth, wishInfo, deposit, withdraw, useItem, describe, save, clearSave, rel, stageName,
+  fmtDate, fmtDay, age, isMinor, schoolName, lifeStageName, currentGoals, questDef, wearTitle, spotOf
+} from '../../game/index.js'
+import { TITLES } from '../../game/data/titles.js'
 import { NPCS, NPC_MAP } from '../../game/data/npcs.js'
 import { THEMES, settings, setTheme } from '../../game/themes.js'
 import { LOCATION_MAP } from '../../game/data/locations.js'
 import { ITEMS } from '../../game/data/world.js'
-import { BACKGROUNDS, SKILL_NAMES, STAT_NAMES } from '../../game/data/profile.js'
+import { BACKGROUNDS, SKILL_NAMES, STAT_NAMES, DREAM_MAP } from '../../game/data/profile.js'
 
 const APPS = [
+  { id: 'life', name: '人生', icon: '🌱' },
   { id: 'msg', name: '消息', icon: '💬' },
   { id: 'contacts', name: '通讯录', icon: '👥' },
   { id: 'bank', name: '银行', icon: '🏦' },
@@ -160,8 +196,9 @@ const plotCount = computed(() => Object.keys(state.plots).length)
 const contacts = computed(() =>
   NPCS.filter((n) => rel(n.id)).map((n) => {
     const r = rel(n.id)
-    const where = LOCATION_MAP[n.location].name + ' ' + n.hours[0] + ':00-' + (n.hours[1] % 24) + ':00'
-    return { id: n.id, name: n.name, icon: n.icon, job: n.job, aff: Math.round(r.aff), stage: stageName(r), where }
+    const sp = spotOf(n)
+    const where = LOCATION_MAP[sp.location].name + ' ' + sp.hours[0] + ':00-' + (sp.hours[1] % 24) + ':00'
+    return { id: n.id, name: n.name, icon: n.icon, job: sp.job, aff: Math.round(r.aff), stage: stageName(r), where }
   })
 )
 const invite = computed(() => {
@@ -179,6 +216,29 @@ const bagList = computed(() =>
       return { id, name: it.name, icon: it.icon, count: state.bag[id], tip: tips[it.kind], label: labels[it.kind] }
     })
 )
+
+const goals = computed(() => currentGoals())
+const goalsDone = computed(() => goals.value.filter((g) => g.done).length)
+const dreamText = computed(() => {
+  const d = DREAM_MAP[state.profile.dream]
+  if (!d) return '小梦想：还没写（小学的作文课上会决定）'
+  return '小梦想：' + d.icon + ' ' + d.name
+})
+const questText = computed(() => {
+  const q = state.courage.quest
+  if (!q) return '手上没有勇气课题'
+  const def = questDef(q.id)
+  return '课题：' + (def ? def.text : '') + '（还剩 ' + Math.max(0, q.until - state.day) + ' 天）'
+})
+const titles = computed(() =>
+  TITLES.map((t) => ({ id: t.id, name: t.name, icon: t.icon, desc: t.desc, owned: !!state.titles[t.id], worn: state.profile.title === t.id }))
+)
+
+function onWear(t) {
+  if (!t.owned) return
+  wearTitle(t.worn ? '' : t.id)
+  save()
+}
 
 function onSave() {
   save()

@@ -1,6 +1,12 @@
 import { state, round1, clamp, addStats, pushMessage } from './core.js'
 import { NPCS, NPC_MAP, STAGES, NEGLECT_DAYS, INVITE_CHANCE, INVITE_PLACES } from '../data/npcs.js'
 import { LOCATION_MAP } from '../data/locations.js'
+import { isMinor } from './calendar.js'
+
+// NPC 此刻所在的人生阶段：主角 18 岁前，大家都还是学生
+export function spotOf(n) {
+  return isMinor() && n.youth ? n.youth : n
+}
 
 export function rel(id) {
   return state.social[id] || null
@@ -61,7 +67,10 @@ export function socialNewDay() {
 export function npcsAt(locId) {
   const h = state.hour
   const inHours = (n) => (h >= n.hours[0] && h < n.hours[1]) || (n.hours[1] > 24 && h < n.hours[1] - 24)
-  const list = NPCS.filter((n) => n.location === locId && inHours(n))
+  const list = NPCS.filter((n) => {
+    const sp = spotOf(n)
+    return sp.location === locId && inHours(sp)
+  })
   const inv = state.invite
   if (inv && !inv.done && inv.day === state.day && inv.loc === locId && h >= inv.from && h < inv.to) {
     if (!list.some((n) => n.id === inv.npc)) list.push(NPC_MAP[inv.npc])

@@ -3,7 +3,7 @@
     <view class="section-title">🗳️ 东京都知事选举</view>
     <view class="card">
       <text v-if="isElectionDay()" class="hot">今天是投票日！明天公布结果。</text>
-      <text v-else>距离下次投票日（第 {{ electionDay() }} 天）还有 {{ daysToElection() }} 天</text>
+      <text v-else>距离下次投票日（{{ fmtDay(electionDay()) }}）还有 {{ daysToElection() }} 天</text>
       <text class="muted block">参选条件：声望 ≥ {{ ELECTION_MIN_REP }}，保证金 {{ fmtMoney(ELECTION_DEPOSIT) }}。当选后每天领取知事薪水 {{ fmtMoney(GOVERNOR_SALARY) }}。</text>
       <view v-for="r in rows" :key="r.id" class="cand">
         <text class="cand-name">{{ r.icon }} {{ r.name }}</text>
@@ -14,7 +14,7 @@
     </view>
 
     <view v-if="state.election.last" class="card">
-      <text class="act-name">上届结果（第 {{ state.election.last.day }} 天）：{{ state.election.last.winner }} 当选</text>
+      <text class="act-name">上届结果（{{ fmtDay(state.election.last.day) }}）：{{ state.election.last.winner }} 当选</text>
       <text v-for="r in state.election.last.results" :key="r.name" class="muted block">{{ r.name }} {{ r.pct }}%</text>
     </view>
 
@@ -57,8 +57,7 @@
 import { computed } from 'vue'
 import {
   state, fmtMoney, isElectionDay, electionDay, daysToElection, projection, campaignGain,
-  registerCandidate, campaign, vote
-} from '../../game/index.js'
+  registerCandidate, campaign, vote, fmtDay } from '../../game/index.js'
 import { CANDIDATES, CAMPAIGNS, ELECTION_DEPOSIT, ELECTION_MIN_REP, GOVERNOR_SALARY } from '../../game/data/events.js'
 
 const rows = computed(() => projection())

@@ -2,6 +2,7 @@ import { state, addMoney, pushMessage, pushNews, fmtMoney, isOpen } from './core
 import { finish, fail } from './time.js'
 import { LOCATION_MAP } from '../data/locations.js'
 import { FURNITURE, HOMES, PLOTS, BUILD_COST } from '../data/world.js'
+import { contractBlock } from './life.js'
 
 function atOpen(locId) {
   const loc = LOCATION_MAP[locId]
@@ -48,7 +49,7 @@ export function removeFurniture(uid) {
 }
 
 // 搬家后放不下的家具退回仓库
-function fitFurniture() {
+export function fitFurniture() {
   const home = HOMES[state.home]
   const keep = []
   state.furniture.placed.forEach((p) => {
@@ -63,9 +64,11 @@ function fitFurniture() {
 export function moveHome(homeId) {
   const err = atOpen('estate')
   if (err) return fail(err)
+  if (contractBlock()) return fail(contractBlock())
   if (state.home === homeId) return fail('你已经住在这里了')
   if (state.home === 'villa') return fail('海景别墅是你自己的房子，不需要再租房')
   const h = HOMES[homeId]
+  if (!h || h.family) return fail('这里不出租')
   const cost = h.price || h.rent
   if (state.money < cost) return fail('钱不够，需要 ' + fmtMoney(cost))
   addMoney(-cost, h.price ? '购房 · ' + h.name : '押金 · ' + h.name)
@@ -83,6 +86,7 @@ export function moveHome(homeId) {
 export function buyPlot(id) {
   const err = atOpen('estate')
   if (err) return fail(err)
+  if (contractBlock()) return fail(contractBlock())
   const p = PLOTS.filter((x) => x.id === id)[0]
   if (!p) return fail('没有这块地')
   if (state.plots[id]) return fail('这块地已经是你的了')

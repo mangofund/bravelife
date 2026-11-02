@@ -7,6 +7,11 @@ import { WISHES } from '../data/profile.js'
 import { resolveElection, daysToElection } from './election.js'
 import { socialNewDay } from './social-day.js'
 import { checkTutorial } from './tutorial.js'
+import { isMinor, festivalToday, isBirthday, dateOf, age } from './calendar.js'
+import { checkStory, checkGoals } from './story.js'
+import { checkQuest, courageNewDay, charmActive } from './courage.js'
+import { checkTitles, funNewDay, os } from './fun.js'
+import { POCKET, RAIN_CHANCE } from '../data/calendar.js'
 
 function cleanerRate() {
   let rate = 1
@@ -26,7 +31,8 @@ function tick(step, sleeping, quality) {
     s.hunger -= 1.5 * step
     s.health += 0.6 * step
   } else {
-    s.hunger -= 3 * step
+    // 和父母同住时家里管饭，饿得慢
+    s.hunger -= (isMinor() ? 1.2 : 3) * step
     s.energy -= 2.5 * step
     s.mood -= 0.6 * step
     if (s.hunger >= 50 && s.energy >= 30) s.health += 0.2 * step
@@ -34,6 +40,7 @@ function tick(step, sleeping, quality) {
   if (s.hunger <= 0) s.health -= 2 * step
   if (!sleeping && s.energy <= 0) s.health -= 1.5 * step
   if (s.mood <= 10) s.health -= 0.5 * step
+  if (charmActive('charm_mood') && s.mood < 40) s.mood = 40
   Object.keys(s).forEach((k) => {
     s[k] = round1(clamp(s[k], 0, 100))
   })
@@ -46,7 +53,9 @@ export function passTime(hours, sleeping, quality) {
     const step = Math.min(1, left)
     tick(step, !!sleeping, quality || 1)
     left = Math.round((left - step) * 1e6) / 1e6
+    const before = state.hour
     state.hour = Math.round((state.hour + step) * 1e6) / 1e6
+    if (!sleeping && before < 3 && state.hour >= 3) state.counters.lateNights = (state.counters.lateNights || 0) + 1
     if (state.hour >= 24) {
       state.hour = Math.round((state.hour - 24) * 1e6) / 1e6
       newDay()
@@ -82,11 +91,32 @@ function newDay() {
 
   resolveElection(prev)
   socialNewDay()
+  funNewDay(prev)
+  courageNewDay()
+  lifeNewDay()
 
   pushNews(NEWS_POOL[Math.floor(Math.random() * NEWS_POOL.length)])
   const left = daysToElection()
   if (left > 0 && left <= 7) pushNews('东京都知事选举还有 ' + left + ' 天，候选人报名截止到选举前一天。')
   if (left === 0) pushNews('今天是东京都知事选举投票日！投票所 8:00 - 20:00 开放。')
+}
+
+// 天气、零花钱、早饭、节日和生日提醒
+function lifeNewDay() {
+  const d = dateOf()
+  state.weather = Math.random() < RAIN_CHANCE[d.m - 1] ? 'rain' : Math.random() < 0.35 ? 'cloud' : 'sun'
+  if (isMinor()) {
+    addStats({ hunger: Math.max(0, 75 - state.stats.hunger) })
+    if ((state.day - 1) % RENT_DAYS === 0) {
+      const v = POCKET[state.profile.background] || 1000
+      addMoney(v, '零花钱')
+      pushMessage(state.profile.background === 'self' ? '妈妈' : '爸爸妈妈', '这周的零花钱 ' + fmtMoney(v) + '，省着点花哦。')
+    }
+  }
+  const f = festivalToday()
+  if (f && (f.from[0] === d.m && f.from[1] === d.d)) pushNews(f.icon + ' ' + f.news)
+  if (isBirthday()) pushMessage('人生', '🎂 今天是你 ' + age() + ' 岁的生日！晚上早点回家吧。')
+  if (state.weather === 'rain') pushNews('🌧️ 今天有雨，出门记得带伞。')
 }
 
 export function bestBed() {
@@ -180,12 +210,26 @@ function checkBody() {
 export function finish(msg) {
   const body = checkBody()
   checkWish()
-  const tut = checkTutorial()
+  const extra = progress()
   save()
   let text = body || msg
-  if (tut) text = text ? text + '\n' + tut : tut
+  if (extra) text = text ? text + '\n' + extra : extra
   if (text) toast(text)
   return true
+}
+
+// 新手任务、章节目标、勇气课题、称号、剧情：每次行动后统一检查
+function progress() {
+  const notes = [checkTutorial(), checkGoals(), checkQuest(), checkTitles()].filter(Boolean)
+  checkStory()
+  const s = state.stats
+  if (s.energy < 15) os('tired')
+  else if (s.hunger < 20) os('hungry')
+  if (state.money >= 1000000 && !state.counters.osRich) {
+    state.counters.osRich = 1
+    os('rich')
+  }
+  return notes.join('\n')
 }
 
 // 实时时钟：游戏页每秒调用一次，minutes 为本次流逝的游戏分钟数
@@ -195,10 +239,10 @@ export function tickClock(minutes) {
   passTime(minutes / 60)
   const body = checkBody()
   checkWish()
-  const tut = checkTutorial()
+  const tut = progress()
   unsavedMinutes += minutes
   // 普通流逝每 30 游戏分钟存一次档，有事发生时立即存
-  if (body || tut || unsavedMinutes >= 30) {
+  if (body || tut || state.pendingStory || unsavedMinutes >= 30) {
     save()
     unsavedMinutes = 0
   }
