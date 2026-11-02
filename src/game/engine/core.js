@@ -1,5 +1,6 @@
 import { reactive } from 'vue'
 import { SKILL_NAMES, STAT_NAMES } from '../data/profile.js'
+import { fmtMoney } from '../currency.js'
 
 export const SAVE_KEY = 'bravelife_save_v1'
 // 改名前的存档键：新键没有存档时读取它，下次保存写入新键
@@ -40,7 +41,9 @@ export function initialState() {
     social: {},
     invite: null,
     tutorial: { step: 0, done: false },
-    counters: { meals: 0, sleeps: 0, shifts: 0 }
+    counters: { meals: 0, sleeps: 0, shifts: 0 },
+    vehicles: {},
+    clean: 80
   }
 }
 
@@ -111,20 +114,13 @@ export function round1(v) {
   return Math.round(v * 10) / 10
 }
 
-export function fmtMoney(n) {
-  const neg = n < 0
-  const s = String(Math.floor(Math.abs(n)))
-  let out = ''
-  for (let i = 0; i < s.length; i++) {
-    if (i > 0 && (s.length - i) % 3 === 0) out += ','
-    out += s[i]
-  }
-  return (neg ? '-¥' : '¥') + out
-}
+export { fmtMoney }
 
 export function fmtHour(h) {
-  const hh = Math.floor(h) % 24
-  const mm = Math.round((h - Math.floor(h)) * 60)
+  // 按整分钟取整，避免 7.9999 显示成 07:60
+  const total = Math.floor(h * 60 + 1e-6)
+  const hh = Math.floor(total / 60) % 24
+  const mm = total % 60
   return (hh < 10 ? '0' : '') + hh + ':' + (mm < 10 ? '0' : '') + mm
 }
 

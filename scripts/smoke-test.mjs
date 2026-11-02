@@ -40,8 +40,9 @@ const day = state.day
 check('sleep full', g.sleep(true))
 check('day advanced after night sleep or 8h', state.day >= day)
 
-// 模拟 40 天：每天回家睡觉，检查房租、选举开票、数值合法
-for (let i = 0; i < 40; i++) {
+// 模拟 30 多天：每天回家睡觉，检查房租、选举开票、数值合法
+// 至少跨过第一次选举（第 28 天）
+for (let i = 0; i < 200 && state.day <= 32; i++) {
   state.location = 'home'
   state.stats.hunger = 80
   g.sleep(true)
@@ -158,6 +159,59 @@ g.skipTutorial()
 check('tutorial skip', g.tutorialStep() === null)
 state.stats.hunger = 5
 check('hunger warning', g.warnings().length > 0)
+
+// 出行方式：省钱费时 vs 花钱省时
+g.newGame({ name: '通勤', gender: 'f', skin: 'b', hair: 'black', outfit: 'tee', background: 'normal', wish: 'rich' })
+g.skipTutorial()
+const opts = g.travelOptions('marunouchi')
+const by = (id) => opts.filter((o) => o.id === id)[0]
+check('walk is free and slowest', by('walk').cost === 0 && by('walk').hours > by('train').hours && by('walk').hours > by('taxi').hours)
+check('taxi costs most', by('taxi').cost > by('train').cost)
+check('bike/car need purchase', !by('bike').ok && !by('car').ok)
+const m0 = state.money
+check('travel by taxi', g.travel('marunouchi', 'taxi') && state.money === m0 - by('taxi').cost)
+state.pendingEvent = null
+check('beach too far for bike', g.travelOptions('beach').filter((o) => o.id === 'bike')[0].reason !== '')
+check('walking always allowed', g.travelOptions('beach').filter((o) => o.id === 'walk')[0].ok)
+state.location = 'ginza'
+state.hour = 12
+check('buy bike', g.buyVehicle('bike') && state.vehicles.bike)
+check('bike now usable nearby', g.travelOptions('temple').filter((o) => o.id === 'bike')[0].ok)
+check('default mode prefers bike', g.defaultMode('temple') === 'bike')
+state.money = 3000000
+check('buy car', g.buyVehicle('car') && state.vehicles.car)
+// 推进到下一个结算日（第 8、15… 天）
+const target = Math.floor((state.day - 1) / 7) * 7 + 8
+while (state.day < target) {
+  Object.assign(state.stats, { hunger: 80, energy: 80, health: 80 })
+  g.wait(12)
+}
+check('parking charged weekly', state.txns.some((t) => t.text.indexOf('停车费') === 0))
+
+// 外卖与家务
+state.location = 'home'
+Object.assign(state.stats, { hunger: 30, energy: 80, health: 80, mood: 60 })
+const m1 = state.money
+check('order delivery at home', g.orderDelivery('sushi') && state.money < m1 && state.stats.hunger > 30)
+state.location = 'ginza'
+check('no delivery outside home', !g.orderDelivery('bento'))
+state.location = 'home'
+state.clean = 10
+check('clean self', g.doChores('self') && state.clean >= 65)
+state.clean = 10
+check('maid', g.doChores('maid') && state.clean === 100)
+check('clean decays', (g.wait(10), state.clean < 100))
+
+// 实时时钟：60 次 × 1 分钟 = 1 小时
+Object.assign(state.stats, { hunger: 90, energy: 90, health: 90, mood: 80 })
+const h0 = state.day * 24 + state.hour
+for (let i = 0; i < 60; i++) g.tickClock(1)
+const h1 = state.day * 24 + state.hour
+check('realtime clock advances 1h', Math.abs(h1 - h0 - 1) < 0.01)
+
+// 货币显示
+check('money in yen', g.fmtMoney(1500) === '1,500 日元' && g.fmtMoney(-200) === '-200 日元' && g.fmtMoney(100000000) === '1 亿日元')
+check('clock never shows :60', g.fmtHour(7.99999) === '07:59' && g.fmtHour(8) === '08:00')
 
 // 改名前的旧存档仍能读取
 const legacy = JSON.stringify(Object.assign({}, JSON.parse(store.bravelife_save_v1), { money: 12345 }))

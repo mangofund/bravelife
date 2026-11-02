@@ -3,11 +3,11 @@ import {
   describe, fmtMoney, isOpen, dailyUsed, markDaily, round1, save, count
 } from './core.js'
 import { passTime, finish, fail, bestBed, kitchenLevel, decorScore } from './time.js'
-import { LOCATION_MAP, TRAVEL, OMIKUJI } from '../data/locations.js'
+import { LOCATION_MAP, OMIKUJI } from '../data/locations.js'
 import { CAREERS, PROMOTE_SHIFTS } from '../data/jobs.js'
-import { ITEMS, FURNITURE, HOMES } from '../data/world.js'
+import { ITEMS, FURNITURE, HOMES, DELIVERY, CHORES } from '../data/world.js'
 import { BACKGROUNDS, SKILL_NAMES } from '../data/profile.js'
-import { EVENTS, EVENT_CHANCE } from '../data/events.js'
+import { EVENTS } from '../data/events.js'
 
 export function newGame(profile) {
   const bg = BACKGROUNDS.filter((b) => b.id === profile.background)[0] || BACKGROUNDS[1]
@@ -40,37 +40,6 @@ export function reqText(req) {
   const keys = Object.keys(req)
   if (!keys.length) return '无要求'
   return keys.map((k) => (k === 'rep' ? '声望' : SKILL_NAMES[k]) + ' ≥ ' + req[k]).join('，')
-}
-
-export function travelCost(toId) {
-  const from = LOCATION_MAP[state.location]
-  const to = LOCATION_MAP[toId]
-  return from.far || to.far ? TRAVEL.far : TRAVEL.near
-}
-
-function rollEvent() {
-  if (Math.random() > EVENT_CHANCE) return
-  const pool = EVENTS.filter((ev) => {
-    if (!ev.cond) return true
-    return Object.keys(ev.cond).every((k) => (k === 'money' ? state.money >= ev.cond[k] : state.skills[k] >= ev.cond[k]))
-  })
-  if (pool.length) state.pendingEvent = pool[Math.floor(Math.random() * pool.length)].id
-}
-
-export function travel(toId) {
-  const to = LOCATION_MAP[toId]
-  if (!to || to.soon) return fail('这里还没开放')
-  if (state.location === toId) return fail('你已经在这里了')
-  const t = travelCost(toId)
-  if (state.money >= t.cost) {
-    passTime(t.hours)
-    addMoney(-t.cost, '交通 · 前往' + to.name)
-  } else {
-    passTime(t.hours * 3)
-  }
-  state.location = toId
-  rollEvent()
-  return finish(state.money >= 0 ? '已到达 ' + to.name : '没钱坐电车，走路到了 ' + to.name)
 }
 
 export function wait(hours) {
@@ -117,7 +86,7 @@ export function omikuji() {
   const err = canActHere('shrine')
   if (err) return fail(err)
   if (dailyUsed('shrine:omikuji')) return fail('今天已经抽过签了')
-  if (state.money < 200) return fail('钱不够，需要 ¥200')
+  if (state.money < 200) return fail('钱不够，需要 ' + fmtMoney(200))
   markDaily('shrine:omikuji')
   passTime(0.25)
   addMoney(-200, '抽签')
@@ -228,7 +197,8 @@ export function sleep(full) {
   if (full) count('sleeps')
   let msg = (full ? '睡醒了' : '小睡了一会') + '，精力 ' + Math.round(state.stats.energy)
   if (full) {
-    const bonus = Math.min(decorScore() * 2, 20)
+    // 房间太乱时装饰加成减半
+    const bonus = Math.round(Math.min(decorScore() * 2, 20) * (state.clean >= 50 ? 1 : 0.5))
     if (bonus) {
       addStats({ mood: bonus })
       msg += '，家里很舒服，心情+' + bonus
@@ -269,6 +239,32 @@ export function useFurniture(fid) {
     return finish('直播结束，收到打赏 ' + fmtMoney(earn))
   }
   return run(f.use)
+}
+
+// 外卖：只能送到家
+export function orderDelivery(id) {
+  if (state.location !== 'home') return fail('外卖只能送到家里')
+  const d = DELIVERY.filter((x) => x.id === id)[0]
+  if (!d) return fail('没有这个餐')
+  if (state.money < d.price) return fail('钱不够，需要 ' + fmtMoney(d.price))
+  passTime(d.hours)
+  addMoney(-d.price, '外卖 · ' + d.name)
+  addStats(d.effects)
+  count('meals')
+  return finish(d.icon + ' ' + d.name + '送到了：' + describe(d.effects))
+}
+
+// 家务：自己打扫（费时免费）或请家政（花钱省时）
+export function doChores(kind) {
+  if (state.location !== 'home') return fail('要在家里打扫')
+  const c = CHORES[kind]
+  if (!c) return fail('没有这种方式')
+  if (state.money < c.cost) return fail('钱不够，需要 ' + fmtMoney(c.cost))
+  passTime(c.hours)
+  if (c.cost) addMoney(-c.cost, c.name)
+  addStats(c.effects)
+  state.clean = Math.min(100, Math.round(state.clean + c.clean))
+  return finish(c.icon + ' ' + c.name + '，房间整洁度 ' + state.clean)
 }
 
 export function eventById(id) {

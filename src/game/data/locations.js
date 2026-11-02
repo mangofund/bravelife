@@ -25,7 +25,8 @@ export const LOCATIONS = [
     desc: '清晨最热闹。可以吃海鲜丼，也可以买食材回家做饭。',
     shop: ['veggie', 'fish', 'wagyu'],
     actions: [
-      { id: 'kaisendon', name: '海鲜丼', icon: '🍣', hours: 1, cost: 2500, effects: { hunger: 60, mood: 15, health: 2 } }
+      { id: 'kaisendon', name: '海鲜丼', icon: '🍣', hours: 1, cost: 2500, effects: { hunger: 60, mood: 15, health: 2 } },
+      { id: 'cookclass', name: '料理教室', icon: '👨‍🍳', hours: 2, cost: 8000, paid: true, effects: { hunger: 20 }, skills: { cook: 5 } }
     ]
   },
   {
@@ -47,7 +48,8 @@ export const LOCATIONS = [
     desc: '撸铁、瑜伽，练出好身体。',
     actions: [
       { id: 'lift', name: '力量训练', icon: '💪', hours: 2, cost: 1500, effects: { energy: -20, health: 3, mood: 3 }, skills: { fit: 3 } },
-      { id: 'yoga', name: '瑜伽课', icon: '🧘', hours: 1.5, cost: 2000, effects: { health: 5, mood: 8 }, skills: { fit: 1 } }
+      { id: 'yoga', name: '瑜伽课', icon: '🧘', hours: 1.5, cost: 2000, effects: { health: 5, mood: 8 }, skills: { fit: 1 } },
+      { id: 'trainer', name: '私人教练课', icon: '🏅', hours: 1, cost: 12000, paid: true, effects: { energy: -12, health: 4 }, skills: { fit: 4 } }
     ]
   },
   {
@@ -55,14 +57,16 @@ export const LOCATIONS = [
     desc: '安静、免费，适合埋头学习。',
     actions: [
       { id: 'study', name: '自习', icon: '✏️', hours: 3, cost: 0, effects: { mood: -4 }, skills: { int: 3 } },
-      { id: 'novel', name: '读小说', icon: '📖', hours: 2, cost: 0, effects: { mood: 5 }, skills: { cre: 2 } }
+      { id: 'novel', name: '读小说', icon: '📖', hours: 2, cost: 0, effects: { mood: 5 }, skills: { cre: 2 } },
+      { id: 'tutor', name: '请家教一对一', icon: '👩‍🏫', hours: 2, cost: 15000, paid: true, effects: { mood: -2 }, skills: { int: 5 } }
     ]
   },
   {
     id: 'karaoke', name: '卡拉 OK', icon: '🎤', x: 14, y: 41, open: [10, 29],
     desc: '包厢里吼两个小时，烦恼全忘。',
     actions: [
-      { id: 'sing', name: '唱两小时', icon: '🎶', hours: 2, cost: 2000, effects: { mood: 20 }, skills: { cha: 2, cre: 1 } }
+      { id: 'sing', name: '唱两小时', icon: '🎶', hours: 2, cost: 2000, effects: { mood: 20 }, skills: { cha: 2, cre: 1 } },
+      { id: 'vocal', name: '声乐私教', icon: '🎙️', hours: 1.5, cost: 9000, paid: true, effects: { mood: 5 }, skills: { cha: 3, cre: 2 } }
     ]
   },
   {
@@ -148,7 +152,8 @@ export const LOCATIONS = [
     id: 'livehouse', name: '新宿 Live House', icon: '🎸', x: 84, y: 70, open: [16, 27], career: 'idol',
     desc: '地下乐队和偶像出道的地方。',
     actions: [
-      { id: 'show', name: '看演出', icon: '🎟️', hours: 2, cost: 4000, effects: { mood: 20 }, skills: { cre: 2 } }
+      { id: 'show', name: '看演出', icon: '🎟️', hours: 2, cost: 4000, effects: { mood: 20 }, skills: { cre: 2 } },
+      { id: 'acting', name: '表演工作坊', icon: '🎭', hours: 2, cost: 10000, paid: true, effects: { energy: -8 }, skills: { cha: 3, cre: 3 } }
     ]
   },
   { id: 'cityhall', name: '都厅·投票所', icon: '🗳️', x: 20, y: 87, open: [8, 20], special: 'election', desc: '报名参选东京都知事、拉票、投票。', actions: [] },
@@ -169,11 +174,6 @@ export const LOCATION_MAP = LOCATIONS.reduce((m, l) => {
   m[l.id] = l
   return m
 }, {})
-
-export const TRAVEL = {
-  near: { hours: 0.5, cost: 200 },
-  far: { hours: 1.5, cost: 1500 }
-}
 
 export const OMIKUJI = [
   { name: '大吉', mood: 20, money: 10000, text: '万事顺遂，财运亨通！' },

@@ -1,4 +1,5 @@
 // 随机事件（出行时触发）、选举候选人、每日新闻
+import { fmtMoney } from '../currency.js'
 
 export const EVENT_CHANCE = 0.15
 
@@ -63,7 +64,7 @@ export const EVENTS = [
   },
   {
     id: 'flyer', icon: '📄', title: '发传单的兼职',
-    text: '路边有人招募临时发传单，一小时 ¥1,500 现结。',
+    text: '路边有人招募临时发传单，一小时 ' + fmtMoney(1500) + ' 现结。',
     choices: [
       { label: '干一小时', effects: { money: 1500, hours: 1, energy: -8 } },
       { label: '不了', effects: {} }
@@ -74,7 +75,7 @@ export const EVENTS = [
     text: '“您的银行账户异常，请立刻转账到安全账户……”',
     choices: [
       { label: '直接挂断', effects: { mood: 2 }, skills: { int: 1 } },
-      { label: '按对方说的做', effects: { money: -30000, mood: -15 }, msg: '被骗了 ¥30,000……' }
+      { label: '按对方说的做', effects: { money: -30000, mood: -15 }, msg: '被骗了 ' + fmtMoney(30000) + '……' }
     ]
   }
 ]

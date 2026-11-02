@@ -1,4 +1,5 @@
 // 角色创建：外观、出身、人生愿望
+import { fmtMoney } from '../currency.js'
 
 export const GENDERS = [
   { id: 'm', name: '男生', emoji: '👨' },
@@ -70,7 +71,7 @@ export const BACKGROUNDS = [
 
 export const WISHES = [
   { id: 'ceo', name: '登上职业巅峰', icon: '👑', desc: '在任意职业中升到最高职位' },
-  { id: 'rich', name: '亿万富翁', icon: '💰', desc: '净资产达到 ¥100,000,000' },
+  { id: 'rich', name: '亿万富翁', icon: '💰', desc: '净资产达到 ' + fmtMoney(100000000) },
   { id: 'governor', name: '当选都知事', icon: '🏛️', desc: '赢得一次东京都知事选举' },
   { id: 'seaview', name: '湾岸海景房', icon: '🌊', desc: '买下湾岸海景别墅' },
   { id: 'famous', name: '家喻户晓', icon: '🌟', desc: '声望达到 100' }

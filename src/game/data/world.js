@@ -35,7 +35,24 @@ export const FURNITURE = {
   rug: { name: '地毯', icon: '🟫', price: 12000, decor: 1 },
   aquarium: { name: '水族箱', icon: '🐠', price: 70000, decor: 4 },
   art: { name: '浮世绘挂画', icon: '🖼️', price: 120000, decor: 5 },
+  robovac: { name: '扫地机器人', icon: '🤖', price: 60000, cleaner: 0.4 },
   cat: { name: '猫爬架和猫', icon: '🐈', price: 60000, decor: 4, use: { id: 'cat', name: '撸猫', icon: '🐈', hours: 0.5, effects: { mood: 12 } } }
+}
+
+// 外卖：不用出门，比自己做饭贵，等餐期间在家
+export const DELIVERY = [
+  { id: 'bento', name: '外卖便当', icon: '🍱', price: 1200, hours: 0.5, effects: { hunger: 45, mood: 3 } },
+  { id: 'ramen', name: '外卖拉面', icon: '🍜', price: 1600, hours: 0.5, effects: { hunger: 50, mood: 6 } },
+  { id: 'pizza', name: '披萨', icon: '🍕', price: 2800, hours: 0.75, effects: { hunger: 55, mood: 8, health: -2 } },
+  { id: 'sushi', name: '寿司拼盘', icon: '🍣', price: 3800, hours: 0.75, effects: { hunger: 60, mood: 15 } }
+]
+
+// 家务：房间整洁度 0-100，每小时下降；低于 30 心情掉得更快
+export const CLEAN_DECAY = 0.5
+export const DIRTY_LINE = 30
+export const CHORES = {
+  self: { name: '自己打扫洗衣', icon: '🧹', hours: 2, cost: 0, clean: 60, effects: { energy: -10 } },
+  maid: { name: '请家政上门', icon: '🧑‍🔧', hours: 0.25, cost: 6000, clean: 100, effects: {} }
 }
 
 // 住房：rent 为每周房租，price 为买断价格；cols×rows 为家里可摆放家具的格子

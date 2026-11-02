@@ -15,8 +15,21 @@
         <view v-if="loc.soon" class="notice">这里还在建设中，敬请期待。</view>
 
         <view v-else-if="!here">
-          <view class="btn" @click="onTravel">前往 · {{ fmtHours(cost.hours) }} · {{ fmtMoney(cost.cost) }}</view>
-          <text v-if="state.money < cost.cost" class="muted">钱不够坐电车，会走路过去（耗时 ×3）。</text>
+          <view class="section-title">怎么去？<text class="muted">约 {{ options[0].km }} 公里</text></view>
+          <view
+            v-for="o in options"
+            :key="o.id"
+            class="act mode"
+            :class="{ disabled: !o.ok }"
+            @click="onTravel(o)"
+          >
+            <text class="act-icon">{{ o.icon }}</text>
+            <view class="act-main">
+              <text class="act-name">{{ o.name }} · {{ fmtHours(o.hours) }}<text class="muted">（{{ arrive(o.hours) }} 到）</text></text>
+              <text class="muted">{{ o.reason || o.warn || o.desc }}</text>
+            </view>
+            <text class="price">{{ o.cost ? fmtMoney(o.cost) : '免费' }}</text>
+          </view>
         </view>
 
         <view v-else>
@@ -28,7 +41,7 @@
             <view v-for="a in loc.actions" :key="a.id" class="act" @click="onAction(a.id)">
               <text class="act-icon">{{ a.icon }}</text>
               <view class="act-main">
-                <text class="act-name">{{ a.name }}<text v-if="a.daily" class="muted">（每天一次）</text></text>
+                <text class="act-name">{{ a.name }}<text v-if="a.paid" class="tag-sm">付费 · 成长快</text><text v-if="a.daily" class="muted">（每天一次）</text></text>
                 <text class="muted">{{ fmtHours(a.hours) }} · {{ describe(a.effects, a.skills, a.rep) }}</text>
               </view>
               <text class="price">{{ a.cost ? fmtMoney(a.cost) : '免费' }}</text>
@@ -41,7 +54,7 @@
                   <text class="act-name">抽签<text class="muted">（每天一次）</text></text>
                   <text class="muted">看看今天的运势</text>
                 </view>
-                <text class="price">¥200</text>
+                <text class="price">{{ fmtMoney(200) }}</text>
               </view>
             </block>
 
@@ -61,6 +74,7 @@
             <job-panel v-if="loc.career" :career-id="loc.career" />
             <furniture-shop v-if="loc.special === 'furniture'" />
             <estate-panel v-if="loc.special === 'estate'" />
+            <vehicle-panel v-if="loc.id === 'ginza'" />
             <election-panel v-if="loc.special === 'election'" />
           </block>
 
@@ -78,8 +92,9 @@ import PeoplePanel from './people-panel.vue'
 import FurnitureShop from './furniture-shop.vue'
 import EstatePanel from './estate-panel.vue'
 import ElectionPanel from './election-panel.vue'
+import VehiclePanel from './vehicle-panel.vue'
 import {
-  state, isOpen, openText, fmtMoney, fmtHours, describe, travelCost, doAction, omikuji, buyItem, wait
+  state, isOpen, openText, fmtMoney, fmtHours, fmtHour, describe, travelOptions, doAction, omikuji, buyItem, wait
 } from '../../game/index.js'
 import { LOCATION_MAP } from '../../game/data/locations.js'
 import { ITEMS } from '../../game/data/world.js'
@@ -90,12 +105,20 @@ const emit = defineEmits(['close', 'gohome', 'go'])
 const loc = computed(() => LOCATION_MAP[props.locId])
 const here = computed(() => state.location === props.locId)
 const open = computed(() => isOpen(loc.value, state.hour))
-const cost = computed(() => travelCost(props.locId))
+const options = computed(() => (here.value || loc.value.soon ? [] : travelOptions(props.locId)))
+
+function arrive(hours) {
+  return fmtHour((state.hour + hours) % 24)
+}
 
 function noop() {}
 
-function onTravel() {
-  emit('go', props.locId)
+function onTravel(o) {
+  if (!o.ok) {
+    uni.showToast({ title: o.name + '：' + o.reason, icon: 'none' })
+    return
+  }
+  emit('go', props.locId, o.id)
 }
 
 function onAction(id) {
@@ -176,6 +199,9 @@ function onAction(id) {
 .good-name {
   font-weight: 600;
   font-size: 24rpx;
+}
+.mode.disabled {
+  opacity: 0.45;
 }
 .wait {
   margin: 24rpx 0 40rpx;

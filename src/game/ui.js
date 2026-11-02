@@ -6,7 +6,7 @@ export const ui = reactive({
   nonce: 0
 })
 
-export function requestWalk(locId) {
+export function requestWalk(locId, mode) {
   ui.nonce += 1
-  ui.walkRequest = { loc: locId, nonce: ui.nonce }
+  ui.walkRequest = { loc: locId, mode: mode || '', nonce: ui.nonce }
 }

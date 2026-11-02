@@ -11,7 +11,9 @@ const SETTINGS_KEY = 'bravelife_settings_v1'
 // 改名前的旧键，读取时兼容
 const LEGACY_SETTINGS_KEY = 'tokyo_life_settings_v1'
 
-export const settings = reactive({ theme: 'watercolor' })
+// speed：实时时钟倍速，0 为暂停；1 表示现实 1 秒 = 游戏 1 分钟
+export const SPEEDS = [0, 1, 2, 5]
+export const settings = reactive({ theme: 'watercolor', speed: 1 })
 
 export function loadSettings() {
   try {
@@ -19,19 +21,30 @@ export function loadSettings() {
     if (!raw) return
     const data = JSON.parse(raw)
     if (data && THEMES.some((t) => t.id === data.theme)) settings.theme = data.theme
+    if (data && SPEEDS.indexOf(data.speed) >= 0) settings.speed = data.speed
   } catch (e) {
     console.error('load settings failed', e)
+  }
+}
+
+function persist() {
+  try {
+    uni.setStorageSync(SETTINGS_KEY, JSON.stringify(settings))
+  } catch (e) {
+    console.error('save settings failed', e)
   }
 }
 
 export function setTheme(id) {
   if (!THEMES.some((t) => t.id === id)) return
   settings.theme = id
-  try {
-    uni.setStorageSync(SETTINGS_KEY, JSON.stringify(settings))
-  } catch (e) {
-    console.error('save settings failed', e)
-  }
+  persist()
+}
+
+export function setSpeed(v) {
+  if (SPEEDS.indexOf(v) < 0) return
+  settings.speed = v
+  persist()
 }
 
 // 插画地址：H5 打包在 static/h5/art（只进 H5 包）；小程序包体有 2MB 限制，从 CDN 加载

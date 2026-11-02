@@ -28,7 +28,7 @@
 
 <script setup>
 import { ref } from 'vue'
-import { onLoad } from '@dcloudio/uni-app'
+import { onLoad, onShow, onHide, onUnload } from '@dcloudio/uni-app'
 import GameHud from '../../components/game-hud/game-hud.vue'
 import GuideBar from '../../components/guide-bar/guide-bar.vue'
 import CityMap from '../../components/city-map/city-map.vue'
@@ -36,7 +36,7 @@ import HomeView from '../../components/home-view/home-view.vue'
 import PhoneView from '../../components/phone-view/phone-view.vue'
 import LocationSheet from '../../components/location-sheet/location-sheet.vue'
 import EventModal from '../../components/event-modal/event-modal.vue'
-import { state, load } from '../../game/index.js'
+import { state, load, tickClock } from '../../game/index.js'
 import { settings } from '../../game/themes.js'
 import { requestWalk } from '../../game/ui.js'
 
@@ -59,6 +59,23 @@ onLoad(() => {
   ready.value = true
 })
 
+// 实时时钟：现实每秒走 settings.speed 分钟；弹出随机事件或切到后台时暂停
+let clock = null
+function startClock() {
+  if (clock) return
+  clock = setInterval(() => {
+    if (!ready.value || !settings.speed || state.pendingEvent) return
+    tickClock(settings.speed)
+  }, 1000)
+}
+function stopClock() {
+  if (clock) clearInterval(clock)
+  clock = null
+}
+onShow(startClock)
+onHide(stopClock)
+onUnload(stopClock)
+
 function onOpen(id) {
   if (id === 'home' && state.location === 'home') {
     tab.value = 'home'
@@ -73,11 +90,11 @@ function goHome() {
 }
 
 // 地点面板点「前往」：关掉面板，切到地图，主人公走过去
-function onGo(id) {
+function onGo(id, mode) {
   sheet.value = ''
   tab.value = 'map'
   // 等地图组件挂载后再发走路请求
-  setTimeout(() => requestWalk(id), 50)
+  setTimeout(() => requestWalk(id, mode), 50)
 }
 </script>
 

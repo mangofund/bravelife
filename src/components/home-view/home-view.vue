@@ -6,6 +6,10 @@
         <text class="muted">{{ home.rent ? '周租 ' + fmtMoney(home.rent) : '自有房产' }}</text>
       </view>
       <text class="muted">装饰分 {{ decor }} · 睡眠质量 ×{{ bed }} · {{ kitchen ? '可以做饭' : '没有厨房设备' }}</text>
+      <view class="clean-row">
+        <text class="muted">整洁度 {{ Math.round(state.clean) }}</text>
+        <view class="track clean-track"><view class="clean-fill" :style="{ width: state.clean + '%', background: state.clean < DIRTY_LINE ? 'var(--warn)' : 'var(--ok)' }" /></view>
+      </view>
       <view v-if="!atHome" class="notice">你现在在外面。可以摆放家具，但睡觉、做饭需要先回家。</view>
       <view v-if="!atHome" class="btn dark" @click="travel('home')">回家</view>
     </view>
@@ -53,9 +57,25 @@
         <text class="act-icon">{{ u.icon }}</text>
         <view class="act-main"><text class="act-name">{{ u.name }}</text><text class="muted">{{ fmtHours(u.hours) }} · {{ u.tip }}</text></view>
       </view>
+
+      <view class="section-title">吃饭 <text class="muted">自己做便宜但费时，外卖省事但贵</text></view>
       <view v-for="g in ingredients" :key="g.id" class="act" @click="act('cook', g.id)">
         <text class="act-icon">🍳</text>
-        <view class="act-main"><text class="act-name">用{{ g.name }}做饭 ×{{ g.count }}</text><text class="muted">1 小时 · {{ kitchen ? '饱腹、心情、厨艺提升' : '需要厨房设备' }}</text></view>
+        <view class="act-main"><text class="act-name">自己做：{{ g.name }} ×{{ g.count }}</text><text class="muted">1 小时 · {{ kitchen ? '饱腹、心情、厨艺提升' : '需要厨房设备' }}</text></view>
+        <text class="price">已买好</text>
+      </view>
+      <view v-if="!ingredients.length" class="muted block">没有食材。去场外鱼市买蔬菜、鲜鱼或和牛，回家自己做最省钱。</view>
+      <view v-for="d in DELIVERY" :key="d.id" class="act" @click="orderDelivery(d.id)">
+        <text class="act-icon">{{ d.icon }}</text>
+        <view class="act-main"><text class="act-name">叫外卖：{{ d.name }}</text><text class="muted">{{ fmtHours(d.hours) }}送达 · {{ describe(d.effects) }}</text></view>
+        <text class="price">{{ fmtMoney(d.price) }}</text>
+      </view>
+
+      <view class="section-title">家务 <text class="muted">整洁度低于 {{ DIRTY_LINE }} 心情会掉得更快</text></view>
+      <view v-for="c in choreList" :key="c.id" class="act" @click="doChores(c.id)">
+        <text class="act-icon">{{ c.icon }}</text>
+        <view class="act-main"><text class="act-name">{{ c.name }}</text><text class="muted">{{ fmtHours(c.hours) }} · 整洁度 +{{ c.clean }}{{ c.effects.energy ? ' · 精力' + c.effects.energy : '' }}</text></view>
+        <text class="price">{{ c.cost ? fmtMoney(c.cost) : '免费' }}</text>
       </view>
     </block>
   </view>
@@ -66,12 +86,13 @@ import { computed, ref, reactive, onBeforeUnmount } from 'vue'
 import HeroDoll from '../hero-doll/hero-doll.vue'
 import { art } from '../../game/themes.js'
 import {
-  state, fmtMoney, fmtHours, describe, travel, sleep, cook, useFurniture, placeFurniture, removeFurniture,
+  state, fmtMoney, fmtHours, describe, travel, sleep, cook, useFurniture, placeFurniture, removeFurniture, orderDelivery, doChores,
   bestBed, kitchenLevel, decorScore
 } from '../../game/index.js'
-import { FURNITURE, HOMES, ITEMS } from '../../game/data/world.js'
+import { FURNITURE, HOMES, ITEMS, DELIVERY, CHORES, DIRTY_LINE } from '../../game/data/world.js'
 
 const selected = ref('')
+const choreList = Object.keys(CHORES).map((id) => Object.assign({ id }, CHORES[id]))
 const roomFailed = ref(false)
 const home = computed(() => HOMES[state.home])
 const atHome = computed(() => state.location === 'home')
@@ -272,6 +293,21 @@ onBeforeUnmount(() => {
 }
 .cell-icon {
   font-size: 52rpx;
+}
+.clean-row {
+  display: flex;
+  align-items: center;
+  margin-top: 8rpx;
+}
+.clean-track {
+  flex: 1;
+  height: 14rpx;
+  margin-left: 16rpx;
+  border-radius: 8rpx;
+  overflow: hidden;
+}
+.clean-fill {
+  height: 100%;
 }
 .inv {
   display: flex;

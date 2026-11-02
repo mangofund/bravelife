@@ -11,6 +11,15 @@
       <view class="clock">
         <text class="time">{{ fmtHour(state.hour) }}</text>
         <text class="date">第 {{ state.day }} 天 · {{ weekday(state.day) }}</text>
+        <view class="speeds">
+          <text
+            v-for="v in SPEEDS"
+            :key="v"
+            class="speed"
+            :class="{ on: settings.speed === v }"
+            @click="setSpeed(v)"
+          >{{ v === 0 ? '⏸' : v + '×' }}</text>
+        </view>
       </view>
     </view>
     <view class="row between money-row">
@@ -34,6 +43,7 @@ import AvatarCard from '../avatar-card/avatar-card.vue'
 import { state, fmtHour, fmtMoney, weekday } from '../../game/index.js'
 import { CAREERS } from '../../game/data/jobs.js'
 import { LOCATION_MAP } from '../../game/data/locations.js'
+import { settings, SPEEDS, setSpeed } from '../../game/themes.js'
 
 const jobText = computed(() => {
   if (!state.job) return '无业游民'
@@ -85,6 +95,26 @@ const bars = computed(() => [
 .date {
   font-size: 22rpx;
   opacity: 0.75;
+}
+.speeds {
+  display: flex;
+  margin-top: 6rpx;
+}
+.speed {
+  font-size: 20rpx;
+  min-width: 44rpx;
+  text-align: center;
+  padding: 2rpx 8rpx;
+  margin-left: 8rpx;
+  border-radius: 999rpx;
+  border: 2rpx solid rgba(255, 255, 255, 0.4);
+  opacity: 0.75;
+}
+.speed.on {
+  background: #ffd166;
+  color: #3a2f27;
+  border-color: #ffd166;
+  opacity: 1;
 }
 .money-row {
   margin: 12rpx 0 8rpx;

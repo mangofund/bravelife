@@ -1,4 +1,4 @@
-import { state, addMoney, pushMessage } from './core.js'
+import { state, addMoney, pushMessage, fmtMoney } from './core.js'
 
 const BED_IDS = ['futon', 'bed', 'kingbed']
 
@@ -28,13 +28,13 @@ export function checkTutorial() {
   while (t.step < TUTORIAL.length && TUTORIAL[t.step].check()) {
     t.step += 1
     addMoney(STEP_REWARD, '新手任务奖励')
-    msg = '✅ 新手任务完成，奖励 ¥5,000'
+    msg = '✅ 新手任务完成，奖励 ' + fmtMoney(STEP_REWARD)
   }
   if (t.step >= TUTORIAL.length) {
     t.done = true
     addMoney(FINAL_REWARD, '新手毕业奖励')
-    pushMessage('勇敢人生', '新手任务全部完成，奖励 ¥20,000！接下来朝你的人生愿望努力吧。')
-    msg = '🎓 新手任务全部完成，奖励 ¥20,000'
+    pushMessage('勇敢人生', '新手任务全部完成，奖励 ' + fmtMoney(FINAL_REWARD) + '！接下来朝你的人生愿望努力吧。')
+    msg = '🎓 新手任务全部完成，奖励 ' + fmtMoney(FINAL_REWARD)
   }
   return msg
 }
@@ -50,6 +50,7 @@ export function warnings() {
   if (s.hunger < 20) list.push('🍙 太饿了，健康在下降，快去吃东西')
   if (s.health < 30) list.push('❤️ 健康偏低，去医院治疗或去钱汤休息')
   if (s.mood < 15) list.push('😊 心情很差，去唱歌、泡澡或散步')
+  if (state.clean !== undefined && state.clean < 20) list.push('🧹 房间太乱了，回家打扫或请家政')
   if (state.money < 0) list.push('💸 账户透支了，先去打工赚钱')
   return list
 }

@@ -1,5 +1,6 @@
 import { state, clamp, round1, addMoney, addStats, pushMessage, pushNews, toast, save, fmtMoney } from './core.js'
-import { HOMES, RENT_DAYS, PLOTS, BUILD_COST, BUILD_INCOME, FURNITURE } from '../data/world.js'
+import { HOMES, RENT_DAYS, PLOTS, BUILD_COST, BUILD_INCOME, FURNITURE, CLEAN_DECAY, DIRTY_LINE } from '../data/world.js'
+import { VEHICLES } from '../data/transport.js'
 import { NEWS_POOL, GOVERNOR_SALARY } from '../data/events.js'
 import { CAREERS } from '../data/jobs.js'
 import { WISHES } from '../data/profile.js'
@@ -7,8 +8,19 @@ import { resolveElection, daysToElection } from './election.js'
 import { socialNewDay } from './social-day.js'
 import { checkTutorial } from './tutorial.js'
 
+function cleanerRate() {
+  let rate = 1
+  state.furniture.placed.forEach((p) => {
+    const f = FURNITURE[p.fid]
+    if (f && f.cleaner && f.cleaner < rate) rate = f.cleaner
+  })
+  return rate
+}
+
 function tick(step, sleeping, quality) {
   const s = state.stats
+  state.clean = round1(clamp((state.clean === undefined ? 80 : state.clean) - CLEAN_DECAY * cleanerRate() * step, 0, 100))
+  if (state.clean < DIRTY_LINE && !sleeping) s.mood -= 0.4 * step
   if (sleeping) {
     s.energy += 11 * quality * step
     s.hunger -= 1.5 * step
@@ -33,10 +45,10 @@ export function passTime(hours, sleeping, quality) {
   while (left > 0.001) {
     const step = Math.min(1, left)
     tick(step, !!sleeping, quality || 1)
-    left = Math.round((left - step) * 1000) / 1000
-    state.hour = Math.round((state.hour + step) * 1000) / 1000
+    left = Math.round((left - step) * 1e6) / 1e6
+    state.hour = Math.round((state.hour + step) * 1e6) / 1e6
     if (state.hour >= 24) {
-      state.hour = Math.round((state.hour - 24) * 1000) / 1000
+      state.hour = Math.round((state.hour - 24) * 1e6) / 1e6
       newDay()
     }
   }
@@ -52,6 +64,10 @@ function newDay() {
   if (home.rent && (state.day - 1) % RENT_DAYS === 0) {
     addMoney(-home.rent, '房租 · ' + home.name)
     pushMessage('房东', '本周房租 ' + fmtMoney(home.rent) + ' 已从账户扣除。')
+  }
+
+  if (state.vehicles && state.vehicles.car && (state.day - 1) % RENT_DAYS === 0) {
+    addMoney(-VEHICLES.car.parking, '停车费 · 本周')
   }
 
   const built = Object.keys(state.plots).filter((id) => state.plots[id].built).length
@@ -147,14 +163,14 @@ function checkBody() {
     s.hunger = Math.max(s.hunger, 60)
     s.energy = Math.max(s.energy, 60)
     s.mood = Math.max(s.mood - 10, 0)
-    pushMessage('综合医院', '你因身体透支被送进医院，住院一天，花费 ¥150,000。注意吃饭和休息！')
+    pushMessage('综合医院', '你因身体透支被送进医院，住院一天，花费 ' + fmtMoney(150000) + '。注意吃饭和休息！')
     return '🚑 你倒下了，被送进医院住院一天'
   }
   if (s.energy <= 0) {
     state.location = 'hospital'
     passTime(6, true, 0.8)
     addMoney(-30000, '急诊费')
-    pushMessage('综合医院', '你因过度疲劳晕倒，被送到急诊，花费 ¥30,000。')
+    pushMessage('综合医院', '你因过度疲劳晕倒，被送到急诊，花费 ' + fmtMoney(30000) + '。')
     return '😵 你累晕了，在医院醒来'
   }
   return ''
@@ -170,6 +186,23 @@ export function finish(msg) {
   if (tut) text = text ? text + '\n' + tut : tut
   if (text) toast(text)
   return true
+}
+
+// 实时时钟：游戏页每秒调用一次，minutes 为本次流逝的游戏分钟数
+let unsavedMinutes = 0
+export function tickClock(minutes) {
+  if (!state.started || minutes <= 0) return
+  passTime(minutes / 60)
+  const body = checkBody()
+  checkWish()
+  const tut = checkTutorial()
+  unsavedMinutes += minutes
+  // 普通流逝每 30 游戏分钟存一次档，有事发生时立即存
+  if (body || tut || unsavedMinutes >= 30) {
+    save()
+    unsavedMinutes = 0
+  }
+  if (body || tut) toast(body || tut)
 }
 
 export function fail(msg) {

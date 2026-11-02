@@ -40,6 +40,7 @@
         :style="{ left: hero.x + '%', top: hero.y + '%', transitionDuration: hero.dur + 's', zIndex: Math.round(hero.y) + 1 }"
       >
         <hero-doll :profile="state.profile" :size="110" :pose="hero.pose" :facing="hero.facing" />
+        <text v-if="hero.vehicle" class="ride">{{ hero.vehicle }}</text>
       </view>
     </view>
   </scroll-view>
@@ -48,7 +49,8 @@
 <script setup>
 import { computed, reactive, ref, watch, onBeforeUnmount, getCurrentInstance, nextTick } from 'vue'
 import HeroDoll from '../hero-doll/hero-doll.vue'
-import { state, isOpen, travel, npcsAt } from '../../game/index.js'
+import { state, isOpen, travel, npcsAt, defaultMode } from '../../game/index.js'
+import { MODE_MAP } from '../../game/data/transport.js'
 import { LOCATIONS, LOCATION_MAP } from '../../game/data/locations.js'
 import { art } from '../../game/themes.js'
 import { ui } from '../../game/ui.js'
@@ -64,7 +66,9 @@ const viewH = '100%'
 
 const mapFailed = ref(false)
 const failed = reactive({})
-const hero = reactive({ x: 0, y: 0, dur: 0, pose: 'idle', facing: 1 })
+const hero = reactive({ x: 0, y: 0, dur: 0, pose: 'idle', facing: 1, vehicle: '' })
+// 不同出行方式在地图上的动画速度倍数（只影响画面，游戏时间按出行方式结算）
+const ANIM_SPEED = { walk: 1, bike: 1.8, train: 2.6, taxi: 2.6, car: 2.6 }
 const cam = reactive({ left: 0, top: 0 })
 let walking = false
 let timer = null
@@ -107,12 +111,14 @@ function place(xPct, yPct) {
   hero.pose = 'idle'
 }
 
-function walk(xPct, yPct, done) {
+function walk(xPct, yPct, done, mode) {
   if (walking) return
   const dx = ((xPct - hero.x) * W) / 100
   const dy = ((yPct - hero.y) * H) / 100
   const dist = Math.sqrt(dx * dx + dy * dy)
-  const dur = Math.min(3, Math.max(0.35, dist / SPEED))
+  const mul = ANIM_SPEED[mode] || 1
+  const dur = Math.min(3, Math.max(0.35, dist / (SPEED * mul)))
+  hero.vehicle = mode && mode !== 'walk' ? MODE_MAP[mode].icon : ''
   walking = true
   if (Math.abs(dx) > 4) hero.facing = dx < 0 ? -1 : 1
   hero.pose = 'walk'
@@ -123,6 +129,7 @@ function walk(xPct, yPct, done) {
   timer = setTimeout(() => {
     walking = false
     hero.pose = 'idle'
+    hero.vehicle = ''
     timer = null
     if (done) done()
   }, dur * 1000)
@@ -153,11 +160,12 @@ watch(
     const req = ui.walkRequest
     if (!req) return
     const target = door(req.loc)
+    const mode = req.mode || defaultMode(req.loc)
     walk(target.x, target.y, () => {
-      travel(req.loc)
+      travel(req.loc, mode)
       if (state.location === 'home' && req.loc === 'home') emit('arrive-home')
       else if (state.location === req.loc) emit('open', req.loc)
-    })
+    }, mode)
   }
 )
 
@@ -307,6 +315,13 @@ onBeforeUnmount(() => {
   border-radius: 999rpx;
   padding: 0 10rpx;
   margin-top: 4rpx;
+}
+.ride {
+  position: absolute;
+  left: 50%;
+  bottom: -10rpx;
+  transform: translateX(-50%);
+  font-size: 56rpx;
 }
 .hero {
   position: absolute;

@@ -23,6 +23,7 @@ function tipOf(f) {
   if (f.kitchen) parts.push(f.kitchen > 1 ? '高级厨房，厨艺成长 ×2' : '可以在家做饭')
   if (f.use) parts.push('解锁：' + f.use.name)
   if (f.decor) parts.push('装饰 +' + f.decor)
+  if (f.cleaner) parts.push('房间变乱的速度降到 ' + Math.round(f.cleaner * 100) + '%')
   return parts.join('，')
 }
 
