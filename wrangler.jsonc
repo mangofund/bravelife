@@ -1,0 +1,13 @@
+{
+  "$schema": "https://unpkg.com/wrangler/config-schema.json",
+  // Cloudflare Workers 静态站点：部署 uni-app 的 H5 构建结果
+  "name": "bravelife",
+  "compatibility_date": "2026-11-01",
+  "build": {
+    "command": "npm run build:h5"
+  },
+  "assets": {
+    "directory": "./dist/build/h5",
+    "not_found_handling": "single-page-application"
+  }
+}
