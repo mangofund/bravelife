@@ -57,6 +57,6 @@ let base = '/static/h5/art'
 base = CDN_ART_BASE
 // #endif
 
-export function art(name) {
-  return base + '/' + settings.theme + '/' + name + '.jpg'
+export function art(name, ext) {
+  return base + '/' + settings.theme + '/' + name + '.' + (ext || 'jpg')
 }

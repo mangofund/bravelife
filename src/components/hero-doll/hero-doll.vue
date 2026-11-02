@@ -2,6 +2,8 @@
   <view class="doll" :class="['pose-' + pose, 'hair-' + hairId, 'outfit-' + outfitId]" :style="boxStyle">
     <view class="flip" :style="{ transform: 'scaleX(' + facing + ')' }">
       <view class="shadow" />
+      <view v-if="pose === 'walk'" class="dust dust-a" />
+      <view v-if="pose === 'walk'" class="dust dust-b" />
       <view class="anim">
       <view class="hair-back" :style="{ background: hairColor }" />
       <view class="leg leg-l" :style="{ background: legColor }"><view class="shoe" /></view>
@@ -307,20 +309,55 @@ const boxStyle = computed(() => ({ width: props.size * 0.62 + 'rpx', height: pro
   background: #3a2f27;
 }
 
-/* 走路：腿和手臂交替摆动，身体上下起伏 */
+/* 走路：一个步态周期 0.56 秒，左右腿各迈一步，身体随每一步上下起伏并微微前倾 */
 .doll.pose-walk .anim {
-  animation: doll-bob 0.5s ease-in-out infinite;
+  animation: doll-bob 0.56s ease-in-out infinite;
 }
-.doll.pose-walk .leg-l,
+.doll.pose-walk .leg-l {
+  animation: doll-leg 0.56s ease-in-out infinite;
+}
+.doll.pose-walk .leg-r {
+  animation: doll-leg 0.56s ease-in-out infinite;
+  animation-delay: -0.28s;
+}
 .doll.pose-walk .arm-r {
-  animation: doll-swing 0.5s ease-in-out infinite;
+  animation: doll-arm 0.56s ease-in-out infinite;
 }
-.doll.pose-walk .leg-r,
 .doll.pose-walk .arm-l {
-  animation: doll-swing 0.5s ease-in-out infinite reverse;
+  animation: doll-arm 0.56s ease-in-out infinite;
+  animation-delay: -0.28s;
 }
+.doll.pose-walk .head {
+  animation: doll-head 0.56s ease-in-out infinite;
+}
+.doll.pose-walk .shadow {
+  animation: doll-shadow 0.28s ease-in-out infinite;
+}
+.doll .dust {
+  position: absolute;
+  bottom: -2%;
+  width: 14%;
+  height: 7%;
+  border-radius: 50%;
+  background: rgba(150, 125, 95, 0.45);
+  opacity: 0;
+}
+.doll .dust-a {
+  left: 18%;
+  animation: doll-dust 0.56s ease-out infinite;
+}
+.doll .dust-b {
+  left: 62%;
+  animation: doll-dust 0.56s ease-out infinite;
+  animation-delay: -0.28s;
+}
+/* 站着时呼吸、偶尔眨眼 */
 .doll.pose-idle .anim {
-  animation: doll-breathe 2.4s ease-in-out infinite;
+  animation: doll-breathe 2.6s ease-in-out infinite;
+}
+.doll.pose-idle .eye,
+.doll.pose-walk .eye {
+  animation: doll-blink 3.6s infinite;
 }
 .doll.pose-cook .arm-l,
 .doll.pose-cook .arm-r {
@@ -341,15 +378,42 @@ const boxStyle = computed(() => ({ width: props.size * 0.62 + 'rpx', height: pro
   font-size: 36rpx;
   animation: doll-float 1.6s ease-in-out infinite;
 }
-@keyframes doll-swing {
-  0% { transform: rotate(22deg); }
-  50% { transform: rotate(-22deg); }
-  100% { transform: rotate(22deg); }
+@keyframes doll-leg {
+  0% { transform: rotate(26deg) scaleY(1); }
+  25% { transform: rotate(0deg) scaleY(0.9); }
+  50% { transform: rotate(-26deg) scaleY(1); }
+  75% { transform: rotate(0deg) scaleY(0.96); }
+  100% { transform: rotate(26deg) scaleY(1); }
+}
+@keyframes doll-arm {
+  0% { transform: rotate(-30deg); }
+  50% { transform: rotate(30deg); }
+  100% { transform: rotate(-30deg); }
 }
 @keyframes doll-bob {
-  0% { transform: translateY(0); }
-  50% { transform: translateY(-4%); }
-  100% { transform: translateY(0); }
+  0% { transform: translateY(0) rotate(4deg); }
+  25% { transform: translateY(-5%) rotate(3deg); }
+  50% { transform: translateY(0) rotate(4deg); }
+  75% { transform: translateY(-5%) rotate(5deg); }
+  100% { transform: translateY(0) rotate(4deg); }
+}
+@keyframes doll-head {
+  0% { transform: rotate(-2deg); }
+  50% { transform: rotate(2deg); }
+  100% { transform: rotate(-2deg); }
+}
+@keyframes doll-shadow {
+  0% { transform: scaleX(1); opacity: 1; }
+  50% { transform: scaleX(0.82); opacity: 0.7; }
+  100% { transform: scaleX(1); opacity: 1; }
+}
+@keyframes doll-dust {
+  0% { transform: scale(0.4); opacity: 0.7; }
+  100% { transform: scale(1.6) translateY(-30%); opacity: 0; }
+}
+@keyframes doll-blink {
+  0%, 94%, 100% { transform: scaleY(1); }
+  96% { transform: scaleY(0.1); }
 }
 @keyframes doll-breathe {
   0% { transform: translateY(0); }

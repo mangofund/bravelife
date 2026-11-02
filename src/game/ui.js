@@ -4,6 +4,7 @@ import { reactive } from 'vue'
 export const ui = reactive({
   walkRequest: null,
   nudge: null,
+  roomRequest: null,
   nonce: 0,
   // 'mobile'：竖屏单栏；'wide'：电脑/平板横屏三栏
   layout: 'mobile',
@@ -16,6 +17,13 @@ export const WIDE_MIN = 960
 export function requestWalk(locId, mode) {
   ui.nonce += 1
   ui.walkRequest = { loc: locId, mode: mode || '', nonce: ui.nonce }
+}
+
+// 家里的行动：先让主人公走到对应家具旁，再执行 run
+// kind：sleep / cook / use；fid：要走过去的家具（use 时必填）
+export function requestRoom(kind, fid, run) {
+  ui.nonce += 1
+  ui.roomRequest = { kind, fid: fid || '', run, nonce: ui.nonce }
 }
 
 // 键盘方向键让主人公在地图上散步

@@ -17,7 +17,8 @@
           {{ t.icon }} {{ t.name }}
         </view>
       </view>
-      <text class="foot">单机游戏 · 存档保存在本机</text>
+      <view class="btn ghost" @click="goAccount">{{ account.user ? '☁️ ' + displayName(account.user) + ' · 云存档已开启' : '登录 / 注册（云端保存进度）' }}</view>
+      <text class="foot">{{ account.user ? '进度会自动同步到云端' : '游客模式 · 进度保存在本机，登录后可上传' }}</text>
     </view>
   </view>
 </template>
@@ -27,6 +28,11 @@ import { ref, watch } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import { hasSave, load } from '../../game/index.js'
 import { THEMES, settings, setTheme, art } from '../../game/themes.js'
+import { account, displayName } from '../../game/account.js'
+
+function goAccount() {
+  uni.navigateTo({ url: '/pages/account/account' })
+}
 
 const saved = ref(false)
 const artFailed = ref(false)

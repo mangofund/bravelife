@@ -63,6 +63,7 @@ import SideStatus from '../../components/side-status/side-status.vue'
 import { state, load, tickClock } from '../../game/index.js'
 import { settings, setSpeed } from '../../game/themes.js'
 import { ui, requestWalk, requestNudge } from '../../game/ui.js'
+import { autoCloudSave } from '../../game/account.js'
 
 const TABS = [
   { id: 'map', name: '地图', icon: '🗺️' },
@@ -93,9 +94,13 @@ onLoad(() => {
 
 // 实时时钟：现实每秒走 settings.speed 分钟；弹出随机事件或切到后台时暂停
 let clock = null
+let seconds = 0
 function startClock() {
   if (clock) return
   clock = setInterval(() => {
+    // 登录后每 60 秒把进度同步到云端自动存档
+    seconds += 1
+    if (seconds % 60 === 0) autoCloudSave()
     if (!ready.value || !settings.speed || state.pendingEvent) return
     tickClock(settings.speed)
   }, 1000)
@@ -229,30 +234,44 @@ function onGo(id, mode) {
   margin: 0 auto;
 }
 
-/* ---------- 宽屏三栏 ---------- */
+/* ---------- 宽屏：地图铺满全屏，左右栏浮在地图上 ---------- */
 .game.wide {
-  flex-direction: row;
-}
-.col-left {
-  width: 340px;
-  flex-shrink: 0;
-  display: flex;
-  flex-direction: column;
-  border-right: var(--bw) solid var(--line);
+  position: relative;
 }
 .col-main {
-  flex: 1;
-  min-width: 0;
+  position: absolute;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
   display: flex;
   flex-direction: column;
 }
+.col-main .content {
+  flex: 1;
+  height: 100%;
+}
+.col-left,
 .col-right {
-  width: 400px;
-  flex-shrink: 0;
+  position: absolute;
+  top: 16px;
+  bottom: 16px;
+  z-index: 40;
   display: flex;
   flex-direction: column;
-  border-left: var(--bw) solid var(--line);
+  overflow: hidden;
   background: var(--paper);
+  border: var(--bw) solid var(--line);
+  border-radius: 22px 16px 24px 18px / 18px 24px 16px 22px;
+  box-shadow: var(--shadow), 0 10px 30px rgba(40, 30, 20, 0.18);
+}
+.col-left {
+  left: 16px;
+  width: 330px;
+}
+.col-right {
+  right: 16px;
+  width: 390px;
 }
 .col-scroll {
   flex: 1;
@@ -261,17 +280,24 @@ function onGo(id, mode) {
 .col-right .col-scroll {
   height: 100%;
 }
+/* 地图/家切换浮在中间上方 */
 .seg {
+  position: absolute;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 41;
   display: flex;
-  padding: 10px 16px;
-  flex-shrink: 0;
+  padding: 6px;
+  background: var(--paper);
+  border: var(--bw) solid var(--line);
+  border-radius: 999px;
+  box-shadow: var(--shadow);
 }
 .seg-item {
   padding: 6px 18px;
-  margin-right: 10px;
+  margin: 0 3px;
   border-radius: 999px;
-  border: var(--bw) solid var(--line);
-  background: var(--card);
   font-family: var(--title-font);
   font-weight: 700;
   font-size: 15px;
@@ -279,5 +305,10 @@ function onGo(id, mode) {
 .seg-item.on {
   background: var(--accent);
   color: #fff;
+}
+/* 家的页面在两侧浮层之间显示 */
+.game.wide .pane {
+  box-sizing: border-box;
+  padding: 72px 422px 16px 362px;
 }
 </style>

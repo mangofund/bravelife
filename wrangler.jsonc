@@ -1,13 +1,28 @@
 {
   "$schema": "https://unpkg.com/wrangler/config-schema.json",
-  // Cloudflare Workers 静态站点：部署 uni-app 的 H5 构建结果
+  // BraveLife：静态网站（uni-app H5 构建结果）+ /api/* 账号与云存档接口
   "name": "bravelife",
-  "compatibility_date": "2026-11-01",
+  "main": "worker/index.js",
+  "compatibility_date": "2026-05-01",
   "build": {
     "command": "npm run build:h5"
   },
   "assets": {
     "directory": "./dist/build/h5",
-    "not_found_handling": "single-page-application"
-  }
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    // 只有接口请求先进 Worker，其余直接返回静态文件
+    "run_worker_first": ["/api/*"]
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "bravelife-db",
+      "database_id": "fe453571-a3a6-4314-a218-1216da151c73",
+      "migrations_dir": "worker/migrations"
+    }
+  ],
+  // 登录验证码邮件，发件人 noreply@bravelife.app（需在 Cloudflare 控制台为 bravelife.app 开通 Email Sending）
+  "send_email": [{ "name": "EMAIL" }],
+  "observability": { "enabled": true }
 }

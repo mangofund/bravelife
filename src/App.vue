@@ -2,14 +2,21 @@
 import { save, state } from './game/index.js'
 import { loadSettings } from './game/themes.js'
 import { initLayout } from './game/ui.js'
+import { loadServerConfig } from './game/config.js'
+import { restoreSession, autoCloudSave } from './game/account.js'
 
 export default {
   onLaunch() {
     loadSettings()
     initLayout()
+    loadServerConfig()
+    restoreSession()
   },
   onHide() {
-    if (state.started) save()
+    if (state.started) {
+      save()
+      autoCloudSave()
+    }
   }
 }
 </script>
@@ -30,6 +37,10 @@ export default {
   --bw: 3rpx;
   --shadow: 0 6rpx 0 rgba(74, 59, 47, 0.16);
   --hud: #5b4636;
+  --floor-a: #dcbf92;
+  --floor-b: #d2b383;
+  --wall-l: #f4e9d6;
+  --wall-r: #e9dbc3;
   --font: 'Hiragino Maru Gothic ProN', 'Yuanti SC', 'PingFang SC', sans-serif;
   --title-font: 'Hannotate SC', 'HanziPen SC', 'Yuanti SC', 'PingFang SC', sans-serif;
   background-color: #f6eedc;
@@ -50,6 +61,10 @@ export default {
   --bw: 4rpx;
   --shadow: 6rpx 6rpx 0 #2b2b2b;
   --hud: #2b5fd9;
+  --floor-a: #ffd98a;
+  --floor-b: #ffcb6b;
+  --wall-l: #bfe3ff;
+  --wall-r: #9fd2ff;
   --font: 'Chalkboard SE', 'HanziPen SC', 'Hannotate SC', 'PingFang SC', sans-serif;
   --title-font: 'HanziPen SC', 'Chalkboard SE', 'PingFang SC', sans-serif;
   background-color: #fffdf4;
@@ -70,6 +85,10 @@ export default {
   --bw: 2rpx;
   --shadow: 0 4rpx 0 rgba(42, 51, 70, 0.22);
   --hud: #2a3346;
+  --floor-a: #d9c7a0;
+  --floor-b: #cdb98f;
+  --wall-l: #efe6d2;
+  --wall-r: #e2d6bd;
   --font: 'Hiragino Mincho ProN', 'Songti SC', 'STSong', serif;
   --title-font: 'Hiragino Mincho ProN', 'Songti SC', 'STKaiti', serif;
   background-color: #f3ede1;

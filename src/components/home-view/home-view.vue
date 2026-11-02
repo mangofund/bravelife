@@ -15,24 +15,9 @@
       <view v-if="!atHome" class="btn dark" @click="travel('home')">回家</view>
     </view>
 
-    <view class="section-title">房间布置 <text class="muted">{{ selected ? '点空格放下「' + FURNITURE[selected].name + '」' : '点仓库里的家具，再点空格摆放' }}</text></view>
+    <view class="section-title">房间布置 <text class="muted">{{ selected ? '点地板放下「' + FURNITURE[selected].name + '」' : '点仓库里的家具，再点地板摆放；点空地让主人公走过去' }}</text></view>
     <view class="room">
-      <image v-if="!roomFailed" class="room-img" :src="art('room')" mode="aspectFill" @error="roomFailed = true" />
-      <view class="grid">
-      <view
-        v-for="cell in cells"
-        :key="cell.key"
-        class="cell"
-        :class="{ filled: !!cell.item, target: selected && !cell.item }"
-        :style="{ width: cellW }"
-        @click="onCell(cell)"
-      >
-        <text v-if="cell.item" class="cell-icon">{{ FURNITURE[cell.item.fid].icon }}</text>
-      </view>
-        <view v-if="atHome" class="room-hero" :style="heroStyle">
-          <hero-doll :profile="state.profile" :size="96" :pose="pose" :facing="facing" />
-        </view>
-      </view>
+      <iso-room :selected="selected" @placed="onPlaced" />
     </view>
 
     </view>
@@ -86,11 +71,11 @@
 </template>
 
 <script setup>
-import { computed, ref, reactive, onBeforeUnmount } from 'vue'
-import HeroDoll from '../hero-doll/hero-doll.vue'
-import { art } from '../../game/themes.js'
+import { computed, ref } from 'vue'
+import IsoRoom from '../iso-room/iso-room.vue'
+import { requestRoom } from '../../game/ui.js'
 import {
-  state, fmtMoney, fmtHours, describe, travel, sleep, cook, useFurniture, placeFurniture, removeFurniture, orderDelivery, doChores,
+  state, fmtMoney, fmtHours, describe, travel, sleep, cook, useFurniture, orderDelivery, doChores,
   bestBed, kitchenLevel, decorScore
 } from '../../game/index.js'
 import { FURNITURE, HOMES, ITEMS, DELIVERY, CHORES, DIRTY_LINE } from '../../game/data/world.js'
@@ -99,24 +84,11 @@ defineProps({ wide: { type: Boolean, default: false } })
 
 const selected = ref('')
 const choreList = Object.keys(CHORES).map((id) => Object.assign({ id }, CHORES[id]))
-const roomFailed = ref(false)
 const home = computed(() => HOMES[state.home])
 const atHome = computed(() => state.location === 'home')
 const decor = computed(() => decorScore())
 const bed = computed(() => bestBed())
 const kitchen = computed(() => kitchenLevel())
-const cellW = computed(() => 100 / home.value.cols + '%')
-
-const cells = computed(() => {
-  const list = []
-  for (let y = 0; y < home.value.rows; y++) {
-    for (let x = 0; x < home.value.cols; x++) {
-      const item = state.furniture.placed.filter((p) => p.x === x && p.y === y)[0] || null
-      list.push({ key: x + '-' + y, x, y, item })
-    }
-  }
-  return list
-})
 
 const invList = computed(() =>
   Object.keys(state.furniture.inv)
@@ -143,107 +115,19 @@ const ingredients = computed(() =>
     .map((id) => ({ id, name: ITEMS[id].name, count: state.bag[id] }))
 )
 
-function onCell(cell) {
-  if (cell.item) {
-    const f = FURNITURE[cell.item.fid]
-    uni.showModal({
-      title: f.icon + ' ' + f.name,
-      content: '收回到家具仓库？',
-      success(res) {
-        if (res.confirm) removeFurniture(cell.item.uid)
-      }
-    })
-    return
-  }
-  if (!selected.value) return
-  const fid = selected.value
-  placeFurniture(fid, cell.x, cell.y)
-  if (!state.furniture.inv[fid]) selected.value = ''
-}
-
-// ---------- 房间里的主人公 ----------
-const hero = reactive({ x: 0, y: 0, dur: 0 })
-const pose = ref('idle')
-const facing = ref(1)
-let busy = false
-let walkTimer = null
-let poseTimer = null
-
-const heroStyle = computed(() => ({
-  left: ((hero.x + 0.5) / home.value.cols) * 100 + '%',
-  top: ((hero.y + 0.5) / home.value.rows) * 100 + '%',
-  transitionDuration: hero.dur + 's'
-}))
-
-function moveTo(x, y, then) {
-  if (busy) return
-  const dist = Math.abs(x - hero.x) + Math.abs(y - hero.y)
-  if (x !== hero.x) facing.value = x < hero.x ? -1 : 1
-  const dur = dist ? Math.min(1.6, 0.35 * dist) : 0
-  busy = true
-  pose.value = dur ? 'walk' : 'idle'
-  hero.dur = dur
-  hero.x = x
-  hero.y = y
-  walkTimer = setTimeout(() => {
-    walkTimer = null
-    busy = false
-    pose.value = 'idle'
-    if (then) then()
-  }, dur * 1000)
-}
-
-function cellOf(test) {
-  return state.furniture.placed.filter((p) => test(FURNITURE[p.fid], p))[0] || null
-}
-
-// 先走到对应家具旁，再执行行动并摆出动作
+// 先让主人公在房间里走到家具旁，再执行行动
 function act(kind, arg) {
-  if (!atHome.value || busy) {
+  const run = () => {
     if (kind === 'sleep') sleep(arg)
     else if (kind === 'cook') cook(arg)
     else useFurniture(arg)
-    return
   }
-  let spot = null
-  let p = 'cook'
-  let run = null
-  if (kind === 'sleep') {
-    spot = cellOf((f) => !!f.bed)
-    p = 'sleep'
-    run = () => sleep(arg)
-  } else if (kind === 'cook') {
-    spot = cellOf((f) => !!f.kitchen)
-    run = () => cook(arg)
-  } else {
-    spot = cellOf((f, item) => item.fid === arg)
-    run = () => useFurniture(arg)
-  }
-  const tx = spot ? spot.x : hero.x
-  const ty = spot ? spot.y : hero.y
-  moveTo(tx, ty, () => {
-    pose.value = p
-    busy = true
-    run()
-    poseTimer = setTimeout(() => {
-      poseTimer = null
-      busy = false
-      pose.value = 'idle'
-    }, p === 'sleep' ? 2400 : 1600)
-  })
+  requestRoom(kind, kind === 'use' ? arg : '', run)
 }
 
-// 在家时偶尔随便走走
-const wander = setInterval(() => {
-  if (!atHome.value || busy || Math.random() < 0.4) return
-  moveTo(Math.floor(Math.random() * home.value.cols), Math.floor(Math.random() * home.value.rows))
-}, 3500)
-
-onBeforeUnmount(() => {
-  clearInterval(wander)
-  if (walkTimer) clearTimeout(walkTimer)
-  if (poseTimer) clearTimeout(poseTimer)
-})
+function onPlaced(fid) {
+  if (!state.furniture.inv[fid]) selected.value = ''
+}
 </script>
 
 <style>
@@ -265,51 +149,12 @@ onBeforeUnmount(() => {
   min-width: 0;
 }
 .room {
-  position: relative;
   border: var(--bw) solid var(--line);
   border-radius: 30rpx 22rpx 34rpx 24rpx / 24rpx 34rpx 22rpx 30rpx;
   box-shadow: var(--shadow);
   overflow: hidden;
-  background: #d9c3a0;
-  padding: 120rpx 16rpx 16rpx;
-}
-.room-img {
-  position: absolute;
-  left: 0;
-  top: 0;
-  width: 100%;
-  height: 100%;
-}
-.grid {
-  position: relative;
-  display: flex;
-  flex-wrap: wrap;
-  border-radius: 12rpx;
-  overflow: hidden;
-}
-.room-hero {
-  position: absolute;
-  transform: translate(-50%, -80%);
-  transition-property: left, top;
-  transition-timing-function: linear;
-  pointer-events: none;
-  z-index: 5;
-  width: 60rpx;
-}
-.cell {
-  height: 100rpx;
-  box-sizing: border-box;
-  border: 1rpx dashed rgba(80, 60, 40, 0.25);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.cell.filled {
-  background: rgba(255, 255, 255, 0.55);
-  border-radius: 18rpx;
-}
-.cell.target {
-  background: rgba(255, 107, 74, 0.15);
+  background: var(--paper-deep);
+  padding: 12rpx 0;
 }
 .cell-icon {
   font-size: 52rpx;

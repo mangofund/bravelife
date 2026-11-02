@@ -95,6 +95,7 @@
           <text class="pct">{{ Math.round(state.stats[k]) }}</text>
         </view>
       </view>
+      <save-panel />
       <view class="card">
         <view class="section-title">🎨 画风</view>
         <view v-for="t in THEMES" :key="t.id" class="act theme-opt" :class="{ on: settings.theme === t.id }" @click="setTheme(t.id)">
@@ -103,7 +104,7 @@
           <text v-if="settings.theme === t.id" class="price">使用中</text>
         </view>
       </view>
-      <view class="btn ghost" @click="onSave">手动存档</view>
+      <view class="btn ghost" @click="onSave">保存到本机</view>
       <view class="btn ghost danger" @click="onRestart">重新开始人生</view>
     </view>
   </view>
@@ -112,6 +113,7 @@
 <script setup>
 import { computed, ref } from 'vue'
 import AvatarCard from '../avatar-card/avatar-card.vue'
+import SavePanel from '../save-panel/save-panel.vue'
 import { state, fmtMoney, fmtHour, netWorth, wishInfo, deposit, withdraw, useItem, describe, save, clearSave, rel, stageName } from '../../game/index.js'
 import { NPCS, NPC_MAP } from '../../game/data/npcs.js'
 import { THEMES, settings, setTheme } from '../../game/themes.js'

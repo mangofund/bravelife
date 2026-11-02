@@ -15,6 +15,13 @@
 			}
 		},
 		{
+			"path": "pages/account/account",
+			"style": {
+				"navigationBarTitleText": "账号",
+				"h5": { "titleNView": false }
+			}
+		},
+		{
 			"path": "pages/game/game",
 			"style": {
 				"navigationBarTitleText": "勇敢人生",

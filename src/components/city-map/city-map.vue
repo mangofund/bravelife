@@ -9,6 +9,8 @@
     @scroll="onScroll"
     :style="{ height: viewH }"
   >
+    <!-- 宽屏时四周留出浮层的宽度，地图边缘的地点也能滚到两块浮层之间 -->
+    <view class="world-wrap" :style="padStyle">
     <view
       class="world"
       :style="{ width: W + 'rpx', height: H + 'rpx' }"
@@ -48,6 +50,7 @@
         <text v-if="hero.vehicle" class="ride">{{ hero.vehicle }}</text>
       </view>
     </view>
+    </view>
   </scroll-view>
 </template>
 
@@ -69,7 +72,17 @@ const instance = getCurrentInstance()
 const zoom = ref(ui.layout === 'wide' ? 1.5 : 1)
 const W = computed(() => Math.round(1400 * zoom.value))
 const H = computed(() => Math.round(1866 * zoom.value))
-const view = reactive({ w: 0, h: 0 })
+// w/h：可视区域像素；bw/bh：缩放为 1 时地图的像素尺寸（rpx 换算在网页和小程序不同，直接量出来最准）
+const view = reactive({ w: 0, h: 0, bw: 0, bh: 0 })
+// 宽屏两侧浮层的宽度（含边距），镜头要把人物放在两块浮层之间的中间
+const PANEL_L = 346
+const PANEL_R = 406
+const PAD_TOP = 72
+const pad = computed(() => (ui.layout === 'wide' ? { l: PANEL_L, r: PANEL_R, t: PAD_TOP, b: 16 } : { l: 0, r: 0, t: 0, b: 0 }))
+const padStyle = computed(() => {
+  const p = pad.value
+  return { padding: p.t + 'px ' + p.r + 'px ' + p.b + 'px ' + p.l + 'px', display: 'inline-block' }
+})
 const scrollPos = reactive({ left: 0, top: 0 })
 const drag = reactive({ active: false, moved: false, x: 0, y: 0, left: 0, top: 0 })
 const SPEED = 500 // rpx / 秒
@@ -105,27 +118,51 @@ function door(locId) {
 }
 
 // 量一下地图可视区域的实际大小（手机和宽屏不一样，窗口缩放后也会变）
-function measure() {
+function minZoom() {
+  if (!view.bw || !view.bh) return 0.6
+  // 宽屏要铺满整个屏幕，不能露出地图外的空白
+  const p = pad.value
+  const fill = Math.max((view.w - p.l - p.r) / view.bw, (view.h - p.t - p.b) / view.bh)
+  return ui.layout === 'wide' ? Math.max(0.6, fill) : 0.6
+}
+
+function measure(done) {
   uni.createSelectorQuery()
     .in(instance.proxy)
     .select('.map-scroll')
-    .boundingClientRect((rect) => {
-      if (rect && rect.width) {
-        view.w = rect.width
-        view.h = rect.height
+    .boundingClientRect()
+    .select('.world')
+    .boundingClientRect()
+    .exec((res) => {
+      const a = res && res[0]
+      const b = res && res[1]
+      if (a && a.width) {
+        view.w = a.width
+        view.h = a.height
       }
+      if (b && b.width) {
+        view.bw = b.width / zoom.value
+        view.bh = b.height / zoom.value
+      }
+      const mz = minZoom()
+      if (zoom.value < mz) zoom.value = Math.round(mz * 100) / 100 + 0.01
+      if (done) done()
     })
-    .exec()
+}
+
+function centerX() {
+  return ui.layout === 'wide' ? (view.w + PANEL_L - PANEL_R) / 2 : view.w / 2
 }
 
 function centerCamera(xPct, yPct) {
-  const vw = view.w || uni.upx2px(750)
   const vh = view.h || uni.getSystemInfoSync().windowHeight - uni.upx2px(330)
-  const px = uni.upx2px((W.value * xPct) / 100)
-  const py = uni.upx2px((H.value * yPct) / 100)
+  const bw = view.bw || uni.upx2px(1400)
+  const bh = view.bh || uni.upx2px(1866)
+  const px = (bw * zoom.value * xPct) / 100 + pad.value.l
+  const py = (bh * zoom.value * yPct) / 100 + pad.value.t
   // 小程序里相同的值不会触发滚动，加一点抖动保证每次都生效
   const jitter = cam.left % 1 === 0 ? 0.5 : 0
-  cam.left = Math.max(0, px - vw / 2) + jitter
+  cam.left = Math.max(0, px - centerX()) + jitter
   cam.top = Math.max(0, py - vh / 2) + jitter
 }
 
@@ -204,16 +241,17 @@ function onWheel(e) {
   if (!e.deltaY) return
   if (e.preventDefault) e.preventDefault()
   const old = zoom.value
-  const next = Math.min(1.8, Math.max(0.6, Math.round((old * (e.deltaY < 0 ? 1.1 : 1 / 1.1)) * 100) / 100))
+  const next = Math.min(2.4, Math.max(minZoom(), Math.round((old * (e.deltaY < 0 ? 1.1 : 1 / 1.1)) * 100) / 100))
   if (next === old) return
   // 以视野中心为基准缩放
   const vw = view.w || 400
   const vh = view.h || 600
-  const cx = (scrollPos.left + vw / 2) / old
-  const cy = (scrollPos.top + vh / 2) / old
+  const p = pad.value
+  const cx = (scrollPos.left + centerX() - p.l) / old
+  const cy = (scrollPos.top + vh / 2 - p.t) / old
   zoom.value = next
-  cam.left = Math.max(0, cx * next - vw / 2)
-  cam.top = Math.max(0, cy * next - vh / 2)
+  cam.left = Math.max(0, cx * next + p.l - centerX())
+  cam.top = Math.max(0, cy * next + p.t - vh / 2)
 }
 
 function onGround(e) {
@@ -272,7 +310,7 @@ watch(
 
 watch(
   () => ui.width,
-  () => nextTick(measure)
+  () => nextTick(() => measure())
 )
 
 // 网页版直接在 DOM 上监听鼠标和滚轮（uni 组件不转发 wheel 事件；滚轮需要 passive: false 才能阻止页面滚动）
@@ -290,8 +328,7 @@ onMounted(() => {
 const start = door(state.location)
 place(start.x, start.y)
 nextTick(() => {
-  measure()
-  setTimeout(() => centerCamera(start.x, start.y), 60)
+  measure(() => setTimeout(() => centerCamera(start.x, start.y), 60))
 })
 
 onBeforeUnmount(() => {
