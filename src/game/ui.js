@@ -2,6 +2,15 @@ import { reactive } from 'vue'
 
 // 界面层的临时状态（不进存档）：布局模式、地图上的走路请求
 export const ui = reactive({
+  homeScene: 'room',
+  selectedFurniture: '',
+  popupActive: false,
+  functionRequest: null,
+  shopCategory: 'food',
+  shopProduct: '',
+  homeTools: { inventory: 'furniture', food: 'delivery', cooking: 'garden', pet: 'dog' },
+  homeActive: false,
+  homeTip: null,
   walkRequest: null,
   nudge: null,
   roomRequest: null,
@@ -17,6 +26,11 @@ export const ui = reactive({
 
 // 宽于这个值（且是网页版）用三栏布局；iPad 横屏 1024 起也会进入宽屏
 export const WIDE_MIN = 960
+
+export function requestFunction(kind, options = {}) {
+  ui.nonce += 1
+  ui.functionRequest = { kind, ...options, nonce: ui.nonce }
+}
 
 export function requestWalk(locId, mode) {
   ui.nonce += 1

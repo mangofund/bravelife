@@ -1,0 +1,106 @@
+{
+  "assumptions": {
+    "foodPerDay": 1200,
+    "transitPerDay": 600,
+    "days": 7,
+    "rentPayments": 1,
+    "includesTutorialRewards": false,
+    "includesPromotion": false,
+    "includesRandomEvents": false
+  },
+  "scenarios": [
+    {
+      "id": "normal-current-store",
+      "label": "普通家庭·当前便利店",
+      "cash": 800000,
+      "rent": 35000,
+      "pay": 7200,
+      "shifts": 5,
+      "expenses": 47600,
+      "weeklyNet": -11600,
+      "weeklyNetWithRental": -13600,
+      "endingCashWithRental": 786400
+    },
+    {
+      "id": "self-current-store",
+      "label": "白手起家·当前便利店",
+      "cash": 150000,
+      "rent": 15000,
+      "pay": 8280,
+      "shifts": 5,
+      "expenses": 27600,
+      "weeklyNet": 13800,
+      "weeklyNetWithRental": 11800,
+      "endingCashWithRental": 161800
+    },
+    {
+      "id": "normal-current-office",
+      "label": "普通家庭·商社新人",
+      "cash": 800000,
+      "rent": 35000,
+      "pay": 12000,
+      "shifts": 5,
+      "expenses": 47600,
+      "weeklyNet": 12400,
+      "weeklyNetWithRental": 10400,
+      "endingCashWithRental": 810400
+    },
+    {
+      "id": "normal-candidate-store",
+      "label": "普通家庭·候选便利店",
+      "cash": 800000,
+      "rent": 35000,
+      "pay": 10800,
+      "shifts": 5,
+      "expenses": 47600,
+      "weeklyNet": 6400,
+      "weeklyNetWithRental": 4400,
+      "endingCashWithRental": 804400
+    },
+    {
+      "id": "self-candidate-store",
+      "label": "白手起家·候选便利店",
+      "cash": 150000,
+      "rent": 15000,
+      "pay": 12420,
+      "shifts": 5,
+      "expenses": 27600,
+      "weeklyNet": 34500,
+      "weeklyNetWithRental": 32500,
+      "endingCashWithRental": 182500
+    },
+    {
+      "id": "self-unemployed",
+      "label": "白手起家·无业观察",
+      "cash": 150000,
+      "rent": 15000,
+      "pay": 0,
+      "shifts": 0,
+      "expenses": 27600,
+      "weeklyNet": -27600,
+      "weeklyNetWithRental": -29600,
+      "endingCashWithRental": 120400
+    }
+  ],
+  "time": {
+    "sleep": 8,
+    "work": 6,
+    "transit": 1,
+    "foodAndCare": 1,
+    "preparation": 1.5,
+    "free": 6.5,
+    "energyLoss": 55,
+    "sleepRecovery": 88
+  },
+  "rewards": {
+    "stageAttempt": 20,
+    "contextChoice": 8,
+    "reflection": 5,
+    "alternativeCancellation": 8,
+    "alternativeRepair": 5,
+    "performanceRouteMax": 33,
+    "cancellationRouteMax": 13,
+    "repeatedNodeGain": 0
+  },
+  "note": "一周预算按一次房租计；精力估算基于普通床铺、非饥饿、无额外疾病；非引擎集成测试。"
+}

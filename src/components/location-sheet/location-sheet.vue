@@ -7,7 +7,7 @@
           <text class="h-name">{{ loc.name }}</text>
           <text class="muted">{{ openText(loc) }} · {{ open ? '营业中' : '休息中' }}</text>
         </view>
-        <text class="close" @click="emit('close')">✕</text>
+        <button class="close" @click="emit('close')">{{ docked ? '返回地图' : '✕' }}</button>
       </view>
       <scroll-view scroll-y class="body">
         <text class="desc">{{ loc.desc }}</text>
@@ -267,4 +267,6 @@ function onAction(id) {
 .wait {
   margin: 24rpx 0 40rpx;
 }
+.sheet.docked .head { padding-top: 12px; flex-shrink: 0; }
+.sheet.docked .close { font-size: 12px; line-height: 1.5; padding: 7px 10px; margin: 0; color: var(--ink); background: var(--card); border-radius: 12px; }
 </style>

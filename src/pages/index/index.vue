@@ -18,6 +18,9 @@
         </view>
       </view>
       <view class="btn ghost" @click="goAccount">{{ account.user ? '☁️ ' + displayName(account.user) + ' · 云存档已开启' : '登录 / 注册（云端保存进度）' }}</view>
+      <!-- #ifdef H5 -->
+      <a href="/guide.html" style="color:inherit;font-size:14px">游戏介绍与存档说明</a>
+      <!-- #endif -->
       <text class="foot">{{ account.user ? '进度会自动同步到云端' : '游客模式 · 进度保存在本机，登录后可上传' }}</text>
     </view>
   </view>

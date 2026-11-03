@@ -1,0 +1,20 @@
+{
+  "status": "proposal_not_live",
+  "version": 1,
+  "clock": {"gardenAndPets": "real", "cooking": "game"},
+  "seeds": {
+    "radish": {"price": 50, "quantity": 1},
+    "tomato": {"price": 80, "quantity": 1},
+    "strawberry": {"price": 150, "quantity": 1}
+  },
+  "feed": {
+    "dog": {"price": 100, "hours": 24, "capHours": 72},
+    "cat": {"price": 100, "hours": 24, "capHours": 72}
+  },
+  "recipes": {
+    "radish_soup": {"name": "萝卜清汤", "produce": {"radish": 5}, "items": {}, "hours": 0.5, "effects": {"hunger": 25, "health": 1, "mood": 1}, "cookGain": 0.5, "kitchen": 1},
+    "tomato_fish_soup": {"name": "番茄鱼汤", "produce": {"tomato": 3}, "items": {"fish": 1}, "hours": 0.75, "effects": {"hunger": 65, "health": 4, "mood": 10}, "cookGain": 2, "kitchen": 1},
+    "strawberry_plate": {"name": "草莓果盘", "produce": {"strawberry": 4}, "items": {}, "hours": 0.25, "effects": {"hunger": 14, "health": 1, "mood": 4}, "cookGain": 0, "kitchen": 0}
+  },
+  "recipeRules": {"cookedHungerBonusPerSkill": 0.2, "skillSoftCap": "existing_core_growth", "maxKitchenMultiplier": 2, "readyMealInventory": false, "fruitCookingBonus": false}
+}

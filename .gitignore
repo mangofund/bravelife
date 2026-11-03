@@ -18,6 +18,14 @@ images/
 .tools/
 .wrangler/
 
+# 本机微信开发者工具配置
+project.config.json
+project.private.config.json
+
+# 表格验收预览与自动检查输出；保留最终交付文件和生成器
+outputs/**/preview-*.png
+outputs/**/*.inspect.ndjson
+
 # Editor directories and files
 .idea
 *.suo

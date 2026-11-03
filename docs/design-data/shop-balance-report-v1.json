@@ -1,0 +1,170 @@
+{
+  "status": "proposal_not_live",
+  "assumptions": "稳态四格单作物；到访时浇水和及时重种；无盗窃或每批均被偷满两份；净收益扣种子，狗方案另扣100/现实日；不含领养、厨房及人物时间成本。料理为成年、厨艺0、属性未触顶、无事件时的理论边际值，不是完整游戏模拟。",
+  "scenarios": [
+    {
+      "visitHours": 12,
+      "crop": "radish",
+      "cycleHours": 12,
+      "fourPlotsNoTheftNetPerRealDay": 800,
+      "fourPlotsMaxTheftNetPerRealDay": 560,
+      "fourPlotsDogNetPerRealDay": 700,
+      "dogAdvantageOverMaxTheft": 140
+    },
+    {
+      "visitHours": 12,
+      "crop": "tomato",
+      "cycleHours": 24,
+      "fourPlotsNoTheftNetPerRealDay": 480,
+      "fourPlotsMaxTheftNetPerRealDay": 320,
+      "fourPlotsDogNetPerRealDay": 380,
+      "dogAdvantageOverMaxTheft": 60
+    },
+    {
+      "visitHours": 12,
+      "crop": "strawberry",
+      "cycleHours": 48,
+      "fourPlotsNoTheftNetPerRealDay": 500,
+      "fourPlotsMaxTheftNetPerRealDay": 340,
+      "fourPlotsDogNetPerRealDay": 400,
+      "dogAdvantageOverMaxTheft": 60
+    },
+    {
+      "visitHours": 24,
+      "crop": "radish",
+      "cycleHours": 24,
+      "fourPlotsNoTheftNetPerRealDay": 400,
+      "fourPlotsMaxTheftNetPerRealDay": 280,
+      "fourPlotsDogNetPerRealDay": 300,
+      "dogAdvantageOverMaxTheft": 20
+    },
+    {
+      "visitHours": 24,
+      "crop": "tomato",
+      "cycleHours": 24,
+      "fourPlotsNoTheftNetPerRealDay": 480,
+      "fourPlotsMaxTheftNetPerRealDay": 320,
+      "fourPlotsDogNetPerRealDay": 380,
+      "dogAdvantageOverMaxTheft": 60
+    },
+    {
+      "visitHours": 24,
+      "crop": "strawberry",
+      "cycleHours": 48,
+      "fourPlotsNoTheftNetPerRealDay": 500,
+      "fourPlotsMaxTheftNetPerRealDay": 340,
+      "fourPlotsDogNetPerRealDay": 400,
+      "dogAdvantageOverMaxTheft": 60
+    },
+    {
+      "visitHours": 48,
+      "crop": "radish",
+      "cycleHours": 48,
+      "fourPlotsNoTheftNetPerRealDay": 200,
+      "fourPlotsMaxTheftNetPerRealDay": 140,
+      "fourPlotsDogNetPerRealDay": 100,
+      "dogAdvantageOverMaxTheft": -40
+    },
+    {
+      "visitHours": 48,
+      "crop": "tomato",
+      "cycleHours": 48,
+      "fourPlotsNoTheftNetPerRealDay": 240,
+      "fourPlotsMaxTheftNetPerRealDay": 160,
+      "fourPlotsDogNetPerRealDay": 140,
+      "dogAdvantageOverMaxTheft": -20
+    },
+    {
+      "visitHours": 48,
+      "crop": "strawberry",
+      "cycleHours": 96,
+      "fourPlotsNoTheftNetPerRealDay": 250,
+      "fourPlotsMaxTheftNetPerRealDay": 170,
+      "fourPlotsDogNetPerRealDay": 150,
+      "dogAdvantageOverMaxTheft": -20
+    },
+    {
+      "visitHours": 72,
+      "crop": "radish",
+      "cycleHours": 72,
+      "fourPlotsNoTheftNetPerRealDay": 133.33,
+      "fourPlotsMaxTheftNetPerRealDay": 93.33,
+      "fourPlotsDogNetPerRealDay": 33.33,
+      "dogAdvantageOverMaxTheft": -60
+    },
+    {
+      "visitHours": 72,
+      "crop": "tomato",
+      "cycleHours": 72,
+      "fourPlotsNoTheftNetPerRealDay": 160,
+      "fourPlotsMaxTheftNetPerRealDay": 106.67,
+      "fourPlotsDogNetPerRealDay": 60,
+      "dogAdvantageOverMaxTheft": -46.67
+    },
+    {
+      "visitHours": 72,
+      "crop": "strawberry",
+      "cycleHours": 72,
+      "fourPlotsNoTheftNetPerRealDay": 333.33,
+      "fourPlotsMaxTheftNetPerRealDay": 226.67,
+      "fourPlotsDogNetPerRealDay": 233.33,
+      "dogAdvantageOverMaxTheft": 6.67
+    }
+  ],
+  "recipes": [
+    {
+      "id": "radish_soup",
+      "name": "萝卜清汤",
+      "foregoneSale": 75,
+      "cashIngredients": 0,
+      "opportunityCost": 75,
+      "adultHungerTimeCost": 1.5,
+      "lowSkillNetHunger": 23.5,
+      "adultEnergyTimeCost": 1.25,
+      "adultMoodTimeCost": 0.3,
+      "rawProduceHunger": 10,
+      "lowSkillNetCookGainPerGameHour": 1
+    },
+    {
+      "id": "tomato_fish_soup",
+      "name": "番茄鱼汤",
+      "foregoneSale": 60,
+      "cashIngredients": 1500,
+      "opportunityCost": 1560,
+      "adultHungerTimeCost": 2.25,
+      "lowSkillNetHunger": 62.75,
+      "adultEnergyTimeCost": 1.88,
+      "adultMoodTimeCost": 0.45,
+      "rawProduceHunger": 9,
+      "lowSkillNetCookGainPerGameHour": 2.6666666666666665
+    },
+    {
+      "id": "strawberry_plate",
+      "name": "草莓果盘",
+      "foregoneSale": 160,
+      "cashIngredients": 0,
+      "opportunityCost": 160,
+      "adultHungerTimeCost": 0.75,
+      "lowSkillNetHunger": 13.25,
+      "adultEnergyTimeCost": 0.63,
+      "adultMoodTimeCost": 0.15,
+      "rawProduceHunger": 8,
+      "lowSkillNetCookGainPerGameHour": 0
+    }
+  ],
+  "feed": {
+    "dog": {
+      "price": 100,
+      "hours": 24,
+      "capHours": 72
+    },
+    "cat": {
+      "price": 100,
+      "hours": 24,
+      "capHours": 72
+    },
+    "sevenRealDayCostPerPet": 700,
+    "twentyEightRealDayCostPerPet": 2800
+  },
+  "checks": "通过种子价格、真实成长规则、喂养容量及边界校验"
+}

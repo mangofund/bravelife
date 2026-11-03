@@ -1,6 +1,6 @@
 <template>
   <view class="phone">
-    <view class="apps">
+    <view v-if="!hideApps" class="apps">
       <view v-for="a in APPS" :key="a.id" class="app" :class="{ on: app === a.id }" @click="openApp(a.id)">
         <text class="app-icon">{{ a.icon }}</text>
         <text class="app-name">{{ a.name }}</text>
@@ -8,7 +8,9 @@
       </view>
     </view>
 
+    <view v-if="hideApps" class="phone-app-heading">{{ currentApp.icon }} {{ currentApp.name }}</view>
     <view v-if="app === 'life'">
+      <homestead-journal />
       <view class="card">
         <text class="act-name">{{ lifeStageName() }}</text>
         <text class="muted block">{{ fmtDate(state.day) }} · {{ age() }} 岁 · {{ isMinor() ? schoolName() + '，和家人住在一起' : '一个人在东京' }}</text>
@@ -82,6 +84,10 @@
     </view>
 
     <view v-if="app === 'contacts'">
+      <view class="contact-sections"><button :class="{active:contactSection==='friends'}" @click="contactSection='friends'">好友</button><button :class="{active:contactSection==='strategies'}" @click="contactSection='strategies'">策略</button></view>
+      <strategy-notebook v-if="contactSection==='strategies'" />
+      <template v-else>
+      <ren-conversation />
       <view v-if="invite" class="notice">📅 {{ invite }}</view>
       <view v-if="!contacts.length" class="muted">还没有认识的人。去图书馆、健身房、拉面横丁等地点看看谁在，点「打招呼」。</view>
       <view v-for="c in contacts" :key="c.id" class="card">
@@ -92,6 +98,7 @@
         <text class="muted block">{{ c.job }} · 常在{{ c.where }}</text>
         <view class="track"><view class="fill pink" :style="{ width: c.aff + '%' }" /></view>
       </view>
+      </template>
     </view>
 
     <view v-if="app === 'me'">
@@ -143,6 +150,9 @@
 
 <script setup>
 import { computed, ref, watch } from 'vue'
+import HomesteadJournal from '../homestead-journal.vue'
+import StrategyNotebook from '../strategy-notebook.vue'
+import RenConversation from '../ren-conversation.vue'
 import AvatarCard from '../avatar-card/avatar-card.vue'
 import SavePanel from '../save-panel/save-panel.vue'
 import {
@@ -156,29 +166,25 @@ import { LOCATION_MAP } from '../../game/data/locations.js'
 import { ITEMS } from '../../game/data/world.js'
 import { BACKGROUNDS, SKILL_NAMES, STAT_NAMES, DREAM_MAP } from '../../game/data/profile.js'
 
-const APPS = [
-  { id: 'life', name: '人生', icon: '🌱' },
-  { id: 'msg', name: '消息', icon: '💬' },
-  { id: 'contacts', name: '通讯录', icon: '👥' },
-  { id: 'bank', name: '银行', icon: '🏦' },
-  { id: 'news', name: '新闻', icon: '📰' },
-  { id: 'bag', name: '背包', icon: '🎒' },
-  { id: 'me', name: '我的', icon: '🪪' }
-]
+import { PHONE_APPS as APPS } from '../../game/data/phone-apps.js'
 const AMOUNTS = [10000, 100000, 1000000]
 const skillKeys = Object.keys(SKILL_NAMES)
 const statKeys = Object.keys(STAT_NAMES)
 
 const props = defineProps({
-  initialApp: { type: String, default: 'msg' }
+  initialApp: { type: String, default: 'msg' },
+  hideApps: Boolean
 })
 const app = ref(props.initialApp)
-state.unread = 0
+const contactSection=ref('friends')
+const currentApp = computed(() => APPS.find(a => a.id === app.value) || APPS[0])
+if (app.value === 'msg') state.unread = 0
 
 watch(
   () => props.initialApp,
   (value) => {
     app.value = value || 'msg'
+    if (app.value === 'msg') state.unread = 0
   }
 )
 
@@ -384,4 +390,6 @@ function onRestart() {
   color: var(--warn);
   margin-top: 16rpx;
 }
+.phone-app-heading { font-size: 23px; font-weight: 700; margin: 0 0 18px; color: var(--ink); }
+.contact-sections{display:flex;gap:6px;margin-bottom:12px}.contact-sections button{flex:1;margin:0;padding:7px;font-size:12px;line-height:1.4;color:var(--ink);background:var(--paper-deep)}.contact-sections .active{background:var(--hud);color:#fff2d4}
 </style>

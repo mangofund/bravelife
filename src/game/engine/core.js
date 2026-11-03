@@ -1,4 +1,7 @@
 import { reactive } from 'vue'
+import { ui } from '../ui.js'
+import { initialGarden, normalizeGarden } from './garden-model.js'
+import { initialHomestead, normalizeHomestead } from './homestead-model.js'
 import { SKILL_NAMES, STAT_NAMES } from '../data/profile.js'
 import { fmtMoney } from '../currency.js'
 
@@ -13,7 +16,9 @@ const MAX_LOG = 60
 
 export function initialState() {
   return {
-    version: 2,
+    version: 3,
+    garden: initialGarden(),
+    homestead: initialHomestead(),
     started: false,
     profile: null,
     day: 1,
@@ -65,7 +70,10 @@ export function initialState() {
 export const state = reactive(initialState())
 
 export function resetState(next) {
-  const fresh = next || initialState()
+  const fresh = Object.assign(initialState(), next || {})
+  fresh.version = 3
+  fresh.garden = normalizeGarden(fresh.garden)
+  fresh.homestead = normalizeHomestead(fresh.homestead)
   Object.keys(fresh).forEach((k) => {
     state[k] = fresh[k]
   })
@@ -74,8 +82,10 @@ export function resetState(next) {
 export function save() {
   try {
     uni.setStorageSync(SAVE_KEY, JSON.stringify(state))
+    return true
   } catch (e) {
     console.error('save failed', e)
+    return false
   }
 }
 
@@ -217,6 +227,11 @@ export function describe(effects, skills, rep, cost) {
 }
 
 export function toast(title) {
+  if (ui.homeActive || ui.popupActive) {
+    ui.nonce += 1
+    ui.homeTip = { text: String(title).replace(/\s+/g, ' ').slice(0, 42), id: ui.nonce }
+    return
+  }
   uni.showToast({ title: String(title).slice(0, 60), icon: 'none', duration: 2200 })
 }
 

@@ -207,10 +207,15 @@ function checkBody() {
 }
 
 // 每个操作结束后统一调用：身体检查、愿望检查、存档、提示
-export function finish(msg) {
+export function settleActivity() {
   const body = checkBody()
   checkWish()
   const extra = progress()
+  return { body, extra }
+}
+
+export function finish(msg) {
+  const { body, extra } = settleActivity()
   save()
   let text = body || msg
   if (extra) text = text ? text + '\n' + extra : extra

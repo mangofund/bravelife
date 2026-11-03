@@ -1,11 +1,11 @@
 <template>
-  <view v-if="step || goal || warns.length" class="guide">
-    <view v-for="w in warns" :key="w" class="warn">{{ w }}</view>
-    <view v-if="step" class="tut">
+  <view v-if="step || goal || warns.length" class="guide" :class="{ compact }">
+    <view v-for="w in compact ? warns.slice(0, 1) : warns" :key="w" class="warn">{{ w }}</view>
+    <view v-if="step && (!compact || !warns.length)" class="tut">
       <text class="tut-text">📖 新手任务 {{ index }}/{{ total }}：{{ step.text }}</text>
       <text class="skip" @click="onSkip">跳过</text>
     </view>
-    <view v-else-if="goal" class="tut">
+    <view v-else-if="goal && (!compact || !warns.length)" class="tut">
       <text class="tut-text">⭐ {{ lifeStageName() }} {{ goalDone }}/{{ goals.length }}：{{ goal.text }}</text>
     </view>
   </view>
@@ -14,6 +14,8 @@
 <script setup>
 import { computed } from 'vue'
 import { state, tutorialStep, warnings, skipTutorial, save, TUTORIAL, currentGoals, lifeStageName } from '../../game/index.js'
+
+defineProps({ compact: Boolean })
 
 const step = computed(() => tutorialStep())
 const index = computed(() => state.tutorial.step + 1)
@@ -70,4 +72,9 @@ function onSkip() {
   margin-left: 12rpx;
   opacity: 0.7;
 }
+.guide.compact { padding-top: 4px; padding-bottom: 4px; }
+.compact .tut-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.compact .tut { margin-top: 0; padding: 5px 8px; }
+.compact .tut-text { font-size: 11px; }
+.compact .warn { margin-top: 0; font-size: 11px; line-height: 1.4; padding: 5px 8px; }
 </style>

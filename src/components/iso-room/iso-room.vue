@@ -16,6 +16,7 @@
       v-for="f in furniture"
       :key="f.uid"
       class="furn"
+      @tap.stop="emit('inspect', { uid: f.uid, fid: f.fid })"
       :style="{ left: f.left + 'rpx', top: f.top + 'rpx', width: f.w + 'rpx', zIndex: f.z }"
     >
       <image v-if="!failed[f.fid]" class="furn-img" :src="art('furn/' + f.fid, 'png')" mode="widthFix" @error="failed[f.fid] = true" />
@@ -31,13 +32,13 @@
 <script setup>
 import { computed, reactive, ref, watch, onBeforeUnmount, getCurrentInstance } from 'vue'
 import HeroDoll from '../hero-doll/hero-doll.vue'
-import { state, placeFurniture, removeFurniture } from '../../game/index.js'
+import { state, placeFurniture } from '../../game/index.js'
 import { FURNITURE, HOMES } from '../../game/data/world.js'
 import { art } from '../../game/themes.js'
 import { ui } from '../../game/ui.js'
 
 const props = defineProps({ selected: { type: String, default: '' } })
-const emit = defineEmits(['placed'])
+const emit = defineEmits(['placed', 'inspect'])
 const instance = getCurrentInstance()
 
 // 可以踩上去的家具（地毯、扫地机器人）
@@ -287,14 +288,7 @@ function onTap(e) {
 function onCell(x, y) {
   const item = itemAt.value[x + ',' + y]
   if (item) {
-    const f = FURNITURE[item.fid]
-    uni.showModal({
-      title: f.icon + ' ' + f.name,
-      content: '收回到家具仓库？',
-      success(res) {
-        if (res.confirm) removeFurniture(item.uid)
-      }
-    })
+    emit('inspect', { uid: item.uid, fid: item.fid })
     return
   }
   if (props.selected) {
@@ -364,7 +358,7 @@ onBeforeUnmount(() => {
 .furn {
   position: absolute;
   transform: translateY(-100%);
-  pointer-events: none;
+  pointer-events: auto;
 }
 .furn-img {
   width: 100%;

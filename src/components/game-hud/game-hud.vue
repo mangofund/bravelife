@@ -1,16 +1,16 @@
 <template>
-  <view class="hud">
+  <view class="hud" :class="{ compact }">
     <view class="row between">
       <view class="row hud-left">
-        <avatar-card :profile="state.profile" :size="76" />
+        <avatar-card v-if="!compact" :profile="state.profile" :size="76" />
         <view class="who">
           <text class="name">{{ state.profile.name }}<text v-if="title" class="gov"> {{ title }}</text><text v-if="state.election.governor" class="gov"> 🏛️都知事</text></text>
-          <text class="job">{{ jobText }}</text>
+          <text v-if="!compact" class="job">{{ jobText }}</text>
         </view>
       </view>
       <view class="clock">
         <text class="time">{{ fmtHour(state.hour) }}</text>
-        <text class="date">{{ dateText }} {{ weekday(state.day) }} {{ weatherInfo().icon }}</text>
+        <text v-if="!compact" class="date">{{ dateText }} {{ weekday(state.day) }} {{ weatherInfo().icon }}</text>
         <view class="speeds">
           <text
             v-for="v in SPEEDS"
@@ -47,6 +47,8 @@ import {
 import { CAREERS } from '../../game/data/jobs.js'
 import { LOCATION_MAP } from '../../game/data/locations.js'
 import { settings, SPEEDS, setSpeed } from '../../game/themes.js'
+
+defineProps({ compact: Boolean })
 
 const title = computed(() => titleText())
 const dateText = computed(() => {
@@ -195,4 +197,18 @@ const bars = computed(() => [
   height: 100%;
   border-radius: 6rpx;
 }
+.hud.compact { padding: 7px 12px; }
+.compact .who { margin-left: 0; min-width: 0; }
+.compact .name { font-size: 13px; }
+.compact .time { font-size: 20px; }
+.compact .money { font-size: 17px; }
+.compact .money-row { margin: 4px 0; }
+.compact .speeds { margin-top: 3px; }
+.compact .clock { flex-direction: row; align-items: center; gap: 5px; max-width: none; }
+.compact .time { font-size: 18px; }
+.compact .speeds { margin-top: 0; flex-wrap: nowrap; }
+.compact .speed { min-width: 0; font-size: 9px; padding: 2px 4px; margin-left: 3px; }
+.compact .speed.skip { display: none; }
+.compact .money-row { margin: 2px 0; }
+.compact .who .name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 </style>
