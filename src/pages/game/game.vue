@@ -112,7 +112,7 @@ import { autoCloudSave } from '../../game/account.js'
 import { api, getToken } from '../../game/api.js'
 import { beginRehearsal, endRehearsal, isOpen } from '../../game/engine/core.js'
 import { planEarnings } from '../../game/earn-preview.js'
-import { applyJob, doAction, locVisible, sleep, travel, travelOptions, wait, work } from '../../game/index.js'
+import { applyJob, doAction, locVisible, sleep, travel, travelOptions, useItem, wait, work } from '../../game/index.js'
 // #endif
 
 const TABS = [
@@ -387,6 +387,7 @@ const previewTrace = ref([])
 const showPreviewGoals = ref(false)
 const earnAmount = ref('5000')
 let earnGoal = null
+let previewOpeningBalance = 0
 let previewVisit = 0
 let previewTimer
 let previewNavigation
@@ -484,9 +485,8 @@ function previewTravel(destination, reason) {
       sheet.value = destination
     }],
     ['前往' + name, () => {
-      const options = travelOptions(destination).filter(option => option.ok)
-      const mode = options.find(option => option.cost === 0 && option.hours <= 2) ||
-        options.sort((a, b) => a.hours - b.hours)[0]
+      const mode = travelOptions(destination).filter(option => option.ok && option.cost === 0)
+        .sort((a, b) => a.hours - b.hours)[0]
       if (!mode || !travel(destination, mode.id)) return false
       previewLastActivity = ''
       if (destination === 'home') goHome()
@@ -495,8 +495,7 @@ function previewTravel(destination, reason) {
   ]
 }
 
-function planEarningsStep() {
-  const route = planEarnings(earnGoal)
+function planEarningsStep(route = planEarnings(earnGoal)) {
   if (!route.next) {
     previewMessage.value = route.message
     return []
@@ -535,13 +534,29 @@ function planPreview() {
     return [['在家睡一觉，恢复精力', () => { closePopup(); goHome(); return sleep(true) }]]
   }
 
-  if (hunger < 55 && state.money >= 150 && locVisible('konbini')) {
-    if (current !== 'konbini') return previewTravel('konbini', '饱腹偏低，去便利店找吃的')
-    return [[state.money >= 600 ? '吃便当补充饱腹' : '吃饭团补充饱腹',
-      () => doAction('konbini', state.money >= 600 ? 'bento' : 'onigiri')]]
+  const spendable = Math.max(0, state.money - previewOpeningBalance)
+  if (hunger < 55) {
+    if (state.bag.onigiri > 0) return [['吃背包里的饭团，节省开支', () => useItem('onigiri')]]
+    if (spendable >= 150 && locVisible('konbini')) {
+      if (current !== 'konbini') return previewTravel('konbini', '饱腹偏低，免费前往便利店')
+      const meal = spendable >= 600 ? 'bento' : 'onigiri'
+      return [[meal === 'bento' ? '用试玩盈余买便当' : '用试玩盈余买饭团',
+        () => doAction('konbini', meal)]]
+    }
   }
 
-  if (current === 'home' && !previewGardenTried && state.money >= 50) {
+  if (state.job && hunger >= 20) {
+    const route = planEarnings({ day: state.day, balance: state.money + 1 }, { freeTravel: true })
+    if (route.next) return planEarningsStep(route)
+  }
+
+  if (hunger < 20) {
+    previewMessage.value = '饱腹太低，背包无饭团且试玩盈余不足。可接管或改用按目标代玩。'
+    return []
+  }
+
+  const canGarden = state.garden.plots.every(Boolean) || state.garden.seeds.radish > 0 || spendable >= 50
+  if (current === 'home' && !previewGardenTried && canGarden) {
     previewGardenTried = true
     return planPreviewGarden()
   }
@@ -615,6 +630,7 @@ async function startPreview(targeted) {
       homeScene: ui.homeScene, selectedSeed: ui.selectedSeed, shopCategory: ui.shopCategory,
       shopProduct: ui.shopProduct, selectedFurniture: ui.selectedFurniture, homeTools: { ...ui.homeTools }
     } }
+    previewOpeningBalance = state.money
     earnGoal = targeted ? { day: state.day, startBalance: state.money, balance: state.money + amount } : null
     previewTrace.value = []
     previewGardenTried = false

@@ -19,7 +19,7 @@ function projectEnergy(energy, hours, rate) {
 }
 
 // Evaluate one-shift routes without mutating the live game. Existing jobs are kept.
-export function planEarnings(goal) {
+export function planEarnings(goal, { freeTravel = false } = {}) {
   const remaining = goal.balance - state.money
   if (state.day !== goal.day) return { message: '已到次日，今日目标未完成。' }
   if (remaining <= 0) return { message: '目标达成，今日净增 ¥' + (state.money - goal.startBalance) + '。' }
@@ -39,7 +39,7 @@ export function planEarnings(goal) {
     const pay = shiftPay(id, job?.level ?? 0)
     const options = state.location === career.location ? [{ hours: 0, cost: 0 }] : travelOptions(career.location)
     for (const mode of options) {
-      if (mode.ok === false) continue
+      if (mode.ok === false || (freeTravel && mode.cost > 0)) continue
       for (const nap of state.location === 'home' ? [0, 2] : [0]) {
         const arrival = state.hour + nap + mode.hours
         const applyAt = job || isOpen(location, arrival) ? arrival : Math.max(arrival, location.open[0])
