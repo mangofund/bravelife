@@ -24,5 +24,8 @@
   ],
   // 登录验证码邮件，发件人 noreply@bravelife.app（需在 Cloudflare 控制台为 bravelife.app 开通 Email Sending）
   "send_email": [{ "name": "EMAIL" }],
+  "ratelimits": [
+    { "name": "FEEDBACK_RATE_LIMIT", "namespace_id": "460801", "simple": { "limit": 3, "period": 60 } }
+  ],
   "observability": { "enabled": true }
 }

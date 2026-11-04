@@ -18,6 +18,7 @@
         </view>
       </view>
       <view class="btn ghost" @click="goAccount">{{ account.user ? '☁️ ' + displayName(account.user) + ' · 云存档已开启' : '登录 / 注册（云端保存进度）' }}</view>
+      <navigator class="foot feedback-link" url="/pages/feedback/feedback">玩家反馈</navigator>
       <!-- #ifdef H5 -->
       <a href="/guide.html" style="color:inherit;font-size:14px">游戏介绍与存档说明</a>
       <!-- #endif -->
@@ -168,5 +169,10 @@ function onNew() {
   border-radius: 999rpx;
   padding: 4rpx 0;
   opacity: 0.85;
+}
+.feedback-link {
+  margin: 8rpx 0;
+  padding: 12rpx 0;
+  text-decoration: underline;
 }
 </style>

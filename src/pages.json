@@ -22,6 +22,12 @@
 			}
 		},
 		{
+			"path": "pages/feedback/feedback",
+			"style": {
+				"navigationBarTitleText": "玩家反馈"
+			}
+		},
+		{
 			"path": "pages/game/game",
 			"style": {
 				// #ifdef MP-WEIXIN

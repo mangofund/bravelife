@@ -3,6 +3,7 @@ import {
   HttpError, register, login, sendEmailCode, verifyEmailCode, wechatLogin, logout, requireUser, publicUser
 } from './auth.js'
 import { safeEqual } from './crypto.js'
+import { submitFeedback } from './feedback.js'
 
 const SLOTS = ['auto', '1', '2', '3']
 const MAX_SAVE_BYTES = 512 * 1024
@@ -16,8 +17,30 @@ function json(data, status = 200, extra = {}) {
   })
 }
 
-async function readJson(request, maxBytes) {
-  const text = await request.text()
+async function readJson(request, maxBytes, limitStream = false) {
+  let text = ''
+  if (limitStream && request.body) {
+    const reader = request.body.getReader()
+    const decoder = new TextDecoder()
+    let size = 0
+    try {
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        size += value.byteLength
+        if (size > maxBytes) {
+          await reader.cancel()
+          throw new HttpError(413, '数据太大')
+        }
+        text += decoder.decode(value, { stream: true })
+      }
+      text += decoder.decode()
+    } finally {
+      reader.releaseLock()
+    }
+  } else {
+    text = await request.text()
+  }
   if (text.length > maxBytes) throw new HttpError(413, '数据太大')
   if (!text) return {}
   try {
@@ -90,6 +113,11 @@ async function route(request, env) {
   if (path === '/api/config' && method === 'PUT') return json(await putConfig(env, request))
 
   if (method === 'POST') {
+    if (path === '/api/feedback') {
+      const contentType = request.headers.get('Content-Type') || ''
+      if (!/^application\/json(?:;|$)/i.test(contentType)) throw new HttpError(415, '请使用 JSON 提交反馈')
+      return json(await submitFeedback(env, request, await readJson(request, 8192, true)), 201)
+    }
     if (path === '/api/auth/register') return json(await register(env, await readJson(request, 4096)))
     if (path === '/api/auth/login') return json(await login(env, await readJson(request, 4096)))
     if (path === '/api/auth/email/send') return json(await sendEmailCode(env, await readJson(request, 4096)))

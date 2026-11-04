@@ -22,6 +22,7 @@
         <text class="slot-btn" @click="goAccount">账号设置</text>
       </view>
     </block>
+    <navigator class="btn ghost" url="/pages/feedback/feedback">玩家反馈</navigator>
   </view>
 </template>
 
