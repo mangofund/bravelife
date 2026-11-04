@@ -17,7 +17,7 @@
     <view v-if="!tool" v-show="scene === 'room'" class="homestead" :class="{ arranging: !!selected && !fixedPanel }">
     <view v-if="!showingGarden" class="home-stage">
       <view class="home-sunlight" />
-      <view class="room-model" :style="fixedPanel ? null : { transform: 'scale(' + roomScale + ')' }"><iso-room :selected="selected" :fill-stage="fixedPanel && !showingGarden" :layout-key="selected || inspected?.fid || ''" :three-d="threeD && scene === 'room' && !showingGarden" @3d-failure="fail3d" @placed="onPlaced" @inspect="inspected = $event" /></view>
+      <view class="room-model" :class="{ 'web-room-3d': webRoom3d }" :style="fillRoom ? null : { transform: 'scale(' + roomScale + ')' }"><iso-room :selected="selected" :fill-stage="fillRoom" :layout-key="selected || inspected?.fid || ''" :three-d="threeD && scene === 'room' && !showingGarden" @3d-failure="fail3d" @placed="onPlaced" @inspect="inspected = $event" /></view>
       <view class="scene-detail"><text>装饰 {{ decor }} · 睡眠 ×{{ bed }}</text><text>{{ kitchen ? '厨房已就绪' : '今天也可以叫份外卖' }}</text></view>
     </view>
       <view v-if="!fixedPanel || showingGarden" class="homestead-garden">
@@ -118,6 +118,15 @@ const fixedPanel = computed(() => {
   return false
   // #endif
 })
+const webRoom3d = computed(() => {
+  // #ifdef H5
+  return threeD.value && scene.value === 'room'
+  // #endif
+  // #ifndef H5
+  return false
+  // #endif
+})
+const fillRoom = computed(() => fixedPanel.value || webRoom3d.value)
 const showingGarden = computed(() => fixedPanel.value && homePanel.value === 'garden')
 function selectPanel(id) {
   switchAudio(homePanel.value, id, value => {
@@ -161,7 +170,7 @@ function storeInspected() { if (inspected.value) removeFurniture(inspected.value
 watch([scene, () => props.wide], () => { page.value = 0; measureRoom() })
 watch(foodSection, () => { page.value = 0 })
 function measureRoom() {
-  if (fixedPanel.value) return
+  if (fillRoom.value) return
   nextTick(() => uni.createSelectorQuery().in(instance.proxy).select('.home-stage').boundingClientRect().select('.iso').boundingClientRect().exec(rects => {
     const [area, room] = rects || []
     if (area && room && room.width && room.height) roomScale.value = Math.max(0.1, Math.min(props.wide ? 2.25 : 1.15, (area.width - 24) / (room.width / roomScale.value), (area.height - 24) / (room.height / roomScale.value)))
@@ -306,6 +315,7 @@ watch(pageCount, n => { page.value = Math.min(page.value, n - 1) })
 .home.home-screen.fixed-homestead .homestead-garden {
   flex: 1; min-height: 0; overflow: hidden;
 }
+.home-stage .web-room-3d { position: absolute; inset: 0; width: 100%; }
 .fixed-homestead .room-model { width: 100%; height: 100%; }
 .home.home-screen.fixed-homestead .homestead-garden-content {
   display: block; flex: 1; height: 0; min-height: 0;

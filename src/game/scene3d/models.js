@@ -76,15 +76,31 @@ function furniture(group, id) {
   }
 }
 
-export function buildRoom({ cols, rows, cells, placing }) {
+export function buildRoom({ cols, rows, cells, placing, detailed }) {
   const root = new Group()
   const targets = []
+  if (detailed) {
+    box(root, 0x967253, cols / 2, -.27, rows / 2, cols + .32, .24, rows + .32)
+    box(root, wood, cols / 2, -.12, rows / 2, cols + .23, .12, rows + .23)
+  }
   for (const { x, y, item } of cells) {
     const tile = new Group()
     tile.position.set(x + .5, 0, y + .5)
     tile.userData.hit = { x, y }
-    const floor = (x + y) % 2 ? 0xe8bb82 : 0xf2cb94
-    box(tile, placing ? (item ? 0xe1ac8a : 0xc9d5a0) : floor, 0, -.055, 0, .986, .11, .986)
+    if (detailed && !placing) {
+      // Offset the joints between adjacent rows of warm wood planks.
+      box(tile, wood, 0, -.092, 0, 1, .036, 1)
+      const shades = [0xe3b680, 0xf2cc99, 0xebbe89]
+      for (let plank = 0; plank < 3; plank++) {
+        const joint = (x + y + plank) % 2 ? -.17 : .17
+        const z = (plank - 1) / 3
+        box(tile, shades[(x + y + plank) % 3], (joint - .5) / 2, -.037, z, .49 + joint, .074, .321)
+        box(tile, shades[(x + y + plank + 1) % 3], (joint + .5) / 2, -.037, z, .49 - joint, .074, .321)
+      }
+    } else {
+      const floor = (x + y) % 2 ? 0xe8bb82 : 0xf2cb94
+      box(tile, placing ? (item ? 0xe1ac8a : 0xc9d5a0) : floor, 0, -.055, 0, .986, .11, .986)
+    }
     if (item) furniture(tile, item.fid)
     root.add(tile)
     targets.push(tile)
@@ -101,7 +117,18 @@ export function buildRoom({ cols, rows, cells, placing }) {
   box(root, cream, cols / 2, .84, .077, 1.41, .06, .04)
   box(root, wood, .012, .55, rows - .67, .06, 1.1, .7)
   round(root, cream, .073, .52, rows - .43, .04)
-  return { root, targets }
+  if (detailed) {
+    box(root, cream, cols / 2, 1.31, -.07, cols + .16, .08, .19)
+    box(root, cream, -.07, 1.31, rows / 2, .19, .08, rows + .12)
+    box(root, wood, cols / 2, .53, .095, 1.68, .07, .21)
+    for (const x of [cols / 2 - .47, cols / 2 + .48]) {
+      pot(root, coral, x, .63, .13, .075, .13)
+      const leaves = round(root, 0x6b9f55, x, .76, .13, .09, .12)
+      leaves.rotation.z = x < cols / 2 ? .32 : -.32
+    }
+    box(root, 0xd6a373, .052, .59, rows - .67, .035, .8, .5)
+  }
+  return { root, targets, detailed }
 }
 
 function crop(group, { crop, phase }) {

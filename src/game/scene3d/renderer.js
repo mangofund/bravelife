@@ -86,7 +86,9 @@ export function createSceneView(canvas, onFailure, { native = false, pixelRatio 
     camera.bottom = middle.y - halfHeight
     camera.updateProjectionMatrix()
 
-    const ratio = Math.min(pixelRatio, 1.5, 1200 / Math.max(width, height))
+    const detailed = !native && model.detailed
+    const ratio = Math.min(pixelRatio, detailed ? 2 : 1.5,
+      (detailed ? 2048 : 1200) / Math.max(width, height))
     const w = Math.max(1, Math.round(width * ratio))
     const h = Math.max(1, Math.round(height * ratio))
     if (output && (canvas.width !== w || canvas.height !== h)) {

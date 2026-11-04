@@ -63,6 +63,9 @@ const roomModel = computed(() => ({
   cols: cols.value,
   rows: rows.value,
   cells: cells.value.map(({ x, y, item }) => ({ x, y, item: item && { fid: item.fid } })),
+  // #ifdef H5
+  detailed: true,
+  // #endif
   placing: !!props.selected
 }))
 const heroHeight = computed(() => {
