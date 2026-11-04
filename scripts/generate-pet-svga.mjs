@@ -6,7 +6,7 @@ import protobuf from 'protobufjs/light.js'
 import { schema } from '../src/game/animation/svga-schema.js'
 const Movie=protobuf.Root.fromJSON(schema).lookupType('Movie')
 const root=path.resolve('src/static/pets');fs.mkdirSync(root,{recursive:true})
-const outline='#624535',cream='#fff3db',pink='#e9a39a'
+const outline='#624535',cream='#fff3db',pink='#e9a39a',teal='#76a6a1'
 const color=(hex,alpha=1)=>({r:parseInt(hex.slice(1,3),16)/255,g:parseInt(hex.slice(3,5),16)/255,b:parseInt(hex.slice(5,7),16)/255,a:alpha})
 // [frame, torso offset, forepaw reach, forepaw lift, hindpaw reach, hindpaw lift].
 const leap = [
@@ -64,8 +64,9 @@ function draw(kind,action,frame){
  ellipse(59,75,30,15+breath*.4,fur)
  ellipse(65,82-settle*2,21,8,cream,cream,0)
  leg(false,true);leg(true,true)
- const hx=(sniff?88:85)+settle*4
- const hy=(sniff?73:59)+(groom?5:0)+settle*10
+ const eating=action==='eat'
+ const hx=(eating?82:sniff?88:85)+settle*4
+ const hy=(eating?73+Math.sin(t*3)*2:sniff?73:59)+(groom?5:0)+settle*10
  // Ears are separate from head and move with its pose.
  if(cat){
   p(`M ${hx-17} ${Y(hy-8)} L ${hx-18} ${Y(hy-29)} L ${hx-3} ${Y(hy-18)} Z`,fur)
@@ -93,13 +94,18 @@ function draw(kind,action,frame){
  // A subdued collar, keeping species silhouettes distinct at game scale.
  line(`M ${hx-16} ${Y(hy+18)} Q ${hx-3} ${Y(hy+25)} ${hx+11} ${Y(hy+19)}`,cat?'#a883ac':'#738e79',3)
  ellipse(hx-1,hy+22,2.3,2.7,'#dbb76d',outline,.8)
+ if(eating){
+  p('M 87 98 L 111 98 L 107 106 L 91 106 Z',teal)
+  ellipse(99,97,12,3,'#dfbb86')
+  for(const x of [94,99,104])ellipse(x,96,1.6,1.3,dark,dark,0)
+ }
  return shapes
 }
-const actions={dog:['idle','run','jump','sniff','sleep'],cat:['idle','run','jump','groom','sleep']}
+const actions={dog:['idle','run','jump','sniff','sleep','eat'],cat:['idle','run','jump','groom','sleep','eat']}
 for(const [kind,list] of Object.entries(actions))for(const action of list){
  const movie={version:'2.0',params:{viewBoxWidth:128,viewBoxHeight:112,fps:12,frames:24},sprites:[{imageKey:kind+'.vector',frames:Array.from({length:24},(_,i)=>({alpha:1,layout:{x:0,y:0,width:128,height:112},transform:{a:1,b:0,c:0,d:1,tx:0,ty:0},shapes:draw(kind,action,i).map(shape => ({...shape, transform:{a:1,b:0,c:0,d:1,tx:0,ty:0}}))}))}]}
  const error=Movie.verify(movie);if(error)throw Error(error)
  fs.writeFileSync(path.join(root,kind+'-'+action+'.svga'),deflateSync(Movie.encode(Movie.create(movie)).finish()))
 }
-fs.writeFileSync(path.join(root,'README.md'),'# BraveLife original pet animation assets\n\n10 original vector SVGA 2.x clips, 128×112, 12 fps, 24 frames, transparent.\nGenerated deterministically by `node scripts/generate-pet-svga.mjs`.\nDog: idle/wag, run/trot, jump, sniff, sleep. Cat: idle, run/walk, jump/pounce, groom, sleep.\nNo third-party artwork or remote media. Format: https://github.com/svga/SVGA-Format/blob/master/proto/svga.proto\nThe shared cross-platform player supports only this authored vector subset (absolute M/L/Q/C/Z paths and ellipses); it is not a general SVGA player.\n')
-console.log('Generated 10 transparent vector SVGA clips')
+fs.writeFileSync(path.join(root,'README.md'),'# BraveLife original pet animation assets\n\n12 original vector SVGA 2.x clips, 128×112, 12 fps, 24 frames, transparent.\nGenerated deterministically by `node scripts/generate-pet-svga.mjs`.\nDog: idle/wag, run/trot, jump, sniff, sleep, eat. Cat: idle, run/walk, jump/pounce, groom, sleep, eat.\nNo third-party artwork or remote media. Format: https://github.com/svga/SVGA-Format/blob/master/proto/svga.proto\nThe shared cross-platform player supports only this authored vector subset (absolute M/L/Q/C/Z paths and ellipses); it is not a general SVGA player.\n')
+console.log('Generated 12 transparent vector SVGA clips')

@@ -62,6 +62,23 @@ function furniture(group, id) {
       round(group, 0x57854f, 0, .41, 0, .22, .25)
       round(group, 0x84a95c, .12, .54, .03, .13)
       break
+    case 'cat_bed':
+    case 'dog_bed':
+      pot(group, id === 'cat_bed' ? coral : teal, 0, .065, 0, .36, .13)
+      round(group, cream, 0, .13, 0, .28, .045)
+      break
+    case 'cat_litter':
+      box(group, teal, 0, .07, 0, .63, .14, .52)
+      box(group, cream, 0, .145, 0, .52, .025, .41)
+      break
+    case 'dog_pad':
+      box(group, teal, 0, .018, 0, .68, .036, .56)
+      box(group, cream, 0, .04, 0, .58, .012, .46)
+      break
+    case 'cat_toy':
+    case 'dog_toy':
+      round(group, id === 'cat_toy' ? coral : 0xa1bf5e, .21, .09, .13, .09)
+      break
     case 'rug':
       box(group, coral, 0, .018, 0, .92, .036, .84)
       box(group, cream, 0, .038, 0, .73, .009, .64)

@@ -8,9 +8,9 @@
 import { ref, watch, onMounted, onBeforeUnmount, getCurrentInstance, nextTick, computed } from 'vue'
 import { loadPetSVGA, drawPetFrame } from '../../game/animation/svga-player.js'
 import { ui } from '../../game/ui.js'
-const props=defineProps({kind:{type:String,required:true},action:{type:String,default:'idle'},facing:{type:Number,default:1},size:{type:Number,default:64}})
-const labels={idle:'悠闲摇尾',run:'小跑',jump:'蹦跳',groom:'舔爪洗脸',sniff:'低头嗅闻',sleep:'趴下睡觉'}
-const label=computed(()=>(props.kind==='cat'?'小猫':'小狗')+' · '+labels[props.action])
+const props=defineProps({kind:{type:String,required:true},action:{type:String,default:'idle'},activity:{type:String,default:''},facing:{type:Number,default:1},size:{type:Number,default:64}})
+const labels={idle:'悠闲摇尾',run:'小跑',jump:'蹦跳',groom:'舔爪洗脸',sniff:'低头嗅闻',sleep:'趴下睡觉',eat:'吃口粮',sun:'躺着晒太阳',play:'玩玩具',toilet:'上厕所'}
+const label=computed(()=>(props.kind==='cat'?'小猫':'小狗')+' · '+labels[props.activity || props.action])
 const instance=getCurrentInstance(),canvasId='pet-'+instance.uid
 const failed=ref(false)
 let ctx,movie,timer,frame=0,request=0,disposed=false

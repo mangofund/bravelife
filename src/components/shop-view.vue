@@ -26,12 +26,16 @@ const categories = [{id:'food',name:'食物'},{id:'ingredient',name:'食材'},{i
 const confirming = ref(''), bought = ref('')
 const pending = ref('')
 watch(category, () => { confirming.value=''; bought.value='' })
-const hint = computed(() => ({furniture:'送入家园仓库，摆放后生效',garden:'购买入库，播种扣种子不再扣现金',pet:'购买不自动喂养，猫狗各用对应口粮'})[category.value] || '购买后放入背包，使用或赠送时消耗')
+const hint = computed(() => ({furniture:'送入家园仓库，摆放后生效',garden:'购买入库，播种扣种子不再扣现金',pet:'口粮需手动喂养，用品入库后可在小屋摆放'})[category.value] || '购买后放入背包，使用或赠送时消耗')
 function furnitureTip(g) { return g.kitchen ? '摆放后解锁料理' : g.bed ? '改善睡眠 ×'+g.bed : g.cleaner ? '减缓小屋整洁度下降' : g.use ? g.use.name : '装饰小屋' }
 const goods = computed(() => {
   let list
-  if(['garden','pet'].includes(category.value)) list=Object.entries(SUPPLIES).filter(([,g])=>g.category===category.value).map(([id,g])=>({...g,id,kind:'supply'}))
-  else if(category.value==='furniture') list=Object.entries(FURNITURE).filter(([id,g])=>!g.courage&&id!=='cat').map(([id,g])=>({...g,id,kind:'furniture',tip:furnitureTip(g)}))
+  if (category.value === 'pet') list = [
+    ...Object.entries(SUPPLIES).filter(([,g]) => g.category === 'pet').map(([id,g]) => ({...g,id,kind:'supply'})),
+    ...Object.entries(FURNITURE).filter(([,g]) => g.pet).map(([id,g]) => ({...g,id,kind:'furniture'}))
+  ]
+  else if(category.value==='garden') list=Object.entries(SUPPLIES).filter(([,g])=>g.category===category.value).map(([id,g])=>({...g,id,kind:'supply'}))
+  else if(category.value==='furniture') list=Object.entries(FURNITURE).filter(([id,g])=>!g.courage&&!g.pet&&id!=='cat').map(([id,g])=>({...g,id,kind:'furniture',tip:furnitureTip(g)}))
   else list=Object.entries(ITEMS).filter(([,g])=>category.value==='gift'?['gift','ring'].includes(g.kind):g.kind===category.value).map(([id,g])=>({...g,id,kind:'item',tip:g.kind==='ingredient'?'料理：'+describe(g.cook):['gift','ring'].includes(g.kind)?'用于关系互动':describe(g.effects)}))
   return list.sort((a,b)=>(b.id===ui.shopProduct?1:0)-(a.id===ui.shopProduct?1:0))
 })
@@ -44,7 +48,7 @@ function purchase(g){
 function usePurchase(g){
   if(g.category==='garden'){ui.selectedSeed=g.target;requestFunction('home');return}
   if(g.category==='pet'){ui.homeTools.pet=g.target;requestFunction('pets');return}
-  if(g.kind==='furniture'){ui.homeTools.inventory='furniture';requestFunction('inventory');return}
+  if(g.kind==='furniture'){ui.homeTools.inventory=g.pet?'pet':'furniture';requestFunction('inventory');return}
   if(ITEMS[g.id]?.kind==='ingredient'){ui.homeTools.food='cook';ui.homeTools.cooking='classic';requestFunction('life');return}
   requestFunction('phone',{app:'bag'})
 }

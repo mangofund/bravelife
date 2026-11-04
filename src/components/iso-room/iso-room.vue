@@ -6,6 +6,7 @@
     <view v-if="threeD && !sceneCovered && threeReady && atHome" class="iso-hero iso-hero-3d" :style="roomProjection[0]">
       <hero-doll :profile="state.profile" :size="Math.round(TW * 1.05)" :pose="pose" :facing="facing" />
     </view>
+    <pet-residents v-if="threeD && !sceneCovered && threeReady" environment="room" :points="projectedPetPoints" />
     <view v-if="threeD && sceneFailed" class="scene-unavailable">
       <text>房间 3D 暂不可用</text><button size="mini" @tap.stop="sceneFailed = false">重试</button>
     </view>
@@ -31,7 +32,7 @@
       @tap.stop="emit('inspect', { uid: f.uid, fid: f.fid })"
       :style="{ left: f.left + 'rpx', top: f.top + 'rpx', width: f.w + 'rpx', zIndex: f.z }"
     >
-      <image v-if="!failed[f.fid]" class="furn-img" :src="art('furn/' + f.fid, 'png')" mode="widthFix" @error="failed[f.fid] = true" />
+      <image v-if="!FURNITURE[f.fid].pet && !failed[f.fid]" class="furn-img" :src="art('furn/' + f.fid, 'png')" mode="widthFix" @error="failed[f.fid] = true" />
       <text v-else class="furn-emoji" :style="{ fontSize: TW * 0.5 + 'rpx' }">{{ f.icon }}</text>
     </view>
 
@@ -82,8 +83,14 @@ const heroHeight = computed(() => {
   const fid = itemAt.value[hero.x + ',' + hero.y]?.fid
   return fid === 'futon' ? .22 : ON_TOP[fid] ? .4 : 0
 })
-const roomAnchors = computed(() => [[hero.x + .5, heroHeight.value, hero.y + .5]])
+const roomAnchors = computed(() => [
+  [hero.x + .5, heroHeight.value, hero.y + .5],
+  ...petPoints.value.map(p => [p.x + .5, p.activity === 'sleep' ? .15 : .04, p.y + .5])
+])
 const roomProjection = ref([])
+const projectedPetPoints = computed(() => petPoints.value.flatMap((p, i) =>
+  roomProjection.value[i + 1] ? [{ ...p, ...roomProjection.value[i + 1], z: 4 }] : []
+))
 function fail3d() {
   threeReady.value = false
   sceneFailed.value = true
@@ -174,9 +181,10 @@ let busy = false
 let timers = []
 
 useGuideAnchor('room', '.iso-hero')
-const petPoints = computed(() => cells.value.filter(c => !c.item || WALKABLE[c.item.fid]).map(c => {
+const petPoints = computed(() => cells.value.filter(c => !c.item || WALKABLE[c.item.fid] || FURNITURE[c.item.fid].pet).map(c => {
   const t = top(c.x, c.y)
-  return { id: c.key, x: c.x, y: c.y, left: t.X + 'rpx', top: (t.Y + TH.value * .65) + 'rpx', z: (c.x + c.y) * 10 + 6 }
+  const furnishing = c.item && FURNITURE[c.item.fid]
+  return { id: c.key, x: c.x, y: c.y, pet: furnishing?.pet, activity: furnishing?.activity, left: t.X + 'rpx', top: (t.Y + TH.value * .65) + 'rpx', z: (c.x + c.y) * 10 + 6 }
 }))
 const heroStyle = computed(() => {
   const t = top(hero.x, hero.y)

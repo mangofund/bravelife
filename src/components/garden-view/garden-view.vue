@@ -14,6 +14,7 @@
       <scene-stage v-if="threeD && !sceneCovered && !sceneFailed" kind="garden" :model="gardenModel" :anchors="plotAnchors"
         @ready="threeReady = true" @failure="fail3d" @pick="onPlotTap" @projected="plotProjection = $event" />
       <template v-if="threeD && !sceneCovered && threeReady">
+        <pet-residents environment="garden" :points="projectedPetPoints" />
         <button v-for="(p, i) in plots" :key="i" class="plot-label" :style="plotProjection[i]"
           :aria-label="plotLabel(p, i)" @click.stop="onPlotTap(i)">{{ p ? p.name : '播种' }}</button>
       </template>
@@ -96,11 +97,17 @@ watch(() => [props.threeD, props.section], () => { threeReady.value = false; sce
 function plotLabel(plot, index) {
   return plot ? plot.name + '，' + plot.stage : '第' + (index + 1) + '格，播种'
 }
-const petPoints = [
-  {id:'a',x:0,y:0,left:'18%',top:'94%',z:12},
-  {id:'b',x:1,y:0,left:'50%',top:'94%',z:12},
-  {id:'c',x:2,y:0,left:'82%',top:'94%',z:12}
-]
+// Follow the garden's cross-shaped paths and the near edge, between the crop beds.
+const petPoints = []
+for (let y = 0; y < 5; y++) {
+  for (let x = 0; x < 5; x++) {
+    if (x !== 2 && y !== 2 && y !== 4) continue
+    petPoints.push({ id: x + ',' + y, x, y, left: (16 + x * 17) + '%', top: (34 + y * 15) + '%', z: 12 })
+  }
+}
+const projectedPetPoints = computed(() => petPoints.flatMap((p, i) =>
+  plotProjection.value[i + 4] ? [{ ...p, ...plotProjection.value[i + 4] }] : []
+))
 const confirming = ref('')
 const selected = computed({get:()=>ui.selectedSeed || 'radish',set:v=>ui.selectedSeed=v})
 const {busy,run}=useAction()
@@ -139,7 +146,10 @@ const gardenModel = computed(() => ({
     wet: p.waterUntil > now.value
   }))
 }))
-const plotAnchors = [[.77, .08, 1.25], [2.42, .08, 1.25], [.77, .08, 2.9], [2.42, .08, 2.9]]
+const plotAnchors = [
+  [.77, .08, 1.25], [2.42, .08, 1.25], [.77, .08, 2.9], [2.42, .08, 2.9],
+  ...petPoints.map(p => [.1 + p.x * .75, .04, .1 + p.y * .8])
+]
 const plotProjection = ref([])
 function fail3d() {
   threeReady.value = false
