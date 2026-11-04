@@ -1,5 +1,5 @@
 {
-  "release": "weixin-homestead-canvas-overlay-fix-2026-11-04",
+  "release": "web-garden-layout-2026-11-04",
   "date": "2026-11-04",
-  "changes": ["unmount-native-home-canvas-under-overlays", "restore-scene-when-uncovered"]
+  "changes": ["fixed-size-garden-controls", "centered-homestead-switch", "restore-garden-3d-viewport"]
 }

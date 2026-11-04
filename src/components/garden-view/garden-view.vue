@@ -260,4 +260,42 @@ onBeforeUnmount(() => { clearInterval(timer); save() })
 }
 .garden.fixed-panel .plot { min-height: 0; }
 .garden.fixed-panel .garden-actions { margin-bottom: 0; }
+/* #ifdef H5 */
+.garden.fixed-panel .seeds,
+.garden.fixed-panel .garden-actions {
+  justify-content: center;
+  gap: 6px;
+}
+.garden.fixed-panel .seeds button,
+.garden.fixed-panel .garden-actions button,
+.garden.fixed-panel .basket-pages button {
+  box-sizing: border-box;
+  flex: none;
+  height: 36px;
+  margin: 0;
+  padding: 0 3px;
+  font-size: 12px;
+  line-height: 36px;
+}
+.garden.fixed-panel .seeds button { width: 88px; }
+.garden.fixed-panel .garden-actions button { width: 132px; }
+.garden.fixed-panel .basket-pages button { width: 80px; }
+.garden.fixed-panel > .muted.block {
+  text-align: center;
+  font-size: 12px;
+}
+.garden.fixed-panel .plot-label {
+  box-sizing: border-box;
+  width: 52px;
+  height: 28px;
+  padding: 0;
+  line-height: 26px;
+}
+@media (max-width: 400px) {
+  .garden.fixed-panel .seeds button { width: 68px; }
+}
+@media (max-width: 320px) {
+  .garden.fixed-panel .seeds { gap: 4px; }
+}
+/* #endif */
 </style>

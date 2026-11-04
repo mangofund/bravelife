@@ -299,4 +299,35 @@ watch(pageCount, n => { page.value = Math.min(page.value, n - 1) })
   background: var(--card); color: var(--ink);
 }
 .homestead-switch button.active { background: var(--hud); color: #fff4df; }
+/* #ifdef H5 */
+.home.home-screen.fixed-homestead .homestead-garden-content {
+  display: flex;
+  flex: 1 1 0;
+  align-self: center;
+  width: 100%;
+  max-width: 760px;
+  height: auto;
+}
+.fixed-homestead .garden-caption {
+  justify-content: center;
+  margin-bottom: 8px;
+}
+.fixed-homestead .garden-caption > view { margin-left: 0; gap: 8px; }
+.fixed-homestead .garden-caption button {
+  box-sizing: border-box;
+  width: 84px;
+  height: 34px;
+  padding: 0;
+  font-size: 13px;
+  line-height: 34px;
+}
+.homestead-switch { justify-content: center; }
+.homestead-switch button {
+  box-sizing: border-box;
+  flex: 0 0 104px;
+  height: 40px;
+  padding: 0;
+  line-height: 40px;
+}
+/* #endif */
 </style>
