@@ -10,7 +10,7 @@
       <view class="scene-layer">
         <view class="guided-scene">
         <view v-if="sheet" class="location-scene"><location-sheet docked :loc-id="sheet" @close="closeSheetByUser" @gohome="goHome" @go="onGo" /></view>
-        <city-map v-else-if="tab === 'map'" @open="onOpen" @arrive-home="tab = 'home'" />
+        <city-map v-else-if="tab === 'map'" @open="onOpen" @arrive-home="goHome" />
         <home-view v-else-if="tab === 'home'" wide @tool="openHomeTool" />
         <scroll-view v-else-if="tab === 'status'" scroll-y class="desktop-record"><view class="record-title">人物志 <text>经历、能力与人生目标</text></view><view class="record-grid"><game-hud /><side-status /></view></scroll-view>
         <scroll-view v-else scroll-y class="phone-scene"><phone-view :key="phoneApp" :initial-app="phoneApp" hide-apps /></scroll-view>
@@ -31,7 +31,7 @@
       <view class="content">
         <view class="guided-scene">
         <location-sheet v-if="sheet" docked :loc-id="sheet" @close="closeSheetByUser" @gohome="goHome" @go="onGo" />
-        <city-map v-else-if="tab === 'map'" @open="onOpen" @arrive-home="tab = 'home'" />
+        <city-map v-else-if="tab === 'map'" @open="onOpen" @arrive-home="goHome" />
         <home-view v-else-if="tab === 'home'" :scene-covered="homeCanvasCovered" @tool="openHomeTool" />
         <scroll-view v-else scroll-y class="pane"><phone-view :key="phoneApp" :initial-app="phoneApp" hide-apps /></scroll-view>
         </view>
@@ -334,6 +334,7 @@ function switchTab(id){
 }
 
 function goHome() {
+  ui.homeScene = 'room'
   sheet.value = ''
   tab.value = 'home'
 }

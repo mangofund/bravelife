@@ -5,7 +5,7 @@
 // petFeed 与 plant 共用 garden/drop_003.mp3，是用户 2026-11-03 明确批准的唯一跨系统复用。
 //
 // 关键约束（不要绕过）：
-// - 首声必须由用户手势触发：本模块不在启动时自动播音，play() 只在用户操作里调用。
+// - 首声必须由用户手势触发。宠物叫声只在音频已解锁后播放。
 // - 静音状态持久化：存在 bravelife_sound_muted_v1，不随每次进游戏重置。
 // - error_006 进游戏时压低音量：ERROR_VOLUME = 0.5，其余短音默认 1.0。
 // - 短音与环境循环走不同实例：短音用缓存的 InnerAudioContext，环境循环单独一路，带淡入淡出。
@@ -39,7 +39,9 @@ export const SOUND_MAP = {
   affection: 'story/confirmation_003.mp3',
   keyMoment: 'story/glass_004.mp3',
   // 宠物：喂食放入与播种共用 drop_003（用户批准的唯一跨系统复用）
-  petFeed: 'garden/drop_003.mp3'
+  petFeed: 'garden/drop_003.mp3',
+  catMeow: 'pets/meow.mp3',
+  dogBark: 'pets/bark.mp3'
 }
 
 // 页签切换变体池：switch_002 为主，003-007 只在页签系统里轮换，不拆到别处。
@@ -54,7 +56,7 @@ export const TAB_SWITCH_VARIANTS = [
 
 // 暂不配 UI 音、等真实录音的事件：调用 play() 会静默返回 false，不报错、不拿 UI 音冒充。
 export const SOUND_TBD = [
-  'water', 'chop', 'fry', 'dogBark', 'catMeow', 'purr',
+  'water', 'chop', 'fry', 'purr',
   'train', 'rain', 'cicada', 'shrineBell', 'ambientHome', 'ambientCafe'
 ]
 
@@ -131,6 +133,11 @@ export function play(event) {
   const file = SOUND_MAP[event]
   if (!file) return false
   return playFile(file, event === 'error' ? ERROR_VOLUME : 1.0)
+}
+
+export function playPetCall(kind) {
+  if (!unlocked) return false
+  return play(kind === 'cat' ? 'catMeow' : 'dogBark')
 }
 
 export function playTabSwitch() {

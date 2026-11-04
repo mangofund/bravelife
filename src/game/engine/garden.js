@@ -57,8 +57,9 @@ export function feed(kind, requestId = '') {
     requireAction(state.garden.feed[kind] > 0, '口粮不足，去商店宠物区补货吧')
     requireAction(Math.max(0, pet.fedUntil - now) + def.hours * HOUR <= def.capHours * HOUR, '现有口粮还很充足，稍后再添')
     pet.fedUntil = Math.max(now, pet.fedUntil) + def.hours * HOUR
+    pet.lastMealAt = Math.max(now, (pet.lastMealAt || 0) + 1)
     state.garden.feed[kind]--
-    return kind === 'dog' ? '追加一天口粮，小狗回菜园看守' : '追加一天口粮，小猫在家陪伴'
+    return '追加一天口粮，' + PETS[kind].name + '来吃饭了'
   }, requestId)
 }
 export function cuddleCat(requestId = '') {
@@ -66,9 +67,29 @@ export function cuddleCat(requestId = '') {
     home(); const now = syncGarden(), cat = state.garden.pets.cat
     requireAction(cat, '先领养一只小猫吧')
     requireAction(cat.fedUntil > now, '小猫肚子饿了，先添点口粮吧')
+    const bond = gainPetBond(cat)
     if (!cat.lastCuddle || now - cat.lastCuddle >= 24 * HOUR) {
-      cat.lastCuddle = now; addStats({ mood: 4 }); return '小猫蹭了蹭你，心情 +4'
+      cat.lastCuddle = now
+      addStats({ mood: 4 })
+      return '小猫蹭了蹭你，心情 +4' + bond
     }
-    return '陪小猫玩了一会儿，它舒服地打着呼噜'
+    return '陪小猫玩了一会儿，它舒服地打着呼噜' + bond
+  }, requestId)
+}
+
+function gainPetBond(pet) {
+  if (pet.lastHugDay === state.day) return ''
+  pet.lastHugDay = state.day
+  const bond = pet.bond || 0
+  pet.bond = Math.min(100, bond + 5)
+  return bond < pet.bond ? '，亲密度 +' + (pet.bond - bond) : ''
+}
+
+export function hugPet(kind, requestId = '') {
+  return transact(() => {
+    home()
+    const pet = Object.hasOwn(PETS, kind) && state.garden.pets[kind]
+    requireAction(pet, '先领养这位伙伴吧')
+    return PETS[kind].name + '往你怀里蹭了蹭' + gainPetBond(pet)
   }, requestId)
 }

@@ -26,6 +26,31 @@ check('猫狗分粮、旧首日不重复赠送',()=>{garden.adopt('cat');buy('su
 check('回拨现实时间不能刷饱腹',()=>{const t=core.state.garden.pets.dog.fedUntil;now-=72*HOUR;buy('supply','feed_dog');assert.ok(garden.feed('dog'));assert.equal(core.state.garden.pets.dog.fedUntil,t+24*HOUR);assert.ok(core.state.garden.pets.dog.fedUntil-core.state.garden.lastAt<=72*HOUR)})
 check('保存失败回滚购买及请求ID，可原请求重试',()=>{const before=JSON.stringify(core.state);saveFails=true;assert.equal(buy('supply','seed_tomato','retry-buy'),false);saveFails=false;assert.equal(JSON.stringify(core.state),before);assert.ok(buy('supply','seed_tomato','retry-buy'));assert.ok(core.load());assert.equal(buy('supply','seed_tomato','retry-buy'),false)})
 check('保存失败回滚播种与库存',()=>{const before=JSON.stringify(core.state);saveFails=true;assert.equal(garden.sow(2,'tomato'),false);saveFails=false;assert.equal(JSON.stringify(core.state),before)})
+check('猫狗亲密度分别记录，重复拥抱和读档不重复加分',()=>{
+  assert.ok(garden.hugPet('cat'))
+  assert.ok(garden.hugPet('dog'))
+  assert.equal(core.state.garden.pets.cat.bond,5)
+  assert.equal(core.state.garden.pets.dog.bond,5)
+  assert.ok(core.load())
+  assert.ok(garden.cuddleCat())
+  assert.ok(garden.hugPet('dog'))
+  assert.equal(core.state.garden.pets.cat.bond,5)
+  assert.equal(core.state.garden.pets.dog.bond,5)
+  core.state.day++
+  assert.ok(garden.hugPet('dog'))
+  assert.equal(core.state.garden.pets.dog.bond,10)
+  assert.equal(core.state.garden.pets.cat.bond,5)
+})
+check('失败的添粮不会留下进食活动',()=>{
+  core.state.garden.pets.dog.fedUntil = now
+  buy('supply','feed_dog')
+  const before=JSON.stringify(core.state.garden)
+  saveFails=true
+  assert.equal(garden.feed('dog'),false)
+  saveFails=false
+  assert.equal(JSON.stringify(core.state.garden),before)
+  assert.ok(core.state.garden.pets.dog.lastMealAt>0)
+})
 const h=await import('../src/game/engine/homestead.js')
 fresh()
 core.state.furniture.placed=[{uid:1,fid:'stove',x:0,y:0}]

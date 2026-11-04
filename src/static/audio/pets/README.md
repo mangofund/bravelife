@@ -1,2 +1,3 @@
-宠物音效暂留空：狗叫、猫叫、呼噜等真实音未到，不拿 Kenney UI 音冒充。
-喂食放入目前在管理器里共用 garden/drop_003.mp3（用户批准的唯一跨系统复用），见 docs/AUDIO-MAPPING.md。
+- meow.mp3：小猫饿时的叫声。
+- bark.mp3：小狗饿时的叫声。
+- 录音授权见 docs/AUDIO-LICENSE.md，事件映射见 docs/AUDIO-MAPPING.md。

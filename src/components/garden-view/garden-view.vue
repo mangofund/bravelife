@@ -57,9 +57,10 @@
       <text class="act-name">{{ p.icon }} {{ p.name }}</text>
       <template v-if="p.owned">
         <text class="block">{{ p.status }}</text>
-        <text class="muted block">{{ p.food }} · 体力 {{ p.energy }}</text>
+        <text class="muted block">{{ p.food }} · 体力 {{ p.energy }} · 亲密度 {{ p.bond }}/100</text>
         <button size="mini" :disabled="busy || !atHome || !p.canFeed || !p.stock" @click="act(() => feed(p.id), 'petFeed')">追加24小时 · 库存{{ p.stock }}</button>
         <text class="muted block">{{ p.canFeed ? '喂后可维持约' + p.after + '小时' : '最多提前备72小时，暂时无需添粮' }}</text><button size="mini" @click="requestFunction('shop',{category:'pet',product:'feed_'+p.id})">买口粮</button>
+        <button size="mini" :disabled="busy || !atHome" @click="act(() => hugPet(p.id))">抱抱</button>
         <button v-if="p.id === 'cat'" size="mini" :disabled="!atHome" @click="act(() => cuddleCat())">陪陪小猫</button>
       </template>
       <template v-else>
@@ -88,7 +89,7 @@ import { actionAudio } from '../../game/action-audio.js'
 import { useAction } from '../../game/use-action.js'
 import { state, save } from '../../game/engine/core.js'
 import { CROPS, PETS, HOUR } from '../../game/data/garden.js'
-import { syncGarden, sow, reap, waterGarden, useProduce, adopt, feed, cuddleCat, ripe } from '../../game/engine/garden.js'
+import { syncGarden, sow, reap, waterGarden, useProduce, adopt, feed, cuddleCat, hugPet, ripe } from '../../game/engine/garden.js'
 const props = defineProps({ section: { type: String, default: 'all' }, compact: Boolean, scenic: Boolean, embedded: Boolean, fixedPanel: Boolean, threeD: Boolean, sceneCovered: Boolean, feedback: { type: String, default: '' } })
 const threeReady = ref(false)
 const sceneFailed = ref(false)
@@ -164,8 +165,8 @@ const visibleBasket = computed(() => props.scenic ? basket.value.slice(basketInd
 watch(() => basket.value.length, n => { basketIndex.value = Math.min(basketIndex.value, Math.max(0, n - 1)) })
 const pets = computed(() => Object.keys(PETS).map(id => {
   const p = state.garden.pets[id], fed = p && p.fedUntil > now.value
-  return { id, ...PETS[id], owned: !!p, energy: p ? Math.round(p.energy) : 0,
-    status: id === 'dog' ? (fed ? '在菜园看守 · 禁止偷菜' : '肚子饿了，回房睡觉 · 体力消耗极小') : (fed ? '在家等你陪伴' : '饿了，正在休息'),
+  return { id, ...PETS[id], owned: !!p, bond: p?.bond || 0, energy: p ? Math.round(p.energy) : 0,
+    status: id === 'dog' ? (fed ? '口粮充足 · 菜园受保护' : '肚子饿了，会汪汪叫你添粮') : (fed ? '在家园里活动' : '肚子饿了，会喵喵叫你添粮'),
     food: fed ? '口粮与饮水还够 ' + duration(p.fedUntil - now.value) : '需要添粮与饮水',
     stock: state.garden.feed[id] || 0, after: p ? Math.ceil(Math.max(0,p.fedUntil-now.value)/HOUR+24) : 24,
     canFeed: p && Math.max(0,p.fedUntil-now.value) <= 48 * HOUR }

@@ -22,7 +22,7 @@ export function normalizeGarden(raw) {
   })
   for (const kind of ['dog', 'cat']) {
     const p = raw.pets && raw.pets[kind]
-    if (p && typeof p === 'object') g.pets[kind] = { fedUntil: finite(p.fedUntil), energy: Math.min(100, finite(p.energy, 100)), lastCuddle: finite(p.lastCuddle) }
+    if (p && typeof p === 'object') g.pets[kind] = { fedUntil: finite(p.fedUntil), energy: Math.min(100, finite(p.energy, 100)), lastCuddle: finite(p.lastCuddle), lastMealAt: finite(p.lastMealAt), bond: Math.min(100, finite(p.bond)), lastHugDay: finite(p.lastHugDay, -1) }
   }
   return g
 }

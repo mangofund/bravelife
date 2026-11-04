@@ -24,12 +24,14 @@ function leapPose(frame) {
 }
 function draw(kind,action,frame){
  const shapes=[],t=frame/24*Math.PI*2,cat=kind==='cat',fur=cat?'#dfa05b':'#c68a50',dark=cat?'#b77341':'#a56538'
- const moving=action==='run', jumping=action==='jump', sleep=action==='sleep', groom=action==='groom', sniff=action==='sniff'
+ const moving=action==='run', jumping=action==='jump' || action==='play', sleep=action==='sleep', groom=action==='groom', sniff=action==='sniff'
+ const greeting=action==='greet', calling=action==='call', toilet=action==='toilet'
+ const rub=greeting?Math.sin(t*2):0
  const [body,frontReach,frontLift,backReach,backLift]=jumping?leapPose(frame):[0,0,0,0,0]
  const settle=sleep?Math.min(1,frame/11):0
  const breath=sleep&&frame>=12?Math.sin((frame-12)/12*Math.PI*2)*.65:0
  const bob=moving?Math.sin(t*2)*1.4:0
- const Y=y=>y+body+settle*13+bob+breath
+ const Y=y=>y+body+settle*13+bob+breath+(toilet?Math.sin(t)**2*5:0)
  const style=(fill,stroke=outline,width=1.7)=>({fill:color(fill),stroke:color(stroke),strokeWidth:width,lineCap:1,lineJoin:1})
  const ellipse=(x,y,rx,ry,fill,stroke=outline,width=1.7,alpha=1)=>shapes.push({type:2,ellipse:{x,y:Y(y),radiusX:rx,radiusY:ry},styles:{...style(fill,stroke,width),fill:color(fill,alpha),stroke:color(stroke,alpha)}})
  const p=(d,fill,stroke=outline,width=1.7)=>shapes.push({type:0,shape:{d},styles:style(fill,stroke,width)})
@@ -65,8 +67,8 @@ function draw(kind,action,frame){
  ellipse(65,82-settle*2,21,8,cream,cream,0)
  leg(false,true);leg(true,true)
  const eating=action==='eat'
- const hx=(eating?82:sniff?88:85)+settle*4
- const hy=(eating?73+Math.sin(t*3)*2:sniff?73:59)+(groom?5:0)+settle*10
+ const hx=(eating?82:sniff?88:85)+settle*4+rub*5
+ const hy=(eating?73+Math.sin(t*3)*2:sniff?73:59)+(groom?5:0)+settle*10+rub*3-(calling?Math.sin(t*2)**2*4:0)
  // Ears are separate from head and move with its pose.
  if(cat){
   p(`M ${hx-17} ${Y(hy-8)} L ${hx-18} ${Y(hy-29)} L ${hx-3} ${Y(hy-18)} Z`,fur)
@@ -83,7 +85,7 @@ function draw(kind,action,frame){
   for(let i=-1;i<=1;i++)line(`M ${hx+i*6} ${Y(hy-18)} L ${hx+i*5} ${Y(hy-11)}`,dark,2)
   for(const side of [-1,1])for(const dy of [-2,3])line(`M ${hx+side*14} ${Y(hy+8+dy)} L ${hx+side*27} ${Y(hy+5+dy*2)}`,outline,.9)
  }
- const blink=frame===18||frame===19||groom||(sleep&&settle>.65)
+ const blink=frame===18||frame===19||groom||greeting||(sleep&&settle>.65)
  for(const x of [hx-8,hx+10]){
   if(blink)line(`M ${x-3} ${Y(hy+1)} Q ${x} ${Y(hy+4)} ${x+3} ${Y(hy+1)}`,outline,2)
   else {ellipse(x,hy,2.6,3.8,outline,outline,0);ellipse(x+.6,hy-1.2,.8,1.1,cream,cream,0)}
@@ -94,6 +96,12 @@ function draw(kind,action,frame){
  // A subdued collar, keeping species silhouettes distinct at game scale.
  line(`M ${hx-16} ${Y(hy+18)} Q ${hx-3} ${Y(hy+25)} ${hx+11} ${Y(hy+19)}`,cat?'#a883ac':'#738e79',3)
  ellipse(hx-1,hy+22,2.3,2.7,'#dbb76d',outline,.8)
+ if(calling) ellipse(hx+4,hy+14,3,1+Math.sin(t*2)**2*4,outline)
+ if(action==='play'){
+  const ballX=100+Math.sin(t)*14, ballY=97-Math.max(0,Math.sin(t))*15
+  ellipse(ballX,ballY-Y(0),7,7,cat?'#d993ad':'#a1bf5e')
+  line(`M ${ballX-4} ${ballY-5} Q ${ballX+4} ${ballY} ${ballX-3} ${ballY+6}`,cream,1.2)
+ }
  if(eating){
   p('M 87 98 L 111 98 L 107 106 L 91 106 Z',teal)
   ellipse(99,97,12,3,'#dfbb86')
@@ -101,11 +109,11 @@ function draw(kind,action,frame){
  }
  return shapes
 }
-const actions={dog:['idle','run','jump','sniff','sleep','eat'],cat:['idle','run','jump','groom','sleep','eat']}
+const actions={dog:['idle','run','jump','sniff','sleep','eat','greet','call','toilet','play'],cat:['idle','run','jump','groom','sleep','eat','greet','call','toilet','play']}
 for(const [kind,list] of Object.entries(actions))for(const action of list){
  const movie={version:'2.0',params:{viewBoxWidth:128,viewBoxHeight:112,fps:12,frames:24},sprites:[{imageKey:kind+'.vector',frames:Array.from({length:24},(_,i)=>({alpha:1,layout:{x:0,y:0,width:128,height:112},transform:{a:1,b:0,c:0,d:1,tx:0,ty:0},shapes:draw(kind,action,i).map(shape => ({...shape, transform:{a:1,b:0,c:0,d:1,tx:0,ty:0}}))}))}]}
  const error=Movie.verify(movie);if(error)throw Error(error)
  fs.writeFileSync(path.join(root,kind+'-'+action+'.svga'),deflateSync(Movie.encode(Movie.create(movie)).finish()))
 }
-fs.writeFileSync(path.join(root,'README.md'),'# BraveLife original pet animation assets\n\n12 original vector SVGA 2.x clips, 128×112, 12 fps, 24 frames, transparent.\nGenerated deterministically by `node scripts/generate-pet-svga.mjs`.\nDog: idle/wag, run/trot, jump, sniff, sleep, eat. Cat: idle, run/walk, jump/pounce, groom, sleep, eat.\nNo third-party artwork or remote media. Format: https://github.com/svga/SVGA-Format/blob/master/proto/svga.proto\nThe shared cross-platform player supports only this authored vector subset (absolute M/L/Q/C/Z paths and ellipses); it is not a general SVGA player.\n')
-console.log('Generated 12 transparent vector SVGA clips')
+fs.writeFileSync(path.join(root,'README.md'),'# BraveLife original pet animation assets\n\n20 original vector SVGA 2.x clips, 128×112, 12 fps, 24 frames, transparent.\nGenerated deterministically by `node scripts/generate-pet-svga.mjs`.\nDog: idle/wag, run/trot, jump, sniff, sleep, eat, greet, call, toilet, play. Cat: idle, run/walk, jump/pounce, groom, sleep, eat, greet, call, toilet, play.\nNo third-party artwork or remote media. Format: https://github.com/svga/SVGA-Format/blob/master/proto/svga.proto\nThe shared cross-platform player supports only this authored vector subset (absolute M/L/Q/C/Z paths and ellipses); it is not a general SVGA player.\n')
+console.log('Generated 20 transparent vector SVGA clips')

@@ -39,10 +39,10 @@ export const FURNITURE = {
   cat: { name: '猫爬架和猫', icon: '🐈', price: 60000, decor: 4, use: { id: 'cat', name: '撸猫', icon: '🐈', hours: 0.5, effects: { mood: 12 } } },
   cat_litter: { name: '猫砂盆', icon: '🪣', price: 1200, pet: 'cat', activity: 'toilet', tip: '摆放后，小猫会来这里上厕所' },
   cat_bed: { name: '猫窝', icon: '🧺', price: 1800, pet: 'cat', activity: 'sleep', tip: '摆放后，小猫会来这里睡觉' },
-  cat_toy: { name: '猫玩具', icon: '🧶', price: 500, pet: 'cat', activity: 'play', tip: '摆放后，小猫会来这里玩耍' },
+  cat_toy: { name: '猫球玩具', icon: '🧶', price: 500, pet: 'cat', activity: 'play', tip: '摆放后，小猫会来这里玩耍' },
   dog_pad: { name: '狗狗尿垫', icon: '🟦', price: 800, pet: 'dog', activity: 'toilet', tip: '摆放后，小狗会来这里上厕所' },
   dog_bed: { name: '狗窝', icon: '🧺', price: 2000, pet: 'dog', activity: 'sleep', tip: '摆放后，小狗会来这里睡觉' },
-  dog_toy: { name: '狗玩具', icon: '🎾', price: 500, pet: 'dog', activity: 'play', tip: '摆放后，小狗会来这里玩耍' },
+  dog_toy: { name: '狗球玩具', icon: '🎾', price: 500, pet: 'dog', activity: 'play', tip: '摆放后，小狗会来这里玩耍' },
   // 勇气商店的旧物：只能用勇气交换，不在家具城出售
   old_ticket: { name: '1964 年奥运门票', icon: '🎫', price: 0, decor: 2, courage: true },
   old_tape: { name: '没拆的磁带', icon: '📼', price: 0, decor: 2, courage: true },

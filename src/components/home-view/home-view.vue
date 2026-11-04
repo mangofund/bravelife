@@ -12,7 +12,7 @@
 
     <view v-else-if="fixedPanel && !showingGarden" class="placement-note room-hint"><text>{{ feedback || '左右滑动旋转 · 点击家具查看' }}</text></view>
 
-    <view v-if="!tool" v-show="scene === 'room'" class="homestead" :class="{ arranging: !!selected && !fixedPanel }">
+    <view v-if="!tool && scene === 'room'" class="homestead" :class="{ arranging: !!selected && !fixedPanel }">
     <view v-if="!showingGarden" class="home-stage">
       <view class="home-sunlight" />
       <view class="room-model" :style="fixedPanel ? null : { transform: 'scale(' + roomScale + ')' }"><iso-room :selected="selected" :fill-stage="fixedPanel" :layout-key="selected || inspected?.fid || ''" :three-d="fixedPanel" :scene-covered="sceneCovered" @placed="onPlaced" @inspect="inspected = $event" /></view>
@@ -171,6 +171,11 @@ const choreList = Object.keys(CHORES).map((id) => Object.assign({ id }, CHORES[i
 const inventoryPageSize = computed(() => props.wide ? 9 : 6)
 const home = computed(() => HOMES[state.home])
 const atHome = computed(() => state.location === 'home')
+watch(atHome, home => {
+  if (!home || props.tool) return
+  homePanel.value = 'room'
+  scene.value = 'room'
+})
 const decor = computed(() => decorScore())
 const bed = computed(() => bestBed())
 const kitchen = computed(() => kitchenLevel())

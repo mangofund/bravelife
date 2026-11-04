@@ -36,9 +36,13 @@
 
 - petFeed 喂食放入：garden/drop_003.mp3，与 plant 共用，是用户批准的唯一跨系统复用。
 
+- catMeow 猫咪饿了：pets/meow.mp3。
+- dogBark 小狗饿了：pets/bark.mp3。
+- 宠物叫声在音频已解锁时播放，并遵循游戏静音设置。
+
 ## 暂留空、等真实录音
 
-water 浇水、chop 切菜、fry 煎炒、dogBark 狗叫、catMeow 猫叫、purr 呼噜、train 电车、rain 雨、cicada 蝉鸣、shrineBell 神社铃、ambientHome / ambientCafe 环境循环。play() 对这些事件静默返回 false。
+water 浇水、chop 切菜、fry 煎炒、purr 呼噜、train 电车、rain 雨、cicada 蝉鸣、shrineBell 神社铃、ambientHome / ambientCafe 环境循环。play() 对这些事件静默返回 false。
 
 ## 接线说明（尚未接线到各事件）
 

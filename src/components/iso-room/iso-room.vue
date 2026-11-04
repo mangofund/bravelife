@@ -6,7 +6,7 @@
     <view v-if="threeD && !sceneCovered && threeReady && atHome" class="iso-hero iso-hero-3d" :style="roomProjection[0]">
       <hero-doll :profile="state.profile" :size="Math.round(TW * 1.05)" :pose="pose" :facing="facing" />
     </view>
-    <pet-residents v-if="threeD && !sceneCovered && threeReady" environment="room" :points="projectedPetPoints" />
+    <pet-residents v-if="threeD && !sceneCovered && threeReady" environment="room" :owner="atHome ? hero : null" :points="projectedPetPoints" />
     <view v-if="threeD && sceneFailed" class="scene-unavailable">
       <text>房间 3D 暂不可用</text><button size="mini" @tap.stop="sceneFailed = false">重试</button>
     </view>
@@ -36,7 +36,7 @@
       <text v-else class="furn-emoji" :style="{ fontSize: TW * 0.5 + 'rpx' }">{{ f.icon }}</text>
     </view>
 
-    <pet-residents environment="room" :points="petPoints" />
+    <pet-residents environment="room" :owner="atHome ? hero : null" :points="petPoints" />
     <view v-if="atHome" class="iso-hero" :style="heroStyle">
       <hero-doll :profile="state.profile" :size="Math.round(TW * 1.05)" :pose="pose" :facing="facing" />
     </view>
