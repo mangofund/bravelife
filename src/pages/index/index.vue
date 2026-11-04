@@ -22,12 +22,23 @@
         </view>
       </view>
       <!-- #endif -->
+      <!-- #ifdef MP-WEIXIN -->
+      <view class="btn ghost" @click="goAccount">{{ account.user ? displayName(account.user) : '登录 / 注册' }}</view>
+      <view class="support-row">
+        <navigator class="support-link" url="/pages/feedback/feedback">
+          <text class="support-icon" aria-hidden="true">🎧</text>
+          <text>用户反馈</text>
+        </navigator>
+      </view>
+      <!-- #endif -->
+      <!-- #ifndef MP-WEIXIN -->
       <view class="btn ghost" @click="goAccount">{{ account.user ? '☁️ ' + displayName(account.user) + ' · 云存档已开启' : '登录 / 注册（云端保存进度）' }}</view>
       <navigator class="foot feedback-link" url="/pages/feedback/feedback">玩家反馈</navigator>
       <!-- #ifdef H5 -->
       <a href="/guide.html" style="color:inherit;font-size:14px">游戏介绍与存档说明</a>
       <!-- #endif -->
       <text class="foot">{{ account.user ? '进度会自动同步到云端' : '游客模式 · 进度保存在本机，登录后可上传' }}</text>
+      <!-- #endif -->
     </view>
   </view>
 </template>
@@ -180,4 +191,24 @@ function onNew() {
   padding: 12rpx 0;
   text-decoration: underline;
 }
+/* #ifdef MP-WEIXIN */
+.support-row {
+  display: flex;
+  justify-content: flex-end;
+}
+.support-link {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+  min-height: 72rpx;
+  padding: 0 20rpx;
+  background: var(--card);
+  color: var(--ink);
+  border-radius: 999rpx;
+  font-size: 22rpx;
+}
+.support-icon {
+  font-size: 28rpx;
+}
+/* #endif */
 </style>
