@@ -35,8 +35,8 @@
       <!-- #endif -->
     </view>
     <view class="garden-actions">
-      <button size="mini" :disabled="!atHome || !readyCount" @click="act(() => reap(), readyCount > 0 ? 'harvest' : null)">收获成熟作物</button>
-      <button size="mini" :disabled="!atHome || !growingCount" @click="act(() => waterGarden(), null)">浇水 · 免费</button>
+      <button id="garden-harvest" size="mini" :disabled="!atHome || !readyCount" @click="act(() => reap(), readyCount > 0 ? 'harvest' : null)">收获成熟作物</button>
+      <button id="garden-water" size="mini" :disabled="!atHome || !growingCount" @click="act(() => waterGarden(), null)">浇水 · 免费</button>
     </view>
     </block>
     <block v-if="section === 'all' || section === 'basket'">

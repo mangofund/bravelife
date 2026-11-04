@@ -393,7 +393,10 @@ function stopPreview() {
 }
 
 function clickPreviewControl(id) {
-  const button = document.getElementById(id)
+  return clickPreviewElement(document.getElementById(id))
+}
+
+function clickPreviewElement(button) {
   if (!button || button.disabled || !button.getClientRects().length) return false
   button.scrollIntoView({ block: 'nearest' })
   button.click()
@@ -429,6 +432,59 @@ function takePreviewControl() {
   previewMessage.value = '已接管演示副本，退出后恢复原进度。'
 }
 
+function openPreviewGarden() {
+  return document.getElementById('home-garden-panel')?.getAttribute('aria-pressed') === 'true' ||
+    clickPreviewControl('home-garden-panel')
+}
+
+function planPreview() {
+  if (state.pendingStory || state.pendingEvent) {
+    return [['继续当前剧情或事件', () => clickPreviewElement(
+      document.querySelector('.st-btn, .ev-btn') || document.querySelector('.st-scene')
+    )]]
+  }
+  if (state.location !== 'home') {
+    return [
+      ['查看当前地点 · ' + (LOCATION_MAP[state.location]?.name || state.location), () => {
+        closePopup()
+        tab.value = 'map'
+        sheet.value = state.location
+      }],
+      ['在当前地点停留一小时，观察时间推进', () => clickPreviewElement(document.querySelector('.sheet .wait'))]
+    ]
+  }
+  const plot = state.garden.plots.findIndex(p => !p)
+  if (plot < 0) {
+    return [
+      ['菜园已种满，先看看作物', () => { closePopup(); goHome() }],
+      ['打开菜园面板', openPreviewGarden],
+      ['收获成熟作物，或给生长中的作物浇水', () =>
+        clickPreviewControl('garden-harvest') || clickPreviewControl('garden-water')]
+    ]
+  }
+  const seeds = state.garden.seeds.radish || 0
+  const food = state.garden.feed.dog || 0
+  const openShop = () => showPopup('shop', popupAnchor('shop'))
+  const steps = [
+    ['打开商店', openShop],
+    ['到园艺区选萝卜种子', () => clickPreviewControl('shop-tab-garden')],
+    ['买一份种子，种子会进入家园仓库', () => clickPreviewControl('shop-buy-seed_radish'), () => state.garden.seeds.radish === seeds + 1],
+    ['切到宠物区', () => clickPreviewControl('shop-tab-pet')],
+    ['买一份狗粮，回家再喂', () => clickPreviewControl('shop-buy-feed_dog'), () => state.garden.feed.dog === food + 1],
+    ['回家查看菜园', () => { closePopup(); goHome() }],
+    ['打开菜园面板', openPreviewGarden],
+    ['选择萝卜种子', () => clickPreviewControl('garden-seed-radish')],
+    ['点击空地，播种消耗一份种子', () => clickPreviewControl('garden-plot-' + plot), () => !!state.garden.plots[plot] && (state.garden.seeds.radish || 0) === seeds],
+    ['打开小狗照料面板', () => { ui.homeTools.pet = 'dog'; openHomeTool('pets') }]
+  ]
+  if (!state.garden.pets.dog) steps.push(
+    ['查看小狗领养费用', () => clickPreviewControl('garden-adopt-dog')],
+    ['确认领养，小狗会来到家园', () => clickPreviewControl('garden-adopt-dog'), () => !!state.garden.pets.dog]
+  )
+  steps.push(['喂小狗，追加一天口粮', () => clickPreviewControl('garden-feed-dog'), () => (state.garden.feed.dog || 0) === food])
+  return steps
+}
+
 async function startPreview() {
   if (authorStarting.value || preview.value) return
   const visit = previewVisit
@@ -437,11 +493,6 @@ async function startPreview() {
   try {
     await api('POST', '/api/me/preview')
     if (visit !== previewVisit || token !== getToken()) return
-    const plot = state.garden.plots.findIndex(p => !p)
-    if (state.location !== 'home' || plot < 0 || state.pendingEvent || state.pendingStory || ui.reading) {
-      uni.showToast({ title: '请先回家、留一块空地并完成当前事件', icon: 'none' })
-      return
-    }
     if (!beginRehearsal()) return
     previewNavigation = { tab: tab.value, sheet: sheet.value, ui: {
       homeScene: ui.homeScene, selectedSeed: ui.selectedSeed, shopCategory: ui.shopCategory,
@@ -450,27 +501,7 @@ async function startPreview() {
     previewManual.value = false
     previewPaused.value = false
     preview.value = true
-    const seeds = state.garden.seeds.radish || 0
-    const food = state.garden.feed.dog || 0
-    const openShop = () => showPopup('shop', popupAnchor('shop'))
-    const steps = [
-      ['打开商店', openShop],
-      ['到园艺区选萝卜种子', () => clickPreviewControl('shop-tab-garden')],
-      ['买一份种子，种子会进入家园仓库', () => clickPreviewControl('shop-buy-seed_radish'), () => state.garden.seeds.radish === seeds + 1],
-      ['切到宠物区', () => clickPreviewControl('shop-tab-pet')],
-      ['买一份狗粮，回家再喂', () => clickPreviewControl('shop-buy-feed_dog'), () => state.garden.feed.dog === food + 1],
-      ['回家查看菜园', () => { closePopup(); goHome() }],
-      ['打开菜园面板', () => document.getElementById('home-garden-panel')?.getAttribute('aria-pressed') === 'true' || clickPreviewControl('home-garden-panel')],
-      ['选择萝卜种子', () => clickPreviewControl('garden-seed-radish')],
-      ['点击空地，播种消耗一份种子', () => clickPreviewControl('garden-plot-' + plot), () => !!state.garden.plots[plot] && (state.garden.seeds.radish || 0) === seeds],
-      ['打开小狗照料面板', () => { ui.homeTools.pet = 'dog'; openHomeTool('pets') }]
-    ]
-    if (!state.garden.pets.dog) steps.push(
-      ['查看小狗领养费用', () => clickPreviewControl('garden-adopt-dog')],
-      ['确认领养，小狗会来到家园', () => clickPreviewControl('garden-adopt-dog'), () => !!state.garden.pets.dog]
-    )
-    steps.push(['喂小狗，追加一天口粮', () => clickPreviewControl('garden-feed-dog'), () => (state.garden.feed.dog || 0) === food])
-    previewSteps.value = steps
+    previewSteps.value = planPreview()
     advancePreview(true)
   } catch (e) {
     if (visit === previewVisit) {
