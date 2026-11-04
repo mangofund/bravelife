@@ -1,5 +1,5 @@
 export const PET_ROUTINES = {
-  dog: ['idle','run','run','jump','sniff','run','idle','sniff'],
+  dog: ['idle','run','run','jump','sniff','run','sleep','sniff'],
   cat: ['idle','run','groom','jump','run','idle','sleep','groom']
 }
 export function petResting(pet, now) { return !pet || pet.fedUntil <= now || pet.energy < 15 }

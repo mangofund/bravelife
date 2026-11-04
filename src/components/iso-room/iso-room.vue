@@ -3,7 +3,6 @@
     <!-- #ifdef H5 -->
     <scene-stage v-if="threeD" kind="room" :model="roomModel" @ready="threeReady = true"
       @failure="fail3d" @pick="pick3d" v-slot="{ project }">
-      <pet-residents environment="room" :points="projectPets(project)" />
       <view v-if="atHome" class="iso-hero" :style="{ ...project(hero.x + .5, heroHeight, hero.y + .5), transitionDuration: STEP + 's' }">
         <hero-doll :profile="state.profile" :size="Math.round(TW * 1.05)" :pose="pose" :facing="facing" />
       </view>
@@ -72,9 +71,6 @@ const heroHeight = computed(() => {
   const fid = itemAt.value[hero.x + ',' + hero.y]?.fid
   return fid === 'futon' ? .22 : ON_TOP[fid] ? .4 : 0
 })
-function projectPets(project) {
-  return petPoints.value.map(point => ({ ...point, ...project(point.x + .5, 0, point.y + .5) }))
-}
 function fail3d() {
   threeReady.value = false
   emit('3d-failure')

@@ -39,7 +39,7 @@ export function createSceneView(canvas, onFailure) {
   const sun = new DirectionalLight(0xffe0b4, 2.05)
   sun.position.set(2, 7, 4)
   scene.add(sun, new HemisphereLight(0xfff5e0, 0xb0a295, 2))
-  let model
+  let model, bounds
 
   function setModel(next) {
     if (model) {
@@ -47,12 +47,12 @@ export function createSceneView(canvas, onFailure) {
       disposeModel(model.root)
     }
     model = next
+    bounds = new Box3().setFromObject(model.root)
     scene.add(model.root)
   }
 
   function draw(width, height) {
     if (!model || !width || !height) return false
-    const bounds = new Box3().setFromObject(model.root)
     const center = bounds.getCenter(new Vector3())
     camera.position.copy(center).add(new Vector3(10, 9.5, 10))
     camera.lookAt(center)
@@ -77,7 +77,7 @@ export function createSceneView(canvas, onFailure) {
       canvas.width = w
       canvas.height = h
     }
-    // Room and garden share one GPU context, rendering only when their content changes.
+    // Room and garden share one GPU context, rendering on demand or while pets move.
     renderer.setSize(w, h, false)
     renderer.render(scene, camera)
     output.clearRect(0, 0, w, h)

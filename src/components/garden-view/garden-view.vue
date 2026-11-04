@@ -13,7 +13,6 @@
       <!-- #ifdef H5 -->
       <scene-stage v-if="threeD" kind="garden" :model="gardenModel" @pick="onPlotTap"
         @ready="threeReady = true" @failure="fail3d" v-slot="{ project }">
-        <pet-residents environment="garden" :points="projectPets(project)" />
         <button v-for="(p, i) in plots" :key="i" class="plot-label"
           :style="project((i % 2) * 1.65 + .77, .08, Math.floor(i / 2) * 1.65 + 1.25)"
           :aria-label="plotLabel(p, i)" @click.stop="onPlotTap(i)">{{ p ? p.name : '播种' }}</button>
@@ -132,9 +131,6 @@ const gardenModel = computed(() => ({
     wet: p.waterUntil > now.value
   }))
 }))
-function projectPets(project) {
-  return petPoints.map((point, i) => ({ ...point, ...project(.3 + i * 1.25, 0, 3.33) }))
-}
 function fail3d() {
   threeReady.value = false
   emit('3d-failure')
