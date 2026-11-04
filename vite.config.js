@@ -8,7 +8,7 @@ export default defineConfig({
     {
       name: 'bravelife-search-pages',
       generateBundle() {
-        for (const fileName of ['guide.html', 'robots.txt', 'sitemap.xml']) {
+        for (const fileName of ['guide.html', 'robots.txt', 'sitemap.xml', 'release.json']) {
           this.emitFile({ type: 'asset', fileName, source: readFileSync(new URL('./public/' + fileName, import.meta.url), 'utf8') })
         }
       },

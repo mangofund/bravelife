@@ -6,11 +6,11 @@
         <view class="who">
           <text class="name">{{ state.profile.name }}<text v-if="title" class="gov"> {{ title }}</text><text v-if="state.election.governor" class="gov"> 🏛️都知事</text></text>
           <text v-if="!compact" class="job">{{ jobText }}</text>
+          <text v-if="!compact" class="date">{{ dateText }} {{ weekday(state.day) }} {{ weatherInfo().icon }}</text>
         </view>
       </view>
       <view class="clock">
         <text class="time">{{ fmtHour(state.hour) }}</text>
-        <text v-if="!compact" class="date">{{ dateText }} {{ weekday(state.day) }} {{ weatherInfo().icon }}</text>
         <view class="speeds">
           <text
             v-for="v in SPEEDS"
@@ -214,7 +214,7 @@ const bars = computed(() => [
 @media (max-width: 959px) {
   .hud > .row:first-child { flex-wrap: wrap; gap: 6px; }
   .hud .clock, .hud.compact .clock { width: 100%; max-width: none; flex-basis: 100%; display: flex; flex-direction: row; align-items: center; justify-content: space-between; gap: 4px; }
-  .hud .clock .date { display: none; }
+  .hud .date { text-align: left; }
   .hud .speeds { display: flex; margin: 0; gap: 2px; flex-wrap: wrap; justify-content: flex-end; }
   .hud .speed, .hud.compact .speed { display: flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; padding: 0 3px; box-sizing: border-box; border-radius: 10px; font-size: 14px; }
   .hud .speed.skip { margin-left: 0; }
