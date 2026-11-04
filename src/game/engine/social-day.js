@@ -64,8 +64,7 @@ export function socialNewDay() {
 }
 
 // 某地点此刻在场的 NPC（含今天邀约到这里的人）
-export function npcsAt(locId) {
-  const h = state.hour
+export function npcsAt(locId, h = state.hour) {
   const inHours = (n) => (h >= n.hours[0] && h < n.hours[1]) || (n.hours[1] > 24 && h < n.hours[1] - 24)
   const list = NPCS.filter((n) => {
     const sp = spotOf(n)

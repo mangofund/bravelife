@@ -4,7 +4,7 @@
       <text class="ev-icon">{{ ev.icon }}</text>
       <text class="ev-title">{{ ev.title }}</text>
       <text class="ev-text">{{ ev.text }}</text>
-      <view v-for="(c, i) in ev.choices" :key="i" class="btn ev-btn" :class="{ ghost: i > 0 }" @click="actionAudio(() => resolveEvent(i))">{{ c.label }}</view>
+      <view v-for="(c, i) in ev.choices" :key="i" class="btn ev-btn" :data-preview-cost="Math.max(0, -(c.effects?.money || 0))" :class="{ ghost: i > 0 }" @click="actionAudio(() => resolveEvent(i))">{{ c.label }}</view>
     </view>
   </view>
 </template>

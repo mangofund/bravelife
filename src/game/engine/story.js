@@ -102,7 +102,15 @@ export function storyView() {
   const c = ctx()
   return {
     id: ev.id, icon: ev.icon, title: ev.title, scenes: scenesOf(ev.scenes, c),
-    choices: visibleChoices(ev, c).map((ch) => ({ label: ch.label, tag: ch.tag ? TAGS[ch.tag].name : '' }))
+    choices: visibleChoices(ev, c).map((ch) => {
+      const outcomes = ch.roll ? [ch.win, ch.lose] : [ch]
+      return {
+        label: ch.label,
+        tag: ch.tag ? TAGS[ch.tag].name : '',
+        cost: Math.max(0, ...outcomes.map(out => -(out.money || 0))),
+        authorChoice: !!ev.turning || /^(dream|wish):/.test(ch.run || '')
+      }
+    })
   }
 }
 

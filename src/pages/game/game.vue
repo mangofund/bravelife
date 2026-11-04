@@ -110,9 +110,11 @@ import { play, playTabSwitch } from '../../game/audio.js'
 import { autoCloudSave } from '../../game/account.js'
 // #ifdef H5
 import { api, getToken } from '../../game/api.js'
-import { beginRehearsal, endRehearsal, isOpen } from '../../game/engine/core.js'
+import { beginRehearsal, endRehearsal, dailyUsed } from '../../game/engine/core.js'
+import { freePreviewMode, previewArrival } from '../../game/free-preview.js'
+import { NPCS } from '../../game/data/npcs.js'
 import { planEarnings } from '../../game/earn-preview.js'
-import { applyJob, doAction, locVisible, sleep, travel, travelOptions, useItem, wait, work } from '../../game/index.js'
+import { applyJob, doAction, locVisible, npcsAt, sleep, spotOf, talk, travel, useItem, wait, work } from '../../game/index.js'
 // #endif
 
 const TABS = [
@@ -392,7 +394,10 @@ let previewVisit = 0
 let previewTimer
 let previewNavigation
 let previewGardenTried = false
-let previewLastActivity = ''
+let previewActivities = new Set()
+let previewActivityDay = 0
+let previewContact = ''
+let previewContactDay = 0
 
 function stopPreview() {
   clearTimeout(previewTimer)
@@ -425,7 +430,7 @@ function previewSnapshot() {
 }
 
 function downloadPreviewTrace() {
-  const data = { schema: 1, exportedAt: new Date().toISOString(), goal: earnGoal, steps: previewTrace.value }
+  const data = { schema: 2, exportedAt: new Date().toISOString(), goal: earnGoal, steps: previewTrace.value }
   const url = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }))
   const link = document.createElement('a')
   link.href = url
@@ -437,15 +442,24 @@ function downloadPreviewTrace() {
 function advancePreview(automatic) {
   const step = previewSteps.value[0]
   if (!step) return
-  const [label, action, verify] = step
+  let [label, action, verify] = step
   const before = previewSnapshot()
+  const previousTxn = state.txns[0]
+  const previousRelations = Object.fromEntries(Object.entries(state.social).map(([id, rel]) => [id, rel.aff]))
   let ok = false
   try {
-    ok = action() !== false && (!verify || verify())
+    const outcome = action()
+    if (outcome?.label) label = outcome.label
+    ok = outcome !== false && outcome?.ok !== false && (!verify || verify())
   } catch (error) {
     console.error('Author preview step failed', error)
   }
-  previewTrace.value = [...previewTrace.value.slice(-199), { label, ok, before, after: previewSnapshot() }]
+  const ledgerStart = previousTxn ? state.txns.indexOf(previousTxn) : -1
+  const transactions = state.txns.slice(0, ledgerStart < 0 ? state.txns.length : ledgerStart).map(row => ({ ...row }))
+  const relationships = Object.entries(state.social)
+    .filter(([id, rel]) => previousRelations[id] !== rel.aff)
+    .map(([id, rel]) => ({ id, before: previousRelations[id] ?? null, after: rel.aff }))
+  previewTrace.value = [...previewTrace.value.slice(-199), { label, ok, before, after: previewSnapshot(), transactions, relationships }]
   if (!ok) {
     previewMessage.value = '演示停在「' + label + '」。请检查当前界面，或接管后亲自操作。'
     previewPaused.value = true
@@ -478,21 +492,15 @@ function openPreviewGarden() {
 
 function previewTravel(destination, reason) {
   const name = LOCATION_MAP[destination].name
-  return [
-    ['查看路线：' + reason, () => {
-      closePopup()
-      tab.value = 'map'
-      sheet.value = destination
-    }],
-    ['前往' + name, () => {
-      const mode = travelOptions(destination).filter(option => option.ok && option.cost === 0)
-        .sort((a, b) => a.hours - b.hours)[0]
-      if (!mode || !travel(destination, mode.id)) return false
-      previewLastActivity = ''
-      if (destination === 'home') goHome()
-      return true
-    }, () => state.location === destination]
-  ]
+  const mode = freePreviewMode(destination)
+  return [[(mode?.name || '免费出行') + '前往' + name + ' · ' + reason, () => {
+    closePopup()
+    tab.value = 'map'
+    sheet.value = destination
+    if (!mode || !travel(destination, mode.id)) return false
+    if (destination === 'home') goHome()
+    return true
+  }, () => state.location === destination]]
 }
 
 function planEarningsStep(route = planEarnings(earnGoal)) {
@@ -517,12 +525,55 @@ function planEarningsStep(route = planEarnings(earnGoal)) {
   }
 }
 
+function playPreviewScene() {
+  const story = document.querySelector('.st-mask')
+  const event = story ? null : document.querySelector('.ev-mask')
+  const title = (story?.querySelector('.st-title') || event?.querySelector('.ev-title'))?.textContent.trim() || '当前情节'
+  const choices = Array.from((story || event)?.querySelectorAll('[data-preview-cost]') || [])
+  if (!choices.length) return {
+    ok: clickPreviewElement(story?.querySelector('.st-btn, .st-scene')),
+    label: title + ' · 继续阅读'
+  }
+  if (choices.some(choice => choice.dataset.previewAuthor === 'yes')) {
+    return { ok: false, label: title + ' · 人生方向请作者接管选择' }
+  }
+  const budget = earnGoal ? 0 : Math.max(0, state.money - previewOpeningBalance)
+  const choice = choices.sort((a, b) => Number(a.dataset.previewCost) - Number(b.dataset.previewCost))[0]
+  const cost = Number(choice.dataset.previewCost)
+  if (cost > budget) return { ok: false, label: title + ' · 可选分支超出预算，请作者接管' }
+  return {
+    ok: clickPreviewElement(choice),
+    label: title + ' · ' + choice.textContent.trim() + ' · 选预计支出最低的分支（¥' + cost + '）'
+  }
+}
+
+function previewRelationship() {
+  if (previewContactDay === state.day) return null
+  const candidates = NPCS.flatMap(npc => {
+    if (dailyUsed('talk:' + npc.id)) return []
+    const destination = spotOf(npc).location
+    const arrival = previewArrival(destination)
+    if (!arrival || arrival.hunger < 55 || !npcsAt(destination, arrival.hour).some(n => n.id === npc.id)) return []
+    return [{ npc, destination, arrival }]
+  })
+  candidates.sort((a, b) => Number(b.npc.id === previewContact) - Number(a.npc.id === previewContact) ||
+    a.arrival.hours - b.arrival.hours)
+  const next = candidates[0]
+  if (!next) return null
+  const { npc, destination } = next
+  if (destination !== state.location) return previewTravel(destination, '到达时' + npc.name + '在场')
+  return [[(state.social[npc.id] ? '回访' : '认识') + npc.name, () => {
+    if (!talk(npc.id)) return false
+    previewContact = npc.id
+    previewContactDay = state.day
+    return true
+  }]]
+}
+
 function planPreview() {
   if (earnGoal && (state.day !== earnGoal.day || state.money >= earnGoal.balance)) return planEarningsStep()
   if (state.pendingStory || state.pendingEvent || ui.reading) {
-    return [['继续当前剧情或事件', () => clickPreviewElement(
-      document.querySelector('.st-btn, .ev-btn') || document.querySelector('.st-scene')
-    )]]
+    return [['继续当前剧情或事件', playPreviewScene]]
   }
 
   if (earnGoal) return planEarningsStep()
@@ -535,7 +586,7 @@ function planPreview() {
   }
 
   const spendable = Math.max(0, state.money - previewOpeningBalance)
-  if (hunger < 55) {
+  if (hunger < (current === 'konbini' ? 62 : 55)) {
     if (state.bag.onigiri > 0) return [['吃背包里的饭团，节省开支', () => useItem('onigiri')]]
     if (spendable >= 150 && locVisible('konbini')) {
       if (current !== 'konbini') return previewTravel('konbini', '饱腹偏低，免费前往便利店')
@@ -561,19 +612,28 @@ function planPreview() {
     return planPreviewGarden()
   }
 
-  const destination = (mood < 55 ? ['park', 'library'] : ['library', 'park']).find(id =>
-    id !== current && locVisible(id) && isOpen(LOCATION_MAP[id], state.hour)
-  )
+  const relationship = previewRelationship()
+  if (relationship) return relationship
+  if (previewActivityDay !== state.day) {
+    previewActivityDay = state.day
+    previewActivities.clear()
+  }
+  const destinations = mood < 55 ? ['park', 'library'] : ['library', 'park']
+  const destination = destinations.find(id => {
+    if (previewActivities.has(id)) return false
+    const arrival = previewArrival(id)
+    return arrival && arrival.hunger >= 55
+  })
   const activities = { library: ['novel', '读小说，提升心情和创意'], park: ['walk', '在公园散步，恢复心情'] }
-  const activity = activities[current]
-  if (activity && previewLastActivity !== current && isOpen(LOCATION_MAP[current], state.hour)) {
+  if (destination === current) {
+    const activity = activities[current]
     return [[activity[1], () => {
       if (!doAction(current, activity[0])) return false
-      previewLastActivity = current
+      previewActivities.add(current)
       return true
     }]]
   }
-  if (destination) return previewTravel(destination, '趁营业时间体验' + LOCATION_MAP[destination].name)
+  if (destination) return previewTravel(destination, '预计到达时仍营业，且状态足以体验')
   if (current !== 'home') return previewTravel('home', '附近的目标地点已关门')
   return [['在家小睡，等下一段营业时间', () => { closePopup(); goHome(); return sleep(false) }]]
 }
@@ -634,7 +694,10 @@ async function startPreview(targeted) {
     earnGoal = targeted ? { day: state.day, startBalance: state.money, balance: state.money + amount } : null
     previewTrace.value = []
     previewGardenTried = false
-    previewLastActivity = ''
+    previewActivities.clear()
+    previewActivityDay = 0
+    previewContact = ''
+    previewContactDay = 0
     previewManual.value = false
     previewPaused.value = false
     preview.value = true

@@ -14,7 +14,7 @@
 
       <block v-if="!more">
         <block v-if="!after">
-          <view v-for="(c, i) in view.choices" :key="i" class="btn st-btn" :class="tagClass(c.tag)" @click="pick(i)">
+          <view v-for="(c, i) in view.choices" :key="i" class="btn st-btn" :data-preview-cost="c.cost" :data-preview-author="c.authorChoice ? 'yes' : 'no'" :class="tagClass(c.tag)" @click="pick(i)">
             <text v-if="c.tag" class="st-tag">{{ c.tag }}</text>{{ c.label }}
           </view>
         </block>
