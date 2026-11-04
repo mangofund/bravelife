@@ -2,7 +2,10 @@
   <view class="home home-screen" :class="['scene-' + scene, { wide, 'tool-view': !!tool }]">
     <view v-if="!tool" class="home-heading">
       <view><text class="home-eyebrow">{{ scene === 'room' ? 'MY LITTLE HOME' : 'MY EVERYDAY LIFE' }}</text><text class="home-title">{{ currentScene.icon }} {{ scene === 'room' ? home.name : currentScene.name }}</text></view>
-      <view class="home-heading-right"><text class="home-clean">✧ 整洁 {{ Math.round(state.clean) }}</text><button v-if="!atHome" size="mini" @click="travel('home')">回家</button><text v-else class="home-presence">在家 · 慢慢生活</text></view>
+      <view class="home-heading-right">
+        <!-- #ifdef H5 -->
+        <button v-if="scene === 'room' || scene === 'garden'" size="mini" :aria-pressed="threeD" @click="toggle3d">{{ threeD ? '切回 2D' : '试用 3D' }}</button>
+        <!-- #endif --><text class="home-clean">✧ 整洁 {{ Math.round(state.clean) }}</text><button v-if="!atHome" size="mini" @click="travel('home')">回家</button><text v-else class="home-presence">在家 · 慢慢生活</text></view>
     </view>
     <view v-if="scene !== 'garden'" class="scene-tip"><text>{{ feedback || currentScene.tip }}</text><button v-if="scene !== 'room'" @click="switchScene('room')">回房间 ↗</button></view>
     <home-goals v-if="!tool" compact />
@@ -12,10 +15,10 @@
     <view v-if="!tool" v-show="scene === 'room'" class="homestead" :class="{ arranging: !!selected }">
     <view class="home-stage">
       <view class="home-sunlight" />
-      <view class="room-model" :style="{ transform: 'scale(' + roomScale + ')' }"><iso-room :selected="selected" @placed="onPlaced" @inspect="inspected = $event" /></view>
+      <view class="room-model" :style="{ transform: 'scale(' + roomScale + ')' }"><iso-room :selected="selected" :three-d="threeD && scene === 'room'" @3d-failure="fail3d" @placed="onPlaced" @inspect="inspected = $event" /></view>
       <view class="scene-detail"><text>装饰 {{ decor }} · 睡眠 ×{{ bed }}</text><text>{{ kitchen ? '厨房已就绪' : '今天也可以叫份外卖' }}</text></view>
     </view>
-      <view class="homestead-garden"><view class="garden-caption"><text>🌱 门前菜园</text><view><button :class="{ active: gardenSection === 'grow' }" @click="switchAudio(gardenSection, 'grow', v => gardenSection = v)">种植</button><button :class="{ active: gardenSection === 'basket' }" @click="switchAudio(gardenSection, 'basket', v => gardenSection = v)">收成</button></view></view><garden-view compact scenic embedded :feedback="feedback" :section="gardenSection" /></view>
+      <view class="homestead-garden"><view class="garden-caption"><text>🌱 门前菜园</text><view><button :class="{ active: gardenSection === 'grow' }" @click="switchAudio(gardenSection, 'grow', v => gardenSection = v)">种植</button><button :class="{ active: gardenSection === 'basket' }" @click="switchAudio(gardenSection, 'basket', v => gardenSection = v)">收成</button></view></view><garden-view compact scenic embedded :feedback="feedback" :section="gardenSection" :three-d="threeD && scene === 'room'" @3d-failure="fail3d" /></view>
     </view>
 
     <view v-if="scene !== 'room'" class="scene-area">
@@ -24,7 +27,7 @@
       <view v-if="scene === 'food'" class="scene-tabs"><button :class="{ active: foodSection === 'delivery' }" @click="switchAudio(foodSection, 'delivery', v => foodSection = v)">叫外卖</button><button :class="{ active: foodSection === 'cook' }" @click="switchAudio(foodSection, 'cook', v => foodSection = v)">自己做</button></view>
       <view v-if="scene === 'pets'" class="scene-tabs"><button :class="{ active: petSection === 'dog' }" @click="switchAudio(petSection, 'dog', v => petSection = v)">🐕 小狗</button><button :class="{ active: petSection === 'cat' }" @click="switchAudio(petSection, 'cat', v => petSection = v)">🐈 小猫</button></view>
       <view class="scene-content" :class="{ 'garden-stage': scene === 'garden', 'pet-stage': scene === 'pets' }">
-        <garden-view v-if="scene === 'garden' || scene === 'pets'" compact scenic :feedback="feedback" :section="scene === 'pets' ? 'pet-' + petSection : gardenSection" />
+        <garden-view v-if="scene === 'garden' || scene === 'pets'" compact scenic :feedback="feedback" :section="scene === 'pets' ? 'pet-' + petSection : gardenSection" :three-d="threeD && scene === 'garden'" @3d-failure="fail3d" />
         <template v-if="scene === 'inventory'">
           <home-inventory @place="chooseFurniture" />
         </template>
@@ -87,6 +90,16 @@ watch(() => ui.homeTip, tip => {
   tipTimer = setTimeout(() => { feedback.value = '' }, 3500)
 })
 const roomScale = ref(1)
+const threeD = ref(false)
+function toggle3d() {
+  threeD.value = !threeD.value
+}
+function fail3d() {
+  if (!threeD.value) return
+  threeD.value = false
+  uni.showToast({ title: '3D 暂不可用，已切回 2D', icon: 'none' })
+}
+
 const instance = getCurrentInstance()
 const currentScene = computed(() => HOME_SCENES.find(s => s.id === scene.value) || HOME_SCENES[0])
 const lifeScenes = HOME_SCENES.filter(s => s.group === 'life')

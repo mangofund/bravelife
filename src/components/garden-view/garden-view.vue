@@ -9,14 +9,25 @@
     </view>
     <view v-if="!embedded" class="seed-supply"><text>播种消耗1份种子 · 按现实时间生长</text><button @click="requestFunction('shop',{category:'garden',product:'seed_'+selected})">补货</button></view>
     <text class="muted block">{{ scenic ? (feedback || plotHint) : selectedCrop.name + '正常生长约' + selectedCrop.hours + '小时，每格收获10份。点击空地播种。' }}</text>
-    <view class="plots">
+    <view class="plots" :class="{ 'plots-3d': threeD && threeReady }">
+      <!-- #ifdef H5 -->
+      <scene-stage v-if="threeD" kind="garden" :model="gardenModel" @pick="onPlotTap"
+        @ready="threeReady = true" @failure="fail3d" v-slot="{ project }">
+        <pet-residents environment="garden" :points="projectPets(project)" />
+        <button v-for="(p, i) in plots" :key="i" class="plot-label"
+          :style="project((i % 2) * 1.65 + .77, .08, Math.floor(i / 2) * 1.65 + 1.25)"
+          :aria-label="plotLabel(p, i)" @click.stop="onPlotTap(i)">{{ p ? p.name : '播种' }}</button>
+      </scene-stage>
+      <!-- #endif -->
+      <template v-if="!threeD || !threeReady">
       <pet-residents environment="garden" :points="petPoints" />
-      <button v-for="(p, i) in plots" :key="i" class="plot" :aria-label="p ? p.name + '，' + p.stage : '第' + (i + 1) + '格，播种'" @click="onPlotTap(i)">
+      <button v-for="(p, i) in plots" :key="i" class="plot" :aria-label="plotLabel(p, i)" @click="onPlotTap(i)">
         <text class="crop-icon">{{ p ? p.icon : '🌾' }}</text>
         <text>{{ p ? p.name : '空地 · 播种' }}</text>
         <text v-if="!scenic" class="muted">{{ p ? p.stage : '第 ' + (i + 1) + ' 格' }}</text>
         <text v-if="p && !scenic" class="muted">{{ p.water }}</text>
       </button>
+      </template>
     </view>
     <view class="garden-actions">
       <button size="mini" :disabled="!atHome || !readyCount" @click="act(() => reap(), readyCount > 0 ? 'harvest' : null)">收获成熟作物</button>
@@ -60,6 +71,9 @@
 
 <script setup>
 import { computed, ref, watch, onMounted, onBeforeUnmount } from 'vue'
+// #ifdef H5
+import SceneStage from '../scene-stage/scene-stage.vue'
+// #endif
 import PetResidents from '../pet-actor/pet-residents.vue'
 import { ui, requestFunction } from '../../game/ui.js'
 import { play } from '../../game/audio.js'
@@ -68,7 +82,13 @@ import { useAction } from '../../game/use-action.js'
 import { state, save } from '../../game/engine/core.js'
 import { CROPS, PETS, HOUR } from '../../game/data/garden.js'
 import { syncGarden, sow, reap, waterGarden, useProduce, adopt, feed, cuddleCat, ripe } from '../../game/engine/garden.js'
-const props = defineProps({ section: { type: String, default: 'all' }, compact: Boolean, scenic: Boolean, embedded: Boolean, feedback: { type: String, default: '' } })
+const props = defineProps({ section: { type: String, default: 'all' }, compact: Boolean, scenic: Boolean, embedded: Boolean, threeD: Boolean, feedback: { type: String, default: '' } })
+const emit = defineEmits(['3d-failure'])
+const threeReady = ref(false)
+watch(() => [props.threeD, props.section], () => { threeReady.value = false })
+function plotLabel(plot, index) {
+  return plot ? plot.name + '，' + plot.stage : '第' + (index + 1) + '格，播种'
+}
 const petPoints = [
   {id:'a',x:0,y:0,left:'18%',top:'94%',z:12},
   {id:'b',x:1,y:0,left:'50%',top:'94%',z:12},
@@ -104,6 +124,22 @@ const plots = computed(() => {
       water: ripe(p) ? '收成会一直保留' : p.waterUntil > now.value ? '水分充足 · ' + duration(p.waterUntil - now.value) : '缺水 · 生长速度减半' }
   })
 })
+// #ifdef H5
+const gardenModel = computed(() => ({
+  plots: state.garden.plots.map(p => p && ({
+    crop: p.crop,
+    phase: ripe(p) ? 2 : p.progress < CROPS[p.crop].hours * HOUR * .25 ? 0 : 1,
+    wet: p.waterUntil > now.value
+  }))
+}))
+function projectPets(project) {
+  return petPoints.map((point, i) => ({ ...point, ...project(.3 + i * 1.25, 0, 3.33) }))
+}
+function fail3d() {
+  threeReady.value = false
+  emit('3d-failure')
+}
+// #endif
 const plotHint = computed(() => { const p = plots.value[inspectIndex.value]; return p ? p.name + ' · ' + p.stage + ' · ' + p.water : '点空地播种，点作物查看生长进度。' })
 const readyCount = computed(() => { now.value; return state.garden.plots.filter(ripe).length })
 const growingCount = computed(() => { now.value; return state.garden.plots.filter(p => p && !ripe(p)).length })
@@ -196,4 +232,19 @@ onBeforeUnmount(() => { clearInterval(timer); save() })
 }
 .garden .plots{position:relative;padding-bottom:36px}
 .garden .plots .pet-resident{pointer-events:none}
+.garden .plots.plots-3d { display: block; min-height: 175px; padding: 0; background: #f5ecd9; }
+.plot-label {
+  position: absolute;
+  z-index: 13;
+  transform: translate(-50%, -12%);
+  margin: 0;
+  padding: 5px 9px;
+  min-height: 28px;
+  border-radius: 10px;
+  border: 1px solid #bba477;
+  background: #fff1d2;
+  color: #4b3a27;
+  font-size: 12px;
+  line-height: 1.3;
+}
 </style>

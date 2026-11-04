@@ -1,5 +1,15 @@
 <template>
   <view class="iso" :style="{ width: CW + 'rpx', height: CH + 'rpx' }" @tap="onTap">
+    <!-- #ifdef H5 -->
+    <scene-stage v-if="threeD" kind="room" :model="roomModel" @ready="threeReady = true"
+      @failure="fail3d" @pick="pick3d" v-slot="{ project }">
+      <pet-residents environment="room" :points="projectPets(project)" />
+      <view v-if="atHome" class="iso-hero" :style="{ ...project(hero.x + .5, heroHeight, hero.y + .5), transitionDuration: STEP + 's' }">
+        <hero-doll :profile="state.profile" :size="Math.round(TW * 1.05)" :pose="pose" :facing="facing" />
+      </view>
+    </scene-stage>
+    <!-- #endif -->
+    <template v-if="!threeD || !threeReady">
     <!-- 后面两面墙：沿房间左上、右上两条边立起来 -->
     <view class="wall wall-l" :style="wallL" />
     <view class="wall wall-r" :style="wallR"><view class="window" /></view>
@@ -27,11 +37,15 @@
     <view v-if="atHome" class="iso-hero" :style="heroStyle">
       <hero-doll :profile="state.profile" :size="Math.round(TW * 1.05)" :pose="pose" :facing="facing" />
     </view>
+    </template>
   </view>
 </template>
 
 <script setup>
 import { computed, reactive, ref, watch, onBeforeUnmount, getCurrentInstance } from 'vue'
+// #ifdef H5
+import SceneStage from '../scene-stage/scene-stage.vue'
+// #endif
 import PetResidents from '../pet-actor/pet-residents.vue'
 import { useGuideAnchor } from '../../game/use-guide-anchor.js'
 import HeroDoll from '../hero-doll/hero-doll.vue'
@@ -40,9 +54,35 @@ import { FURNITURE, HOMES } from '../../game/data/world.js'
 import { art } from '../../game/themes.js'
 import { ui } from '../../game/ui.js'
 
-const props = defineProps({ selected: { type: String, default: '' } })
-const emit = defineEmits(['placed', 'inspect'])
+const props = defineProps({ selected: { type: String, default: '' }, threeD: Boolean })
+const emit = defineEmits(['placed', 'inspect', '3d-failure'])
 const instance = getCurrentInstance()
+const threeReady = ref(false)
+watch(() => props.threeD, () => { threeReady.value = false })
+
+// #ifdef H5
+const roomModel = computed(() => ({
+  cols: cols.value,
+  rows: rows.value,
+  cells: cells.value.map(({ x, y, item }) => ({ x, y, item: item && { fid: item.fid } })),
+  placing: !!props.selected
+}))
+const heroHeight = computed(() => {
+  if (pose.value !== 'sleep') return 0
+  const fid = itemAt.value[hero.x + ',' + hero.y]?.fid
+  return fid === 'futon' ? .22 : ON_TOP[fid] ? .4 : 0
+})
+function projectPets(project) {
+  return petPoints.value.map(point => ({ ...point, ...project(point.x + .5, 0, point.y + .5) }))
+}
+function fail3d() {
+  threeReady.value = false
+  emit('3d-failure')
+}
+function pick3d({ x, y }) {
+  onCell(x, y)
+}
+// #endif
 
 // 可以踩上去的家具（地毯、扫地机器人）
 const WALKABLE = { rug: true, robovac: true }
@@ -275,6 +315,7 @@ settleHero()
 
 // 点击位置换算成格子：等轴坐标的逆变换
 function onTap(e) {
+  if (props.threeD && threeReady.value) return
   const d = e.detail || {}
   if (d.x === undefined) return
   uni.createSelectorQuery()

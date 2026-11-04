@@ -1,5 +1,5 @@
 {
-  "release": "menu-layer-guide-fix-2026-11-04",
+  "release": "homestead-3d-preview-2026-11-04",
   "date": "2026-11-04",
-  "changes": ["hide-completed-guides", "isolate-menu-overlays"]
+  "changes": ["h5-room-3d-preview", "h5-garden-3d-preview", "2d-fallback"]
 }
