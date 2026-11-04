@@ -244,4 +244,15 @@ uni-page-wrapper {
   .theme-root .mobile-relation-flyout { grid-template-columns: repeat(3, minmax(0, 1fr)); max-height: 45vh; overflow-y: auto; }
   .theme-root .function-popup-tip { white-space: normal; }
 }
+.scene-unavailable {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: var(--muted);
+}
+.scene-unavailable button { margin: 0; }
 </style>

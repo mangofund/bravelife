@@ -67,10 +67,13 @@ export function createSceneView(canvas, onFailure, { native = false, pixelRatio 
     scene.add(model.root)
   }
 
-  function draw(width, height) {
+  function draw(width, height, yaw = 0) {
     if (!model || !width || !height) return false
     const center = bounds.getCenter(new Vector3())
-    camera.position.copy(center).add(new Vector3(10, 9.5, 10))
+    const heading = Math.PI / 4 + yaw
+    const radius = Math.SQRT2 * 10
+    camera.position.set(center.x + Math.sin(heading) * radius, center.y + 9.5,
+      center.z + Math.cos(heading) * radius)
     camera.lookAt(center)
     camera.updateMatrixWorld()
 

@@ -9,16 +9,20 @@
     </view>
     <view v-if="!embedded" class="seed-supply"><text>播种消耗1份种子 · 按现实时间生长</text><button @click="requestFunction('shop',{category:'garden',product:'seed_'+selected})">补货</button></view>
     <text class="muted block">{{ scenic ? (feedback || plotHint) : selectedCrop.name + '正常生长约' + selectedCrop.hours + '小时，每格收获10份。点击空地播种。' }}</text>
-    <view class="plots" :class="{ 'plots-3d': threeD && threeReady }">
+    <view class="plots" :class="{ 'plots-3d': threeD }">
       <!-- #ifdef H5 || MP-WEIXIN -->
-      <scene-stage v-if="threeD" kind="garden" :model="gardenModel" :anchors="plotAnchors"
+      <scene-stage v-if="threeD && !sceneFailed" kind="garden" :model="gardenModel" :anchors="plotAnchors"
         @ready="threeReady = true" @failure="fail3d" @pick="onPlotTap" @projected="plotProjection = $event" />
       <template v-if="threeD && threeReady">
         <button v-for="(p, i) in plots" :key="i" class="plot-label" :style="plotProjection[i]"
           :aria-label="plotLabel(p, i)" @click.stop="onPlotTap(i)">{{ p ? p.name : '播种' }}</button>
       </template>
+      <view v-if="threeD && sceneFailed" class="scene-unavailable">
+        <text>菜园 3D 暂不可用</text><button size="mini" @tap.stop="sceneFailed = false">重试</button>
+      </view>
       <!-- #endif -->
-      <template v-if="!threeD || !threeReady">
+      <!-- #ifndef H5 || MP-WEIXIN -->
+      <template v-if="!threeD">
       <pet-residents environment="garden" :points="petPoints" />
       <button v-for="(p, i) in plots" :key="i" class="plot" :aria-label="plotLabel(p, i)" @click="onPlotTap(i)">
         <text class="crop-icon">{{ p ? p.icon : '🌾' }}</text>
@@ -27,6 +31,7 @@
         <text v-if="p && !scenic" class="muted">{{ p.water }}</text>
       </button>
       </template>
+      <!-- #endif -->
     </view>
     <view class="garden-actions">
       <button size="mini" :disabled="!atHome || !readyCount" @click="act(() => reap(), readyCount > 0 ? 'harvest' : null)">收获成熟作物</button>
@@ -73,7 +78,9 @@ import { computed, ref, watch, onMounted, onBeforeUnmount } from 'vue'
 // #ifdef H5 || MP-WEIXIN
 import SceneStage from '../scene-stage/scene-stage.vue'
 // #endif
+// #ifndef H5 || MP-WEIXIN
 import PetResidents from '../pet-actor/pet-residents.vue'
+// #endif
 import { ui, requestFunction } from '../../game/ui.js'
 import { play } from '../../game/audio.js'
 import { actionAudio } from '../../game/action-audio.js'
@@ -82,9 +89,9 @@ import { state, save } from '../../game/engine/core.js'
 import { CROPS, PETS, HOUR } from '../../game/data/garden.js'
 import { syncGarden, sow, reap, waterGarden, useProduce, adopt, feed, cuddleCat, ripe } from '../../game/engine/garden.js'
 const props = defineProps({ section: { type: String, default: 'all' }, compact: Boolean, scenic: Boolean, embedded: Boolean, fixedPanel: Boolean, threeD: Boolean, feedback: { type: String, default: '' } })
-const emit = defineEmits(['3d-failure'])
 const threeReady = ref(false)
-watch(() => [props.threeD, props.section], () => { threeReady.value = false })
+const sceneFailed = ref(false)
+watch(() => [props.threeD, props.section], () => { threeReady.value = false; sceneFailed.value = false })
 function plotLabel(plot, index) {
   return plot ? plot.name + '，' + plot.stage : '第' + (index + 1) + '格，播种'
 }
@@ -135,10 +142,10 @@ const plotAnchors = [[.77, .08, 1.25], [2.42, .08, 1.25], [.77, .08, 2.9], [2.42
 const plotProjection = ref([])
 function fail3d() {
   threeReady.value = false
-  emit('3d-failure')
+  sceneFailed.value = true
 }
 // #endif
-const plotHint = computed(() => { const p = plots.value[inspectIndex.value]; return p ? p.name + ' · ' + p.stage + ' · ' + p.water : '点空地播种，点作物查看生长进度。' })
+const plotHint = computed(() => { const p = plots.value[inspectIndex.value]; return p ? p.name + ' · ' + p.stage + ' · ' + p.water : '左右滑动旋转 · 点击菜畦播种或查看。' })
 const readyCount = computed(() => { now.value; return state.garden.plots.filter(ripe).length })
 const growingCount = computed(() => { now.value; return state.garden.plots.filter(p => p && !ripe(p)).length })
 const basket = computed(() => crops.filter(c => state.garden.produce[c.id] > 0).map(c => ({ ...c, count: state.garden.produce[c.id] })))

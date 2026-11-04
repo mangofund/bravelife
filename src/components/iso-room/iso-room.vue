@@ -1,12 +1,16 @@
 <template>
   <view class="iso" :style="fillStage ? { width: '100%', height: '100%' } : { width: CW + 'rpx', height: CH + 'rpx' }" @tap="onTap">
     <!-- #ifdef H5 || MP-WEIXIN -->
-    <scene-stage v-if="threeD" kind="room" :model="roomModel" :anchors="roomAnchors" :layout-key="layoutKey"
+    <scene-stage v-if="threeD && !sceneFailed" kind="room" :model="roomModel" :anchors="roomAnchors" :layout-key="layoutKey"
       @ready="threeReady = true" @failure="fail3d" @pick="pick3d" @projected="roomProjection = $event" />
-    <view v-if="threeD && threeReady && atHome" class="iso-hero iso-hero-3d" :style="hero3dStyle">
+    <view v-if="threeD && threeReady && atHome" class="iso-hero iso-hero-3d" :style="roomProjection[0]">
       <hero-doll :profile="state.profile" :size="Math.round(TW * 1.05)" :pose="pose" :facing="facing" />
     </view>
+    <view v-if="threeD && sceneFailed" class="scene-unavailable">
+      <text>房间 3D 暂不可用</text><button size="mini" @tap.stop="sceneFailed = false">重试</button>
+    </view>
     <!-- #endif -->
+    <!-- #ifndef H5 || MP-WEIXIN -->
     <template v-if="!fillStage && (!threeD || !threeReady)">
     <!-- 后面两面墙：沿房间左上、右上两条边立起来 -->
     <view class="wall wall-l" :style="wallL" />
@@ -36,6 +40,7 @@
       <hero-doll :profile="state.profile" :size="Math.round(TW * 1.05)" :pose="pose" :facing="facing" />
     </view>
     </template>
+    <!-- #endif -->
   </view>
 </template>
 
@@ -44,7 +49,9 @@ import { computed, reactive, ref, watch, onBeforeUnmount, getCurrentInstance } f
 // #ifdef H5 || MP-WEIXIN
 import SceneStage from '../scene-stage/scene-stage.vue'
 // #endif
+// #ifndef H5 || MP-WEIXIN
 import PetResidents from '../pet-actor/pet-residents.vue'
+// #endif
 import { useGuideAnchor } from '../../game/use-guide-anchor.js'
 import HeroDoll from '../hero-doll/hero-doll.vue'
 import { state, placeFurniture } from '../../game/index.js'
@@ -53,9 +60,10 @@ import { art } from '../../game/themes.js'
 import { ui } from '../../game/ui.js'
 
 const props = defineProps({ selected: { type: String, default: '' }, threeD: Boolean, fillStage: Boolean, layoutKey: { type: String, default: '' } })
-const emit = defineEmits(['placed', 'inspect', '3d-failure'])
+const emit = defineEmits(['placed', 'inspect'])
 const instance = getCurrentInstance()
 const threeReady = ref(false)
+const sceneFailed = ref(false)
 watch(() => props.threeD, () => { threeReady.value = false })
 
 // #ifdef H5 || MP-WEIXIN
@@ -75,13 +83,9 @@ const heroHeight = computed(() => {
 })
 const roomAnchors = computed(() => [[hero.x + .5, heroHeight.value, hero.y + .5]])
 const roomProjection = ref([])
-const hero3dStyle = computed(() => ({
-  ...roomProjection.value[0],
-  transitionDuration: STEP + 's'
-}))
 function fail3d() {
   threeReady.value = false
-  emit('3d-failure')
+  sceneFailed.value = true
 }
 function pick3d({ x, y }) {
   onCell(x, y)
@@ -319,7 +323,7 @@ settleHero()
 
 // 点击位置换算成格子：等轴坐标的逆变换
 function onTap(e) {
-  if (props.threeD && threeReady.value) return
+  if (props.threeD) return
   const d = e.detail || {}
   if (d.x === undefined) return
   uni.createSelectorQuery()

@@ -1,10 +1,14 @@
 <template>
-  <view class="scene-stage"  :class="{ 'scene-loading': !ready }">
+  <view class="scene-stage" :class="{ 'scene-loading': !ready }">
     <!-- #ifdef H5 -->
-    <div ref="surface" class="scene-surface"></div>
+    <div ref="surface" class="scene-surface"
+      @pointerdown="onPointerDown" @pointermove="onPointerMove" @pointerup="onPointerUp"
+      @pointercancel="cancelGesture" @lostpointercapture="cancelGesture"></div>
     <!-- #endif -->
     <!-- #ifdef MP-WEIXIN -->
-    <canvas id="scene-native" type="webgl" class="scene-surface" @tap.stop="onTap" @error="fail" />
+    <canvas id="scene-native" type="webgl" class="scene-surface" @tap.stop="stopTap"
+      @touchstart="onTouchStart" @touchmove.stop="onTouchMove" @touchend="onTouchEnd"
+      @touchcancel="cancelGesture" @error="fail" />
     <!-- #endif -->
   </view>
 </template>
@@ -91,6 +95,11 @@ let view, canvas, observer, build, addScenePets, updatePets
 let lastDraw = 0
 let lastWidth = 0, lastHeight = 0, habitatTimer
 let frame = 0
+const MAX_YAW = Math.PI / 4
+const DRAG_THRESHOLD = 7
+let yaw = 0
+let lastYaw = 0
+let gesture
 let dirty = true
 let active = true
 
@@ -128,14 +137,16 @@ function renderFrame(time) {
     time = Date.now()
     // #endif
     const moving = updatePets?.(time) && visible()
-    if (moving && !rebuilt && ready.value && clientWidth === lastWidth && clientHeight === lastHeight && time - lastDraw < 32) {
+    const rotated = yaw !== lastYaw
+    if (moving && !rebuilt && !rotated && ready.value && clientWidth === lastWidth && clientHeight === lastHeight && time - lastDraw < 32) {
       schedule()
       return
     }
     lastDraw = time
-    if (view.draw(clientWidth, clientHeight)) {
+    if (view.draw(clientWidth, clientHeight, yaw)) {
+      lastYaw = yaw
       const first = !ready.value
-      if (first || rebuilt || clientWidth !== lastWidth || clientHeight !== lastHeight) {
+      if (first || rebuilt || rotated || clientWidth !== lastWidth || clientHeight !== lastHeight) {
         projectAnchors()
         lastWidth = clientWidth
         lastHeight = clientHeight
@@ -159,18 +170,71 @@ function pick(clientX, clientY, rect) {
   const hit = view.pick((clientX - rect.left) / rect.width, (clientY - rect.top) / rect.height)
   if (hit !== undefined) emit('pick', hit)
 }
+function startGesture(id, x, y) {
+  if (ready.value && Number.isFinite(x) && Number.isFinite(y)) {
+    gesture = { id, x, y, yaw, dragged: false }
+  }
+}
+
+function moveGesture(id, x, y) {
+  if (!gesture || gesture.id !== id) return
+  const dx = x - gesture.x
+  const dy = y - gesture.y
+  if (Math.hypot(dx, dy) >= DRAG_THRESHOLD) gesture.dragged = true
+  if (!gesture.dragged) return
+  const next = gesture.yaw - dx / Math.max(1, dimensions().width) * Math.PI / 2
+  yaw = Math.max(-MAX_YAW, Math.min(MAX_YAW, next))
+  schedule()
+}
+
+function endGesture(id, x, y) {
+  if (!gesture || gesture.id !== id) return false
+  moveGesture(id, x, y)
+  const tapped = !gesture.dragged
+  cancelGesture()
+  return tapped
+}
+
+function cancelGesture() {
+  gesture = undefined
+}
+
 // #ifdef H5
-function onClick(event) {
-  pick(event.clientX, event.clientY, canvas.getBoundingClientRect())
+function onPointerDown(event) {
+  if (!event.isPrimary || event.button !== 0) return
+  startGesture(event.pointerId, event.clientX, event.clientY)
+  event.currentTarget.setPointerCapture(event.pointerId)
+}
+function onPointerMove(event) {
+  moveGesture(event.pointerId, event.clientX, event.clientY)
+}
+function onPointerUp(event) {
+  if (endGesture(event.pointerId, event.clientX, event.clientY)) {
+    pick(event.clientX, event.clientY, canvas.getBoundingClientRect())
+  }
 }
 // #endif
 // #ifdef MP-WEIXIN
-async function onTap(event) {
+function stopTap() {}
+function touchPoint(touch) {
+  return [touch.clientX ?? touch.x, touch.clientY ?? touch.y]
+}
+function onTouchStart(event) {
+  if (event.touches.length !== 1) return cancelGesture()
+  const touch = event.touches[0]
+  startGesture(touch.identifier, ...touchPoint(touch))
+}
+function onTouchMove(event) {
+  if (event.touches.length !== 1) return cancelGesture()
+  const touch = event.touches[0]
+  moveGesture(touch.identifier, ...touchPoint(touch))
+}
+async function onTouchEnd(event) {
   const touch = event.changedTouches?.[0]
-  const x = touch?.clientX ?? event.detail?.x
-  const y = touch?.clientY ?? event.detail?.y
+  if (!touch || !endGesture(touch.identifier, ...touchPoint(touch))) return
   const rect = await measureNative()
-  if (active) pick(x, y, rect)
+  if (!active || !rect) return
+  pick(touch.clientX ?? rect.left + touch.x, touch.clientY ?? rect.top + touch.y, rect)
 }
 // #endif
 
@@ -194,8 +258,7 @@ onMounted(async () => {
     document.addEventListener('visibilitychange', schedule)
     build = props.kind === 'room' ? buildRoom : buildGarden
     canvas = document.createElement('canvas')
-    canvas.style.cssText = 'display:block;width:100%;height:100%;touch-action:pan-y'
-    canvas.addEventListener('click', onClick)
+    canvas.style.cssText = 'display:block;width:100%;height:100%;touch-action:none'
     surface.value.appendChild(canvas)
     view = createSceneView(canvas, fail, { pixelRatio: window.devicePixelRatio || 1 })
     observer = new ResizeObserver(schedule)
@@ -229,7 +292,6 @@ onBeforeUnmount(() => {
   // #ifdef H5
   document.removeEventListener('visibilitychange', schedule)
   observer?.disconnect()
-  canvas?.removeEventListener('click', onClick)
   // #endif
   clearInterval(habitatTimer)
   view?.dispose()
@@ -238,5 +300,7 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .scene-stage, .scene-surface { position: absolute; inset: 0; width: 100%; height: 100%; }
+.scene-surface { touch-action: none; cursor: grab; }
+.scene-surface:active { cursor: grabbing; }
 .scene-loading { opacity: 0; pointer-events: none; }
 </style>
