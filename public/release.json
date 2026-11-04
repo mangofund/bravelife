@@ -1,5 +1,5 @@
 {
-  "release": "quadruped-pets-2026-11-04",
+  "release": "miniprogram-homestead-3d-2026-11-04",
   "date": "2026-11-04",
-  "changes": ["jointed-3d-cat-and-dog", "four-paw-jumps", "lying-sleep"]
+  "changes": ["weixin-native-webgl", "shared-homestead-models", "weixin-2d-fallback"]
 }

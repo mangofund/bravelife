@@ -10,13 +10,13 @@
     <view v-if="!embedded" class="seed-supply"><text>播种消耗1份种子 · 按现实时间生长</text><button @click="requestFunction('shop',{category:'garden',product:'seed_'+selected})">补货</button></view>
     <text class="muted block">{{ scenic ? (feedback || plotHint) : selectedCrop.name + '正常生长约' + selectedCrop.hours + '小时，每格收获10份。点击空地播种。' }}</text>
     <view class="plots" :class="{ 'plots-3d': threeD && threeReady }">
-      <!-- #ifdef H5 -->
-      <scene-stage v-if="threeD" kind="garden" :model="gardenModel" @pick="onPlotTap"
-        @ready="threeReady = true" @failure="fail3d" v-slot="{ project }">
-        <button v-for="(p, i) in plots" :key="i" class="plot-label"
-          :style="project((i % 2) * 1.65 + .77, .08, Math.floor(i / 2) * 1.65 + 1.25)"
+      <!-- #ifdef H5 || MP-WEIXIN -->
+      <scene-stage v-if="threeD" kind="garden" :model="gardenModel" :anchors="plotAnchors"
+        @ready="threeReady = true" @failure="fail3d" @pick="onPlotTap" @projected="plotProjection = $event" />
+      <template v-if="threeD && threeReady">
+        <button v-for="(p, i) in plots" :key="i" class="plot-label" :style="plotProjection[i]"
           :aria-label="plotLabel(p, i)" @click.stop="onPlotTap(i)">{{ p ? p.name : '播种' }}</button>
-      </scene-stage>
+      </template>
       <!-- #endif -->
       <template v-if="!threeD || !threeReady">
       <pet-residents environment="garden" :points="petPoints" />
@@ -70,7 +70,7 @@
 
 <script setup>
 import { computed, ref, watch, onMounted, onBeforeUnmount } from 'vue'
-// #ifdef H5
+// #ifdef H5 || MP-WEIXIN
 import SceneStage from '../scene-stage/scene-stage.vue'
 // #endif
 import PetResidents from '../pet-actor/pet-residents.vue'
@@ -123,7 +123,7 @@ const plots = computed(() => {
       water: ripe(p) ? '收成会一直保留' : p.waterUntil > now.value ? '水分充足 · ' + duration(p.waterUntil - now.value) : '缺水 · 生长速度减半' }
   })
 })
-// #ifdef H5
+// #ifdef H5 || MP-WEIXIN
 const gardenModel = computed(() => ({
   plots: state.garden.plots.map(p => p && ({
     crop: p.crop,
@@ -131,6 +131,8 @@ const gardenModel = computed(() => ({
     wet: p.waterUntil > now.value
   }))
 }))
+const plotAnchors = [[.77, .08, 1.25], [2.42, .08, 1.25], [.77, .08, 2.9], [2.42, .08, 2.9]]
+const plotProjection = ref([])
 function fail3d() {
   threeReady.value = false
   emit('3d-failure')

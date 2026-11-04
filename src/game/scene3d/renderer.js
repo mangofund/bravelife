@@ -29,10 +29,26 @@ function disposeModel(root) {
   })
 }
 
-export function createSceneView(canvas, onFailure) {
-  const output = canvas.getContext('2d')
-  if (!output) throw new Error('Canvas 2D unavailable')
-  const renderer = acquire(onFailure)
+export function createSceneView(canvas, onFailure, { native = false, pixelRatio = 1 } = {}) {
+  const output = native ? null : canvas.getContext('2d')
+  if (!native && !output) throw new Error('Canvas 2D unavailable')
+  let renderer
+  if (native) {
+    const context = canvas.getContext('webgl', { alpha: true, antialias: true })
+    if (!context) throw new Error('WebGL unavailable')
+    // A native canvas owns its backing buffer, but has no DOM event interface.
+    const adapter = {
+      get width() { return canvas.width },
+      set width(value) { if (canvas.width !== value) canvas.width = value },
+      get height() { return canvas.height },
+      set height(value) { if (canvas.height !== value) canvas.height = value },
+      addEventListener() {},
+      removeEventListener() {}
+    }
+    renderer = new WebGLRenderer({ canvas: adapter, context, alpha: true, antialias: true })
+  } else {
+    renderer = acquire(onFailure)
+  }
   const scene = new Scene()
   const camera = new OrthographicCamera(-1, 1, 1, -1, .1, 120)
   const ray = new Raycaster()
@@ -70,18 +86,22 @@ export function createSceneView(canvas, onFailure) {
     camera.bottom = middle.y - halfHeight
     camera.updateProjectionMatrix()
 
-    const ratio = Math.min(window.devicePixelRatio || 1, 1.5, 1200 / Math.max(width, height))
+    const ratio = Math.min(pixelRatio, 1.5, 1200 / Math.max(width, height))
     const w = Math.max(1, Math.round(width * ratio))
     const h = Math.max(1, Math.round(height * ratio))
-    if (canvas.width !== w || canvas.height !== h) {
+    if (output && (canvas.width !== w || canvas.height !== h)) {
       canvas.width = w
       canvas.height = h
     }
     // Room and garden share one GPU context, rendering on demand or while pets move.
     renderer.setSize(w, h, false)
     renderer.render(scene, camera)
-    output.clearRect(0, 0, w, h)
-    output.drawImage(renderer.domElement, 0, 0)
+    if (output) {
+      output.clearRect(0, 0, w, h)
+      output.drawImage(renderer.domElement, 0, 0)
+    } else if (renderer.getContext().isContextLost?.()) {
+      throw new Error('WebGL context lost')
+    }
     return true
   }
 
@@ -92,18 +112,19 @@ export function createSceneView(canvas, onFailure) {
       const p = new Vector3(x, height, z).project(camera)
       return { left: (p.x + 1) * 50 + '%', top: (1 - p.y) * 50 + '%' }
     },
-    pick(event) {
-      const rect = canvas.getBoundingClientRect()
-      if (!model || !rect.width || !rect.height) return
-      ray.setFromCamera(new Vector2(
-        (event.clientX - rect.left) / rect.width * 2 - 1,
-        1 - (event.clientY - rect.top) / rect.height * 2
-      ), camera)
+    pick(x, y) {
+      if (!model || !(x >= 0 && x <= 1 && y >= 0 && y <= 1)) return
+      ray.setFromCamera(new Vector2(x * 2 - 1, 1 - y * 2), camera)
       const hit = ray.intersectObjects(model.targets, true)[0]
       return hit?.object.parent.userData.hit
     },
     dispose() {
       if (model) disposeModel(model.root)
+      if (native) {
+        renderer.dispose()
+        renderer.forceContextLoss()
+        return
+      }
       losses.delete(onFailure)
       if (--users === 0) {
         shared = undefined

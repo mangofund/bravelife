@@ -1,12 +1,11 @@
 <template>
   <view class="iso" :style="{ width: CW + 'rpx', height: CH + 'rpx' }" @tap="onTap">
-    <!-- #ifdef H5 -->
-    <scene-stage v-if="threeD" kind="room" :model="roomModel" @ready="threeReady = true"
-      @failure="fail3d" @pick="pick3d" v-slot="{ project }">
-      <view v-if="atHome" class="iso-hero" :style="{ ...project(hero.x + .5, heroHeight, hero.y + .5), transitionDuration: STEP + 's' }">
-        <hero-doll :profile="state.profile" :size="Math.round(TW * 1.05)" :pose="pose" :facing="facing" />
-      </view>
-    </scene-stage>
+    <!-- #ifdef H5 || MP-WEIXIN -->
+    <scene-stage v-if="threeD" kind="room" :model="roomModel" :anchors="roomAnchors"
+      @ready="threeReady = true" @failure="fail3d" @pick="pick3d" @projected="roomProjection = $event" />
+    <view v-if="threeD && threeReady && atHome" class="iso-hero iso-hero-3d" :style="hero3dStyle">
+      <hero-doll :profile="state.profile" :size="Math.round(TW * 1.05)" :pose="pose" :facing="facing" />
+    </view>
     <!-- #endif -->
     <template v-if="!threeD || !threeReady">
     <!-- 后面两面墙：沿房间左上、右上两条边立起来 -->
@@ -42,7 +41,7 @@
 
 <script setup>
 import { computed, reactive, ref, watch, onBeforeUnmount, getCurrentInstance } from 'vue'
-// #ifdef H5
+// #ifdef H5 || MP-WEIXIN
 import SceneStage from '../scene-stage/scene-stage.vue'
 // #endif
 import PetResidents from '../pet-actor/pet-residents.vue'
@@ -59,7 +58,7 @@ const instance = getCurrentInstance()
 const threeReady = ref(false)
 watch(() => props.threeD, () => { threeReady.value = false })
 
-// #ifdef H5
+// #ifdef H5 || MP-WEIXIN
 const roomModel = computed(() => ({
   cols: cols.value,
   rows: rows.value,
@@ -71,6 +70,12 @@ const heroHeight = computed(() => {
   const fid = itemAt.value[hero.x + ',' + hero.y]?.fid
   return fid === 'futon' ? .22 : ON_TOP[fid] ? .4 : 0
 })
+const roomAnchors = computed(() => [[hero.x + .5, heroHeight.value, hero.y + .5]])
+const roomProjection = ref([])
+const hero3dStyle = computed(() => ({
+  ...roomProjection.value[0],
+  transitionDuration: STEP + 's'
+}))
 function fail3d() {
   threeReady.value = false
   emit('3d-failure')
@@ -413,6 +418,7 @@ onBeforeUnmount(() => {
   display: block;
   text-align: center;
 }
+.iso-hero-3d { z-index: 2; }
 .iso-hero {
   position: absolute;
   transform: translate(-50%, -100%);

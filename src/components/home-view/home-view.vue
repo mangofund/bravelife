@@ -3,7 +3,7 @@
     <view v-if="!tool" class="home-heading">
       <view><text class="home-eyebrow">{{ scene === 'room' ? 'MY LITTLE HOME' : 'MY EVERYDAY LIFE' }}</text><text class="home-title">{{ currentScene.icon }} {{ scene === 'room' ? home.name : currentScene.name }}</text></view>
       <view class="home-heading-right">
-        <!-- #ifdef H5 -->
+        <!-- #ifdef H5 || MP-WEIXIN -->
         <button v-if="scene === 'room' || scene === 'garden'" size="mini" :aria-pressed="threeD" @click="toggle3d">{{ threeD ? '切回 2D' : '试用 3D' }}</button>
         <!-- #endif --><text class="home-clean">✧ 整洁 {{ Math.round(state.clean) }}</text><button v-if="!atHome" size="mini" @click="travel('home')">回家</button><text v-else class="home-presence">在家 · 慢慢生活</text></view>
     </view>
