@@ -2,6 +2,9 @@ import { reactive } from 'vue'
 
 // 界面层的临时状态（不进存档）：布局模式、地图上的走路请求
 export const ui = reactive({
+  gameVisible: false,
+  guideAnchors: { map: null, room: null },
+  height: 812,
   homeScene: 'room',
   selectedFurniture: '',
   popupActive: false,
@@ -52,6 +55,7 @@ export function requestNudge(dx, dy) {
 
 function apply(width) {
   ui.width = width
+  try { ui.height = uni.getSystemInfoSync().windowHeight } catch {}
   let wide = false
   // #ifdef H5
   wide = width >= WIDE_MIN

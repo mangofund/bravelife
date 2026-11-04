@@ -10,6 +10,7 @@
     <view v-if="!embedded" class="seed-supply"><text>播种消耗1份种子 · 按现实时间生长</text><button @click="requestFunction('shop',{category:'garden',product:'seed_'+selected})">补货</button></view>
     <text class="muted block">{{ scenic ? (feedback || plotHint) : selectedCrop.name + '正常生长约' + selectedCrop.hours + '小时，每格收获10份。点击空地播种。' }}</text>
     <view class="plots">
+      <pet-residents environment="garden" :points="petPoints" />
       <button v-for="(p, i) in plots" :key="i" class="plot" :aria-label="p ? p.name + '，' + p.stage : '第' + (i + 1) + '格，播种'" @click="onPlotTap(i)">
         <text class="crop-icon">{{ p ? p.icon : '🌾' }}</text>
         <text>{{ p ? p.name : '空地 · 播种' }}</text>
@@ -59,6 +60,7 @@
 
 <script setup>
 import { computed, ref, watch, onMounted, onBeforeUnmount } from 'vue'
+import PetResidents from '../pet-actor/pet-residents.vue'
 import { ui, requestFunction } from '../../game/ui.js'
 import { play } from '../../game/audio.js'
 import { actionAudio } from '../../game/action-audio.js'
@@ -67,6 +69,11 @@ import { state, save } from '../../game/engine/core.js'
 import { CROPS, PETS, HOUR } from '../../game/data/garden.js'
 import { syncGarden, sow, reap, waterGarden, useProduce, adopt, feed, cuddleCat, ripe } from '../../game/engine/garden.js'
 const props = defineProps({ section: { type: String, default: 'all' }, compact: Boolean, scenic: Boolean, embedded: Boolean, feedback: { type: String, default: '' } })
+const petPoints = [
+  {id:'a',x:0,y:0,left:'18%',top:'94%',z:12},
+  {id:'b',x:1,y:0,left:'50%',top:'94%',z:12},
+  {id:'c',x:2,y:0,left:'82%',top:'94%',z:12}
+]
 const confirming = ref('')
 const selected = computed({get:()=>ui.selectedSeed || 'radish',set:v=>ui.selectedSeed=v})
 const {busy,run}=useAction()
@@ -187,4 +194,6 @@ onBeforeUnmount(() => { clearInterval(timer); save() })
   .garden.embedded .plot{min-height:72px;flex-direction:column;gap:5px;line-height:1.4;padding:8px}
   .garden.embedded .crop-icon{font-size:24px}
 }
+.garden .plots{position:relative;padding-bottom:36px}
+.garden .plots .pet-resident{pointer-events:none}
 </style>

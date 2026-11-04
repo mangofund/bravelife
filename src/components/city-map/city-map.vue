@@ -57,6 +57,7 @@
 <script setup>
 import { play } from '../../game/audio.js'
 import { computed, reactive, ref, watch, onMounted, onBeforeUnmount, getCurrentInstance, nextTick } from 'vue'
+import { useGuideAnchor } from '../../game/use-guide-anchor.js'
 import HeroDoll from '../hero-doll/hero-doll.vue'
 import { state, isOpen, travel, npcsAt, defaultMode, locVisible } from '../../game/index.js'
 import { MODE_MAP } from '../../game/data/transport.js'
@@ -92,6 +93,7 @@ const viewH = '100%'
 
 const mapFailed = ref(false)
 const failed = reactive({})
+useGuideAnchor('map', '.hero')
 const hero = reactive({ x: 0, y: 0, dur: 0, pose: 'idle', facing: 1, vehicle: '' })
 // 不同出行方式在地图上的动画速度倍数（只影响画面，游戏时间按出行方式结算）
 const ANIM_SPEED = { walk: 1, bike: 1.8, train: 2.6, taxi: 2.6, car: 2.6 }

@@ -1,5 +1,5 @@
 {
-  "release": "mobile-readability-guides-2026-11-04",
+  "release": "pet-svga-paged-guides-2026-11-04",
   "date": "2026-11-04",
-  "changes": ["mobile-readable-type", "touch-targets", "dismissible-scene-guides"]
+  "changes": ["character-anchored-paged-guides", "resident-cat-dog-svga"]
 }

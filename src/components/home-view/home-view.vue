@@ -1,6 +1,5 @@
 <template>
   <view class="home home-screen" :class="['scene-' + scene, { wide, 'tool-view': !!tool }]">
-    <scene-guide :scene="scene" />
     <view v-if="!tool" class="home-heading">
       <view><text class="home-eyebrow">{{ scene === 'room' ? 'MY LITTLE HOME' : 'MY EVERYDAY LIFE' }}</text><text class="home-title">{{ currentScene.icon }} {{ scene === 'room' ? home.name : currentScene.name }}</text></view>
       <view class="home-heading-right"><text class="home-clean">✧ 整洁 {{ Math.round(state.clean) }}</text><button v-if="!atHome" size="mini" @click="travel('home')">回家</button><text v-else class="home-presence">在家 · 慢慢生活</text></view>
@@ -55,7 +54,6 @@
 </template>
 
 <script setup>
-import SceneGuide from '../scene-guide/scene-guide.vue'
 import { switchAudio } from '../../game/action-audio.js'
 import { computed, ref, watch, nextTick, onMounted, onBeforeUnmount, getCurrentInstance } from 'vue'
 import HomeInventory from '../home-inventory.vue'
@@ -72,9 +70,10 @@ import {
 import { FURNITURE, HOMES, ITEMS, DELIVERY, CHORES, DIRTY_LINE } from '../../game/data/world.js'
 
 const props = defineProps({ wide: { type: Boolean, default: false }, tool: { type: String, default: '' } })
-const emit = defineEmits(['place', 'tool'])
+const emit = defineEmits(['place', 'tool', 'guide'])
 const toolScene = ref(props.tool)
 const scene = computed({ get: () => props.tool ? toolScene.value : (ui.homeScene === 'garden' ? 'room' : ui.homeScene), set: value => { if(props.tool) toolScene.value = value; else ui.homeScene = value } })
+watch(scene, value => emit('guide', value), { immediate: true })
 const gardenSection = ref('grow')
 const foodSection = computed({get:()=>ui.homeTools.food,set:v=>ui.homeTools.food=v})
 const cookingSection = computed({get:()=>ui.homeTools.cooking,set:v=>ui.homeTools.cooking=v})

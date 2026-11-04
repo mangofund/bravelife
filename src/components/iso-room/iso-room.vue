@@ -23,6 +23,7 @@
       <text v-else class="furn-emoji" :style="{ fontSize: TW * 0.5 + 'rpx' }">{{ f.icon }}</text>
     </view>
 
+    <pet-residents environment="room" :points="petPoints" />
     <view v-if="atHome" class="iso-hero" :style="heroStyle">
       <hero-doll :profile="state.profile" :size="Math.round(TW * 1.05)" :pose="pose" :facing="facing" />
     </view>
@@ -31,6 +32,8 @@
 
 <script setup>
 import { computed, reactive, ref, watch, onBeforeUnmount, getCurrentInstance } from 'vue'
+import PetResidents from '../pet-actor/pet-residents.vue'
+import { useGuideAnchor } from '../../game/use-guide-anchor.js'
 import HeroDoll from '../hero-doll/hero-doll.vue'
 import { state, placeFurniture } from '../../game/index.js'
 import { FURNITURE, HOMES } from '../../game/data/world.js'
@@ -121,6 +124,11 @@ const facing = ref(1)
 let busy = false
 let timers = []
 
+useGuideAnchor('room', '.iso-hero')
+const petPoints = computed(() => cells.value.filter(c => !c.item || WALKABLE[c.item.fid]).map(c => {
+  const t = top(c.x, c.y)
+  return { id: c.key, x: c.x, y: c.y, left: t.X + 'rpx', top: (t.Y + TH.value * .65) + 'rpx', z: (c.x + c.y) * 10 + 6 }
+}))
 const heroStyle = computed(() => {
   const t = top(hero.x, hero.y)
   return {

@@ -5,13 +5,13 @@
       <view class="desktop-topbar">
         <view class="desktop-player"><avatar-card :profile="state.profile" :size="64" /><view><text class="desktop-name">{{ state.profile.name }}</text><text class="desktop-meta">{{ age() }} 岁 · {{ desktopLocation }}</text></view></view>
         <view class="desktop-resources"><view class="desktop-funds"><text class="resource-label">持有资金</text><text class="resource-value">{{ fmtMoney(state.money) }}</text></view><view v-for="r in desktopNeeds" :key="r.key" class="desktop-need"><view class="need-heading"><text>{{ r.name }}</text><text :class="{ critical: r.value < 25 }">{{ r.value }}</text></view><view class="need-track"><view :style="{ width: r.value + '%', background: r.value < 25 ? '#d66c55' : r.color }" /></view></view></view>
-        <view class="desktop-date"><text class="desktop-hour">{{ fmtHour(state.hour) }}</text><text>{{ fmtDate(state.day) }} {{ weatherInfo().icon }}</text><text class="desktop-edition">易读引导版 · 11.04</text></view>
+        <view class="desktop-date"><text class="desktop-hour">{{ fmtHour(state.hour) }}</text><text>{{ fmtDate(state.day) }} {{ weatherInfo().icon }}</text><text class="desktop-edition">萌宠陪伴版 · 11.04</text></view>
       </view>
-      <view class="scene-layer"><scene-guide v-if="sheet || tab !== 'home'" :scene="mainGuide" />
+      <view class="scene-layer">
         <view class="guided-scene">
         <view v-if="sheet" class="location-scene"><location-sheet docked :loc-id="sheet" @close="closeSheetByUser" @gohome="goHome" @go="onGo" /></view>
         <city-map v-else-if="tab === 'map'" @open="onOpen" @arrive-home="tab = 'home'" />
-        <home-view v-else-if="tab === 'home'" wide @tool="openHomeTool" />
+        <home-view v-else-if="tab === 'home'" wide @tool="openHomeTool" @guide="detailGuide = $event" />
         <scroll-view v-else-if="tab === 'status'" scroll-y class="desktop-record"><view class="record-title">人物志 <text>经历、能力与人生目标</text></view><view class="record-grid"><game-hud /><side-status /></view></scroll-view>
         <scroll-view v-else scroll-y class="phone-scene"><phone-view :key="phoneApp" :initial-app="phoneApp" hide-apps /></scroll-view>
         </view>
@@ -28,11 +28,11 @@
         <game-hud :compact="!wide && tab === 'home'" />
         <guide-bar :compact="!wide && tab === 'home'" />
       </view>
-      <view class="content"><scene-guide v-if="sheet || tab !== 'home'" :scene="mainGuide" />
+      <view class="content">
         <view class="guided-scene">
         <location-sheet v-if="sheet" docked :loc-id="sheet" @close="closeSheetByUser" @gohome="goHome" @go="onGo" />
         <city-map v-else-if="tab === 'map'" @open="onOpen" @arrive-home="tab = 'home'" />
-        <home-view v-else-if="tab === 'home'" @tool="openHomeTool" />
+        <home-view v-else-if="tab === 'home'" @tool="openHomeTool" @guide="detailGuide = $event" />
         <scroll-view v-else scroll-y class="pane"><phone-view :key="phoneApp" :initial-app="phoneApp" hide-apps /></scroll-view>
         </view>
       </view>
@@ -51,14 +51,14 @@
     <view v-if="popup" class="function-popup" :style="popupStyle" role="dialog" aria-modal="true" :aria-label="popupTitle" @click.stop>
       <view class="function-popup-head"><button v-if="returnPopup" aria-label="返回原功能" @click="restorePopup">‹ 返回</button><text>{{ popupTitle }}</text><button aria-label="关闭浮层" @click="closePopupByUser">✕</button></view>
       <scroll-view scroll-y class="function-popup-body">
-        <scene-guide v-if="popup === 'shop' || popup === 'status'" :scene="popupGuide" />
-        <phone-view v-if="popup === 'phone'" :key="phoneApp" :initial-app="phoneApp" hide-apps />
+        <phone-view v-if="popup === 'phone'" :key="phoneApp" :initial-app="phoneApp" hide-apps @guide="detailGuide = $event" />
         <shop-view v-else-if="popup === 'shop'" />
         <view v-else-if="popup === 'status'" class="popup-record"><game-hud /><side-status /></view>
-        <home-view v-else :key="popup" :tool="popup === 'inventory' ? 'inventory' : popup === 'pets' ? 'pets' : 'food'" @place="placeFromWarehouse" />
+        <home-view v-else :key="popup" :tool="popup === 'inventory' ? 'inventory' : popup === 'pets' ? 'pets' : 'food'" @place="placeFromWarehouse" @guide="detailGuide = $event" />
       </scroll-view>
       <text class="function-popup-tip">{{ ui.homeTip ? ui.homeTip.text : '点击窗口外收起' }}</text>
     </view>
+    <scene-guide v-if="ready && !state.pendingEvent && !state.pendingStory && !ui.reading && !ui.selectedFurniture" :scene="activeGuide" :floating-panel="!!popup || !!sheet" />
     <event-modal />
     <story-modal />
     <inner-os />
@@ -108,8 +108,10 @@ const homeMenu = ref(false)
 const popup = ref('')
 const popupStyle = ref({})
 const returnPopup=ref(null)
+const detailGuide = ref('food')
+const activeGuide = computed(() => popup.value ? (popup.value === 'shop' || popup.value === 'status' ? popup.value : detailGuide.value) : mainGuide.value)
+watch(popup, value => { detailGuide.value = value === 'phone' ? 'phone:' + phoneApp.value : value === 'life' ? 'food' : value })
 const mainGuide = computed(() => sheet.value ? 'location:' + sheet.value : tab.value === 'home' ? ui.homeScene : 'map')
-const popupGuide = computed(() => popup.value === 'phone' ? 'phone:' + phoneApp.value : popup.value === 'life' ? 'food' : popup.value)
 const instance = getCurrentInstance()
 const popupTitle = computed(() => popup.value === 'phone' ? (PHONE_APPS.find(a=>a.id===phoneApp.value)?.name || '关系') : ({shop:'商店',status:'人物',inventory:'家园仓库',life:'生活',pets:'宠物'})[popup.value] || '生活')
 watch(popup, value => { ui.popupActive = !!value })
@@ -253,12 +255,14 @@ function onKey(e) {
 }
 
 onShow(() => {
+  ui.gameVisible = true
   startClock()
   // #ifdef H5
   window.addEventListener('keydown', onKey)
   // #endif
 })
 function teardown() {
+  ui.gameVisible = false
   closePopup()
   ui.popupActive=false
   save()

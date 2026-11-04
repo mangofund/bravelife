@@ -1,6 +1,5 @@
 <template>
   <view class="phone">
-    <scene-guide :scene="'phone:' + app" />
     <view v-if="!hideApps" class="apps">
       <view v-for="a in APPS" :key="a.id" class="app" :class="{ on: app === a.id }" @click="openApp(a.id)">
         <text class="app-icon">{{ a.icon }}</text>
@@ -150,7 +149,6 @@
 </template>
 
 <script setup>
-import SceneGuide from '../scene-guide/scene-guide.vue'
 import { computed, ref, watch } from 'vue'
 import { play, playTabSwitch } from '../../game/audio.js'
 import { switchAudio } from '../../game/action-audio.js'
@@ -179,7 +177,9 @@ const props = defineProps({
   initialApp: { type: String, default: 'msg' },
   hideApps: Boolean
 })
+const emit = defineEmits(['guide'])
 const app = ref(props.initialApp)
+watch(app, value => emit('guide', 'phone:' + value), { immediate: true })
 const contactSection=ref('friends')
 const currentApp = computed(() => APPS.find(a => a.id === app.value) || APPS[0])
 if (app.value === 'msg') state.unread = 0
