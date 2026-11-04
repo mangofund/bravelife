@@ -163,15 +163,26 @@ export function useItem(itemId) {
 
 // ---------- 工作 ----------
 
+export function jobQualification(careerId) {
+  const c = CAREERS[careerId]
+  return jobBlock(careerId) || (meets(c.levels[0].req) ? '' : '还不够格：' + reqText(c.levels[0].req))
+}
+
+export function shiftPay(careerId, level) {
+  const bg = BACKGROUNDS.find(b => b.id === state.profile.background)
+  return Math.round(CAREERS[careerId].levels[level].pay * (1 + (bg ? bg.payBonus : 0)) * (charmActive('charm_work') ? 1.1 : 1))
+}
+
 export function applyJob(careerId) {
   const c = CAREERS[careerId]
   const err = canActHere(c.location)
   if (err) return fail(err)
   if (state.job && state.job.career === careerId) return fail('你已经在这里工作了')
-  const block = jobBlock(careerId)
-  if (block) return fail(block)
+  const restriction = jobBlock(careerId)
+  if (restriction) return fail(restriction)
   count('applies')
-  if (!meets(c.levels[0].req)) return fail('还不够格：' + reqText(c.levels[0].req))
+  const qualification = jobQualification(careerId)
+  if (qualification) return fail(qualification)
   const old = state.job ? CAREERS[state.job.career].name : ''
   state.job = { career: careerId, level: 0, shifts: 0, lastDay: 0 }
   passTime(1)
@@ -204,8 +215,7 @@ export function work() {
   const job = state.job
   const c = CAREERS[job.career]
   const lv = c.levels[job.level]
-  const bg = BACKGROUNDS.filter((b) => b.id === state.profile.background)[0]
-  const pay = Math.round(lv.pay * (1 + (bg ? bg.payBonus : 0)) * (charmActive('charm_work') ? 1.1 : 1))
+  const pay = shiftPay(job.career, job.level)
   passTime(c.hours)
   logAct(c.hours)
   state.counters.workStreak = job.lastDay === state.day - 1 ? (state.counters.workStreak || 0) + 1 : 1

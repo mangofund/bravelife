@@ -61,7 +61,12 @@
     <scene-guide :scene="mainGuide" :visible="ready && !menuOpen && !sheet && !state.pendingEvent && !state.pendingStory && !ui.reading && !ui.selectedFurniture" />
     <!-- #ifdef H5 -->
     <view v-if="authorPreview" class="author-preview" @click.stop>
-      <button v-if="!preview" :disabled="authorStarting" @click="startPreview">代玩</button>
+      <template v-if="!preview">
+        <input v-if="showPreviewGoals" v-model="earnAmount" inputmode="numeric" aria-label="今日净赚日元" placeholder="今日净赚 ¥" />
+        <button v-if="showPreviewGoals" :disabled="authorStarting" @click="startPreview(true)">按目标代玩</button>
+        <button v-if="showPreviewGoals" :disabled="authorStarting" @click="startPreview(false)">自由试玩</button>
+        <button v-else @click="showPreviewGoals = true">代玩</button>
+      </template>
       <template v-else>
         <text role="status">{{ previewMessage }}</text>
         <button v-if="previewPaused && previewSteps.length" @click="advancePreview(false)">单步</button>
@@ -106,7 +111,8 @@ import { autoCloudSave } from '../../game/account.js'
 // #ifdef H5
 import { api, getToken } from '../../game/api.js'
 import { beginRehearsal, endRehearsal, isOpen } from '../../game/engine/core.js'
-import { doAction, locVisible, sleep, travel, travelOptions } from '../../game/index.js'
+import { planEarnings } from '../../game/earn-preview.js'
+import { applyJob, doAction, locVisible, sleep, travel, travelOptions, wait, work } from '../../game/index.js'
 // #endif
 
 const TABS = [
@@ -378,6 +384,9 @@ const previewPaused = ref(false)
 const previewMessage = ref('')
 const previewSteps = ref([])
 const previewTrace = ref([])
+const showPreviewGoals = ref(false)
+const earnAmount = ref('5000')
+let earnGoal = null
 let previewVisit = 0
 let previewTimer
 let previewNavigation
@@ -387,6 +396,8 @@ let previewLastActivity = ''
 function stopPreview() {
   clearTimeout(previewTimer)
   previewSteps.value = []
+  earnGoal = null
+  showPreviewGoals.value = false
   if (!preview.value) return
   endRehearsal()
   preview.value = false
@@ -413,7 +424,7 @@ function previewSnapshot() {
 }
 
 function downloadPreviewTrace() {
-  const data = { schema: 1, exportedAt: new Date().toISOString(), steps: previewTrace.value }
+  const data = { schema: 1, exportedAt: new Date().toISOString(), goal: earnGoal, steps: previewTrace.value }
   const url = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }))
   const link = document.createElement('a')
   link.href = url
@@ -443,7 +454,7 @@ function advancePreview(automatic) {
   previewSteps.value = previewSteps.value.slice(1)
   previewMessage.value = label
   if (!previewSteps.value.length) previewSteps.value = planPreview()
-  if (automatic) previewTimer = setTimeout(() => advancePreview(true), 1600)
+  if (automatic && previewSteps.value.length) previewTimer = setTimeout(() => advancePreview(true), 1600)
 }
 
 function togglePreview() {
@@ -484,12 +495,38 @@ function previewTravel(destination, reason) {
   ]
 }
 
+function planEarningsStep() {
+  const route = planEarnings(earnGoal)
+  if (!route.next) {
+    previewMessage.value = route.message
+    return []
+  }
+  const step = route.next
+  const summary = '预计 ' + fmtHour(route.end) + ' 完成 · 余下路线净赚 ' + fmtMoney(route.net)
+  previewMessage.value = summary
+  switch (step.type) {
+    case 'nap': return [['小睡两小时恢复精力 · ' + summary, () => { goHome(); return sleep(false) }]]
+    case 'wait': return [['等到可办理入职或开班 · ' + summary, () => wait(step.hours)]]
+    case 'travel': return [[step.label + '前往' + LOCATION_MAP[step.destination].name + ' · ' + summary, () => {
+      closePopup()
+      tab.value = 'map'
+      sheet.value = step.destination
+      return travel(step.destination, step.mode)
+    }]]
+    case 'apply': return [['申请' + route.jobName + ' · ' + summary, () => applyJob(step.career)]]
+    case 'work': return [['开始上班 · ' + summary, work]]
+  }
+}
+
 function planPreview() {
+  if (earnGoal && (state.day !== earnGoal.day || state.money >= earnGoal.balance)) return planEarningsStep()
   if (state.pendingStory || state.pendingEvent || ui.reading) {
     return [['继续当前剧情或事件', () => clickPreviewElement(
       document.querySelector('.st-btn, .ev-btn') || document.querySelector('.st-scene')
     )]]
   }
+
+  if (earnGoal) return planEarningsStep()
 
   const current = state.location
   const { energy, hunger, mood } = state.stats
@@ -559,8 +596,14 @@ function planPreviewGarden() {
   return steps
 }
 
-async function startPreview() {
+async function startPreview(targeted) {
   if (authorStarting.value || preview.value) return
+  const input = String(earnAmount.value).trim()
+  const amount = Number(input)
+  if (targeted && (!/^\d+$/.test(input) || amount <= 0 || !Number.isSafeInteger(state.money + amount))) {
+    uni.showToast({ title: '请输入有效的正整数日元金额', icon: 'none' })
+    return
+  }
   const visit = previewVisit
   const token = getToken()
   authorStarting.value = true
@@ -572,6 +615,7 @@ async function startPreview() {
       homeScene: ui.homeScene, selectedSeed: ui.selectedSeed, shopCategory: ui.shopCategory,
       shopProduct: ui.shopProduct, selectedFurniture: ui.selectedFurniture, homeTools: { ...ui.homeTools }
     } }
+    earnGoal = targeted ? { day: state.day, startBalance: state.money, balance: state.money + amount } : null
     previewTrace.value = []
     previewGardenTried = false
     previewLastActivity = ''
