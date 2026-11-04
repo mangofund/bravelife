@@ -67,6 +67,7 @@
         <button v-if="previewPaused && previewSteps.length" @click="advancePreview(false)">单步</button>
         <button v-if="previewSteps.length" @click="togglePreview">{{ previewPaused ? '继续' : '暂停' }}</button>
         <button v-if="!previewManual" @click="takePreviewControl">接管</button>
+        <button v-if="previewTrace.length" @click="downloadPreviewTrace">导出试玩记录</button>
         <button @click="stopPreview">退出演示</button>
       </template>
     </view>
@@ -104,7 +105,8 @@ import { play, playTabSwitch } from '../../game/audio.js'
 import { autoCloudSave } from '../../game/account.js'
 // #ifdef H5
 import { api, getToken } from '../../game/api.js'
-import { beginRehearsal, endRehearsal } from '../../game/engine/core.js'
+import { beginRehearsal, endRehearsal, isOpen } from '../../game/engine/core.js'
+import { doAction, locVisible, sleep, travel, travelOptions } from '../../game/index.js'
 // #endif
 
 const TABS = [
@@ -375,9 +377,12 @@ const authorStarting = ref(false)
 const previewPaused = ref(false)
 const previewMessage = ref('')
 const previewSteps = ref([])
+const previewTrace = ref([])
 let previewVisit = 0
 let previewTimer
 let previewNavigation
+let previewGardenTried = false
+let previewLastActivity = ''
 
 function stopPreview() {
   clearTimeout(previewTimer)
@@ -403,20 +408,42 @@ function clickPreviewElement(button) {
   return true
 }
 
+function previewSnapshot() {
+  return { location: state.location, day: state.day, hour: state.hour, money: state.money, stats: { ...state.stats } }
+}
+
+function downloadPreviewTrace() {
+  const data = { schema: 1, exportedAt: new Date().toISOString(), steps: previewTrace.value }
+  const url = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }))
+  const link = document.createElement('a')
+  link.href = url
+  link.download = 'bravelife-playtest-' + Date.now() + '.json'
+  link.click()
+  setTimeout(() => URL.revokeObjectURL(url), 1000)
+}
+
 function advancePreview(automatic) {
   const step = previewSteps.value[0]
   if (!step) return
   const [label, action, verify] = step
-  const applied = action()
-  if (applied === false || (verify && !verify())) {
+  const before = previewSnapshot()
+  let ok = false
+  try {
+    ok = action() !== false && (!verify || verify())
+  } catch (error) {
+    console.error('Author preview step failed', error)
+  }
+  previewTrace.value = [...previewTrace.value.slice(-199), { label, ok, before, after: previewSnapshot() }]
+  if (!ok) {
     previewMessage.value = '演示停在「' + label + '」。请检查当前界面，或接管后亲自操作。'
     previewPaused.value = true
     previewSteps.value = []
     return
   }
   previewSteps.value = previewSteps.value.slice(1)
-  previewMessage.value = previewSteps.value.length ? label : label + '。演示完成，退出即可回到原存档。'
-  if (automatic && previewSteps.value.length) previewTimer = setTimeout(() => advancePreview(true), 1600)
+  previewMessage.value = label
+  if (!previewSteps.value.length) previewSteps.value = planPreview()
+  if (automatic) previewTimer = setTimeout(() => advancePreview(true), 1600)
 }
 
 function togglePreview() {
@@ -437,22 +464,69 @@ function openPreviewGarden() {
     clickPreviewControl('home-garden-panel')
 }
 
+function previewTravel(destination, reason) {
+  const name = LOCATION_MAP[destination].name
+  return [
+    ['查看路线：' + reason, () => {
+      closePopup()
+      tab.value = 'map'
+      sheet.value = destination
+    }],
+    ['前往' + name, () => {
+      const options = travelOptions(destination).filter(option => option.ok)
+      const mode = options.find(option => option.cost === 0 && option.hours <= 2) ||
+        options.sort((a, b) => a.hours - b.hours)[0]
+      if (!mode || !travel(destination, mode.id)) return false
+      previewLastActivity = ''
+      if (destination === 'home') goHome()
+      return true
+    }, () => state.location === destination]
+  ]
+}
+
 function planPreview() {
-  if (state.pendingStory || state.pendingEvent) {
+  if (state.pendingStory || state.pendingEvent || ui.reading) {
     return [['继续当前剧情或事件', () => clickPreviewElement(
       document.querySelector('.st-btn, .ev-btn') || document.querySelector('.st-scene')
     )]]
   }
-  if (state.location !== 'home') {
-    return [
-      ['查看当前地点 · ' + (LOCATION_MAP[state.location]?.name || state.location), () => {
-        closePopup()
-        tab.value = 'map'
-        sheet.value = state.location
-      }],
-      ['在当前地点停留一小时，观察时间推进', () => clickPreviewElement(document.querySelector('.sheet .wait'))]
-    ]
+
+  const current = state.location
+  const { energy, hunger, mood } = state.stats
+  if (energy < 35) {
+    if (current !== 'home') return previewTravel('home', '精力偏低，先回家休息')
+    return [['在家睡一觉，恢复精力', () => { closePopup(); goHome(); return sleep(true) }]]
   }
+
+  if (hunger < 55 && state.money >= 150 && locVisible('konbini')) {
+    if (current !== 'konbini') return previewTravel('konbini', '饱腹偏低，去便利店找吃的')
+    return [[state.money >= 600 ? '吃便当补充饱腹' : '吃饭团补充饱腹',
+      () => doAction('konbini', state.money >= 600 ? 'bento' : 'onigiri')]]
+  }
+
+  if (current === 'home' && !previewGardenTried && state.money >= 50) {
+    previewGardenTried = true
+    return planPreviewGarden()
+  }
+
+  const destination = (mood < 55 ? ['park', 'library'] : ['library', 'park']).find(id =>
+    id !== current && locVisible(id) && isOpen(LOCATION_MAP[id], state.hour)
+  )
+  const activities = { library: ['novel', '读小说，提升心情和创意'], park: ['walk', '在公园散步，恢复心情'] }
+  const activity = activities[current]
+  if (activity && previewLastActivity !== current && isOpen(LOCATION_MAP[current], state.hour)) {
+    return [[activity[1], () => {
+      if (!doAction(current, activity[0])) return false
+      previewLastActivity = current
+      return true
+    }]]
+  }
+  if (destination) return previewTravel(destination, '趁营业时间体验' + LOCATION_MAP[destination].name)
+  if (current !== 'home') return previewTravel('home', '附近的目标地点已关门')
+  return [['在家小睡，等下一段营业时间', () => { closePopup(); goHome(); return sleep(false) }]]
+}
+
+function planPreviewGarden() {
   const plot = state.garden.plots.findIndex(p => !p)
   if (plot < 0) {
     return [
@@ -463,25 +537,25 @@ function planPreview() {
     ]
   }
   const seeds = state.garden.seeds.radish || 0
-  const food = state.garden.feed.dog || 0
-  const openShop = () => showPopup('shop', popupAnchor('shop'))
-  const steps = [
-    ['打开商店', openShop],
+  const steps = []
+  if (!seeds) steps.push(
+    ['打开商店', () => showPopup('shop', popupAnchor('shop'))],
     ['到园艺区选萝卜种子', () => clickPreviewControl('shop-tab-garden')],
-    ['买一份种子，种子会进入家园仓库', () => clickPreviewControl('shop-buy-seed_radish'), () => state.garden.seeds.radish === seeds + 1],
-    ['切到宠物区', () => clickPreviewControl('shop-tab-pet')],
-    ['买一份狗粮，回家再喂', () => clickPreviewControl('shop-buy-feed_dog'), () => state.garden.feed.dog === food + 1],
+    ['买一份种子', () => clickPreviewControl('shop-buy-seed_radish'), () => state.garden.seeds.radish === 1]
+  )
+  steps.push(
     ['回家查看菜园', () => { closePopup(); goHome() }],
     ['打开菜园面板', openPreviewGarden],
     ['选择萝卜种子', () => clickPreviewControl('garden-seed-radish')],
-    ['点击空地，播种消耗一份种子', () => clickPreviewControl('garden-plot-' + plot), () => !!state.garden.plots[plot] && (state.garden.seeds.radish || 0) === seeds],
-    ['打开小狗照料面板', () => { ui.homeTools.pet = 'dog'; openHomeTool('pets') }]
-  ]
-  if (!state.garden.pets.dog) steps.push(
-    ['查看小狗领养费用', () => clickPreviewControl('garden-adopt-dog')],
-    ['确认领养，小狗会来到家园', () => clickPreviewControl('garden-adopt-dog'), () => !!state.garden.pets.dog]
+    ['点击空地播种', () => clickPreviewControl('garden-plot-' + plot), () => !!state.garden.plots[plot]]
   )
-  steps.push(['喂小狗，追加一天口粮', () => clickPreviewControl('garden-feed-dog'), () => (state.garden.feed.dog || 0) === food])
+  if (state.garden.pets.dog && state.garden.feed.dog && state.garden.pets.dog.fedUntil <= Date.now()) {
+    const food = state.garden.feed.dog
+    steps.push(
+      ['打开小狗照料面板', () => { ui.homeTools.pet = 'dog'; openHomeTool('pets') }],
+      ['小狗饿了，喂一份库存狗粮', () => clickPreviewControl('garden-feed-dog'), () => state.garden.feed.dog === food - 1]
+    )
+  }
   return steps
 }
 
@@ -498,6 +572,9 @@ async function startPreview() {
       homeScene: ui.homeScene, selectedSeed: ui.selectedSeed, shopCategory: ui.shopCategory,
       shopProduct: ui.shopProduct, selectedFurniture: ui.selectedFurniture, homeTools: { ...ui.homeTools }
     } }
+    previewTrace.value = []
+    previewGardenTried = false
+    previewLastActivity = ''
     previewManual.value = false
     previewPaused.value = false
     preview.value = true
