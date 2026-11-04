@@ -70,10 +70,9 @@ import {
 import { FURNITURE, HOMES, ITEMS, DELIVERY, CHORES, DIRTY_LINE } from '../../game/data/world.js'
 
 const props = defineProps({ wide: { type: Boolean, default: false }, tool: { type: String, default: '' } })
-const emit = defineEmits(['place', 'tool', 'guide'])
+const emit = defineEmits(['place', 'tool'])
 const toolScene = ref(props.tool)
 const scene = computed({ get: () => props.tool ? toolScene.value : (ui.homeScene === 'garden' ? 'room' : ui.homeScene), set: value => { if(props.tool) toolScene.value = value; else ui.homeScene = value } })
-watch(scene, value => emit('guide', value), { immediate: true })
 const gardenSection = ref('grow')
 const foodSection = computed({get:()=>ui.homeTools.food,set:v=>ui.homeTools.food=v})
 const cookingSection = computed({get:()=>ui.homeTools.cooking,set:v=>ui.homeTools.cooking=v})

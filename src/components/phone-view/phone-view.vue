@@ -177,9 +177,7 @@ const props = defineProps({
   initialApp: { type: String, default: 'msg' },
   hideApps: Boolean
 })
-const emit = defineEmits(['guide'])
 const app = ref(props.initialApp)
-watch(app, value => emit('guide', 'phone:' + value), { immediate: true })
 const contactSection=ref('friends')
 const currentApp = computed(() => APPS.find(a => a.id === app.value) || APPS[0])
 if (app.value === 'msg') state.unread = 0

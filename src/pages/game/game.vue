@@ -11,7 +11,7 @@
         <view class="guided-scene">
         <view v-if="sheet" class="location-scene"><location-sheet docked :loc-id="sheet" @close="closeSheetByUser" @gohome="goHome" @go="onGo" /></view>
         <city-map v-else-if="tab === 'map'" @open="onOpen" @arrive-home="tab = 'home'" />
-        <home-view v-else-if="tab === 'home'" wide @tool="openHomeTool" @guide="detailGuide = $event" />
+        <home-view v-else-if="tab === 'home'" wide @tool="openHomeTool" />
         <scroll-view v-else-if="tab === 'status'" scroll-y class="desktop-record"><view class="record-title">人物志 <text>经历、能力与人生目标</text></view><view class="record-grid"><game-hud /><side-status /></view></scroll-view>
         <scroll-view v-else scroll-y class="phone-scene"><phone-view :key="phoneApp" :initial-app="phoneApp" hide-apps /></scroll-view>
         </view>
@@ -32,7 +32,7 @@
         <view class="guided-scene">
         <location-sheet v-if="sheet" docked :loc-id="sheet" @close="closeSheetByUser" @gohome="goHome" @go="onGo" />
         <city-map v-else-if="tab === 'map'" @open="onOpen" @arrive-home="tab = 'home'" />
-        <home-view v-else-if="tab === 'home'" @tool="openHomeTool" @guide="detailGuide = $event" />
+        <home-view v-else-if="tab === 'home'" @tool="openHomeTool" />
         <scroll-view v-else scroll-y class="pane"><phone-view :key="phoneApp" :initial-app="phoneApp" hide-apps /></scroll-view>
         </view>
       </view>
@@ -47,18 +47,18 @@
       </view>
     </block>
 
-    <view v-if="popup" class="function-backdrop" @click.stop="closePopupByUser" />
+    <view v-if="menuOpen" class="function-backdrop" @click.stop="closePopupByUser" />
     <view v-if="popup" class="function-popup" :style="popupStyle" role="dialog" aria-modal="true" :aria-label="popupTitle" @click.stop>
       <view class="function-popup-head"><button v-if="returnPopup" aria-label="返回原功能" @click="restorePopup">‹ 返回</button><text>{{ popupTitle }}</text><button aria-label="关闭浮层" @click="closePopupByUser">✕</button></view>
       <scroll-view scroll-y class="function-popup-body">
-        <phone-view v-if="popup === 'phone'" :key="phoneApp" :initial-app="phoneApp" hide-apps @guide="detailGuide = $event" />
+        <phone-view v-if="popup === 'phone'" :key="phoneApp" :initial-app="phoneApp" hide-apps />
         <shop-view v-else-if="popup === 'shop'" />
         <view v-else-if="popup === 'status'" class="popup-record"><game-hud /><side-status /></view>
-        <home-view v-else :key="popup" :tool="popup === 'inventory' ? 'inventory' : popup === 'pets' ? 'pets' : 'food'" @place="placeFromWarehouse" @guide="detailGuide = $event" />
+        <home-view v-else :key="popup" :tool="popup === 'inventory' ? 'inventory' : popup === 'pets' ? 'pets' : 'food'" @place="placeFromWarehouse" />
       </scroll-view>
       <text class="function-popup-tip">{{ ui.homeTip ? ui.homeTip.text : '点击窗口外收起' }}</text>
     </view>
-    <scene-guide v-if="ready && !state.pendingEvent && !state.pendingStory && !ui.reading && !ui.selectedFurniture" :scene="activeGuide" :floating-panel="!!popup || !!sheet" />
+    <scene-guide :scene="mainGuide" :visible="ready && !menuOpen && !sheet && !state.pendingEvent && !state.pendingStory && !ui.reading && !ui.selectedFurniture" />
     <event-modal />
     <story-modal />
     <inner-os />
@@ -108,10 +108,8 @@ const homeMenu = ref(false)
 const popup = ref('')
 const popupStyle = ref({})
 const returnPopup=ref(null)
-const detailGuide = ref('food')
-const activeGuide = computed(() => popup.value ? (popup.value === 'shop' || popup.value === 'status' ? popup.value : detailGuide.value) : mainGuide.value)
-watch(popup, value => { detailGuide.value = value === 'phone' ? 'phone:' + phoneApp.value : value === 'life' ? 'food' : value })
-const mainGuide = computed(() => sheet.value ? 'location:' + sheet.value : tab.value === 'home' ? ui.homeScene : 'map')
+const menuOpen = computed(() => !!popup.value || socialMenu.value || homeMenu.value)
+const mainGuide = computed(() => tab.value === 'home' ? ui.homeScene : 'map')
 const instance = getCurrentInstance()
 const popupTitle = computed(() => popup.value === 'phone' ? (PHONE_APPS.find(a=>a.id===phoneApp.value)?.name || '关系') : ({shop:'商店',status:'人物',inventory:'家园仓库',life:'生活',pets:'宠物'})[popup.value] || '生活')
 watch(popup, value => { ui.popupActive = !!value })
@@ -424,13 +422,13 @@ function onGo(id, mode) {
 .tabs { position:relative; }.mobile-relation-flyout { right:12px; left:12px; width:auto; bottom:calc(100% + 7px); }.mobile-relation-flyout button { padding:8px 2px; font-size: max(var(--readable-min, 0px), 11px); }
 .desktop-commandbar{position:relative;z-index:80}.tabs.popup-nav{z-index:80}
 .function-backdrop{position:fixed;inset:0;z-index:70;background:transparent;pointer-events:auto}
-.function-popup{position:fixed;z-index:90;display:flex;flex-direction:column;box-sizing:border-box;overflow:hidden;border:1px solid #b29a6a;border-radius:10px;background:rgba(248,241,222,.87);backdrop-filter:blur(14px);box-shadow:0 10px 30px #18243544;pointer-events:auto;color:var(--ink)}
+.function-popup{position:fixed;z-index:90;display:flex;flex-direction:column;box-sizing:border-box;overflow:hidden;border:1px solid #b29a6a;border-radius:10px;background:#f8f1de;box-shadow:0 10px 30px #18243544;pointer-events:auto;color:var(--ink)}
 .function-popup-head{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid #b29a6a66;flex-shrink:0;font-size:17px;font-weight:700}.function-popup-head button{margin:0;padding:2px 10px;font-size:15px;line-height:1.6;background:transparent;color:var(--ink)}.function-popup-head button::after{border:0}
 .function-popup-body{flex:1;height:0;min-height:0}.function-popup-tip{display:block;flex-shrink:0;padding:7px 12px;border-top:1px solid #b29a6a44;font-size: max(var(--readable-min, 0px), 10px);color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.popup-record{padding:10px}.function-popup .phone{padding:12px}.function-popup .shop-view{padding:10px}
-.relation-flyout{background:rgba(38,54,74,.94);backdrop-filter:blur(12px)}
-/* Hints participate in layout so they do not cover scene controls. */
+
+/* Keep scene actors below menus and their input backdrop. */
 .content, .scene-layer { display: flex; flex-direction: column; }
-.guided-scene { flex: 1; height: 0; min-height: 0; position: relative; overflow: hidden; }
+.guided-scene { isolation: isolate; flex: 1; height: 0; min-height: 0; position: relative; overflow: hidden; }
 @media (max-width: 959px) {
   .function-popup { max-height: calc(100dvh - 100px); }
   .game .function-popup-head { padding: 6px 12px; }
