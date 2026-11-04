@@ -100,7 +100,7 @@ export default {
   min-height: 100vh;
   color: var(--ink);
   font-family: var(--font);
-  font-size: 28rpx;
+  font-size: max(var(--readable-min, 0px), 28rpx);
   line-height: 1.5;
 }
 
@@ -136,7 +136,7 @@ uni-page-wrapper {
   background: var(--accent);
   color: #fff;
   font-weight: 700;
-  font-size: 28rpx;
+  font-size: max(var(--readable-min, 0px), 28rpx);
   border: var(--bw) solid var(--line);
   box-shadow: var(--shadow);
 }
@@ -160,7 +160,7 @@ uni-page-wrapper {
 }
 .muted {
   color: var(--muted);
-  font-size: 24rpx;
+  font-size: max(var(--readable-min, 0px), 24rpx);
 }
 .row {
   display: flex;
@@ -181,7 +181,7 @@ uni-page-wrapper {
   border-radius: 20rpx 14rpx 22rpx 16rpx;
   padding: 16rpx 20rpx;
   margin: 12rpx 0;
-  font-size: 26rpx;
+  font-size: max(var(--readable-min, 0px), 26rpx);
 }
 .act {
   display: flex;
@@ -208,10 +208,10 @@ uni-page-wrapper {
 .price {
   color: var(--accent);
   font-weight: 700;
-  font-size: 26rpx;
+  font-size: max(var(--readable-min, 0px), 26rpx);
 }
 .tag-sm {
-  font-size: 20rpx;
+  font-size: max(var(--readable-min, 0px), 20rpx);
   padding: 2rpx 12rpx;
   border-radius: 999rpx;
   border: 2rpx solid var(--line);
@@ -228,5 +228,20 @@ uni-page-wrapper {
 .track {
   background: var(--paper-deep);
   border: 2rpx solid var(--line);
+}
+/* Shared mobile sizing also applies to native mini-program components. */
+@media (max-width: 959px) {
+  .theme-root { --readable-min: 14px; font-size: 16px; }
+  .theme-root button, .theme-root .btn {
+    min-height: 44px; box-sizing: border-box; font-size: 16px;
+    line-height: 1.45; white-space: normal;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .theme-root .tab { min-height: 60px; box-sizing: border-box; }
+  .theme-root .tab-name { font-size: 14px; }
+  .theme-root .skip { min-width: 44px; min-height: 44px; display: flex; align-items: center; justify-content: center; }
+  .theme-root .function-popup-head button { min-width: 44px; }
+  .theme-root .mobile-relation-flyout { grid-template-columns: repeat(3, minmax(0, 1fr)); max-height: 45vh; overflow-y: auto; }
+  .theme-root .function-popup-tip { white-space: normal; }
 }
 </style>

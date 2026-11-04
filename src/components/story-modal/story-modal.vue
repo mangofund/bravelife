@@ -146,7 +146,7 @@ function tagClass(tag) {
 }
 .st-more {
   align-self: flex-end;
-  font-size: 22rpx;
+  font-size: max(var(--readable-min, 0px), 22rpx);
   color: var(--muted);
   margin-top: 8rpx;
 }
@@ -166,7 +166,7 @@ function tagClass(tag) {
   background: #6f8fa8;
 }
 .st-tag {
-  font-size: 20rpx;
+  font-size: max(var(--readable-min, 0px), 20rpx);
   padding: 2rpx 10rpx;
   margin-right: 10rpx;
   border-radius: 999rpx;

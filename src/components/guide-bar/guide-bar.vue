@@ -48,7 +48,7 @@ function onSkip() {
 .warn {
   background: var(--warn);
   color: #fff;
-  font-size: 24rpx;
+  font-size: max(var(--readable-min, 0px), 24rpx);
   border-radius: 12rpx;
   padding: 8rpx 16rpx;
   margin-top: 10rpx;
@@ -64,17 +64,17 @@ function onSkip() {
 }
 .tut-text {
   flex: 1;
-  font-size: 24rpx;
+  font-size: max(var(--readable-min, 0px), 24rpx);
   font-weight: 600;
 }
 .skip {
-  font-size: 22rpx;
+  font-size: max(var(--readable-min, 0px), 22rpx);
   margin-left: 12rpx;
   opacity: 0.7;
 }
 .guide.compact { padding-top: 4px; padding-bottom: 4px; }
 .compact .tut-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .compact .tut { margin-top: 0; padding: 5px 8px; }
-.compact .tut-text { font-size: 11px; }
-.compact .warn { margin-top: 0; font-size: 11px; line-height: 1.4; padding: 5px 8px; }
+.compact .tut-text { font-size: max(var(--readable-min, 0px), 11px); }
+.compact .warn { margin-top: 0; font-size: max(var(--readable-min, 0px), 11px); line-height: 1.4; padding: 5px 8px; }
 </style>

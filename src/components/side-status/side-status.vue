@@ -63,7 +63,7 @@ const invite = computed(() => {
 }
 .sname {
   width: 80rpx;
-  font-size: 24rpx;
+  font-size: max(var(--readable-min, 0px), 24rpx);
 }
 .strack {
   flex: 1;
@@ -84,6 +84,6 @@ const invite = computed(() => {
 .sval {
   width: 60rpx;
   text-align: right;
-  font-size: 24rpx;
+  font-size: max(var(--readable-min, 0px), 24rpx);
 }
 </style>

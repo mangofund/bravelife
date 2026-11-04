@@ -1,5 +1,6 @@
 <template>
   <view class="phone">
+    <scene-guide :scene="'phone:' + app" />
     <view v-if="!hideApps" class="apps">
       <view v-for="a in APPS" :key="a.id" class="app" :class="{ on: app === a.id }" @click="openApp(a.id)">
         <text class="app-icon">{{ a.icon }}</text>
@@ -149,6 +150,7 @@
 </template>
 
 <script setup>
+import SceneGuide from '../scene-guide/scene-guide.vue'
 import { computed, ref, watch } from 'vue'
 import { play, playTabSwitch } from '../../game/audio.js'
 import { switchAudio } from '../../game/action-audio.js'
@@ -298,7 +300,7 @@ function onRestart() {
   font-size: 48rpx;
 }
 .app-name {
-  font-size: 22rpx;
+  font-size: max(var(--readable-min, 0px), 22rpx);
 }
 .dot-badge {
   position: absolute;
@@ -306,7 +308,7 @@ function onRestart() {
   right: 12rpx;
   background: var(--warn);
   color: #fff;
-  font-size: 18rpx;
+  font-size: max(var(--readable-min, 0px), 18rpx);
   border-radius: 999rpx;
   padding: 0 10rpx;
 }
@@ -324,7 +326,7 @@ function onRestart() {
   width: 31%;
   margin-bottom: 12rpx;
   padding: 14rpx 0;
-  font-size: 22rpx;
+  font-size: max(var(--readable-min, 0px), 22rpx);
   box-sizing: border-box;
 }
 .line {
@@ -332,7 +334,7 @@ function onRestart() {
   justify-content: space-between;
   padding: 14rpx 0;
   border-bottom: 2rpx solid var(--line);
-  font-size: 24rpx;
+  font-size: max(var(--readable-min, 0px), 24rpx);
 }
 .line-main {
   flex: 1;
@@ -360,7 +362,7 @@ function onRestart() {
 }
 .skill-name {
   width: 100rpx;
-  font-size: 24rpx;
+  font-size: max(var(--readable-min, 0px), 24rpx);
 }
 .cand .track {
   flex: 1;
@@ -386,7 +388,7 @@ function onRestart() {
 .pct {
   width: 80rpx;
   text-align: right;
-  font-size: 24rpx;
+  font-size: max(var(--readable-min, 0px), 24rpx);
 }
 .theme-opt.on {
   border-color: var(--accent);
@@ -397,5 +399,5 @@ function onRestart() {
   margin-top: 16rpx;
 }
 .phone-app-heading { font-size: 23px; font-weight: 700; margin: 0 0 18px; color: var(--ink); }
-.contact-sections{display:flex;gap:6px;margin-bottom:12px}.contact-sections button{flex:1;margin:0;padding:7px;font-size:12px;line-height:1.4;color:var(--ink);background:var(--paper-deep)}.contact-sections .active{background:var(--hud);color:#fff2d4}
+.contact-sections{display:flex;gap:6px;margin-bottom:12px}.contact-sections button{flex:1;margin:0;padding:7px;font-size: max(var(--readable-min, 0px), 12px);line-height:1.4;color:var(--ink);background:var(--paper-deep)}.contact-sections .active{background:var(--hud);color:#fff2d4}
 </style>

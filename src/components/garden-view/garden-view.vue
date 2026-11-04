@@ -126,34 +126,34 @@ onBeforeUnmount(() => { clearInterval(timer); save() })
 <style scoped>
 .garden { margin-top: 24rpx; }
 .seeds, .garden-actions { display: flex; flex-wrap: wrap; gap: 10rpx; margin: 14rpx 0; }
-.seeds button, .garden-actions button, .pet button { margin: 0; font-size: 23rpx; }
+.seeds button, .garden-actions button, .pet button { margin: 0; font-size: max(var(--readable-min, 0px), 23rpx); }
 .chosen { background: var(--accent); color: var(--card); }
 .plots { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14rpx; margin-top: 18rpx; }
-.plot { width: 100%; min-width: 0; margin: 0; padding: 20rpx 8rpx; background: var(--paper-deep); border: 2rpx dashed var(--line); border-radius: 20rpx; display: flex; flex-direction: column; align-items: center; font-size: 26rpx; line-height: 1.6; }
+.plot { width: 100%; min-width: 0; margin: 0; padding: 20rpx 8rpx; background: var(--paper-deep); border: 2rpx dashed var(--line); border-radius: 20rpx; display: flex; flex-direction: column; align-items: center; font-size: max(var(--readable-min, 0px), 26rpx); line-height: 1.6; }
 .plot[disabled] { color: var(--ink); background: var(--paper-deep); opacity: 1; }
-.plot .muted { font-size: 21rpx; }
+.plot .muted { font-size: max(var(--readable-min, 0px), 21rpx); }
 .crop-icon { font-size: 52rpx; }
 .basket-row, .pet { padding: 18rpx 0; border-bottom: 1rpx solid var(--line); }
 .pet button { margin-top: 14rpx; margin-right: 10rpx; }
 .garden.compact { margin: 0; }
 .compact .seeds { gap: 6px; margin-top: 0; }
-.compact .seeds button { flex: 1; padding: 9px 2px; font-size: 11px; line-height: 1.3; border-radius: 10px; }
-.compact .muted { font-size: 11px; line-height: 1.5; }
+.compact .seeds button { flex: 1; padding: 9px 2px; font-size: max(var(--readable-min, 0px), 11px); line-height: 1.3; border-radius: 10px; }
+.compact .muted { font-size: max(var(--readable-min, 0px), 11px); line-height: 1.5; }
 .compact .plots { gap: 9px; margin-top: 12px; }
-.compact .plot { padding: 12px 4px; border-radius: 15px; font-size: 12px; }
+.compact .plot { padding: 12px 4px; border-radius: 15px; font-size: max(var(--readable-min, 0px), 12px); }
 .compact .crop-icon { font-size: 32px; }
-.compact .plot .muted { font-size: 10px; }
-.compact .garden-actions button { flex: 1; padding: 10px 4px; font-size: 11px; line-height: 1.3; border-radius: 10px; }
+.compact .plot .muted { font-size: max(var(--readable-min, 0px), 10px); }
+.compact .garden-actions button { flex: 1; padding: 10px 4px; font-size: max(var(--readable-min, 0px), 11px); line-height: 1.3; border-radius: 10px; }
 .compact .section-title { margin-top: 6px; font-size: 15px; }
 .compact .pet { padding: 12px; margin: 10px 0; background: var(--paper); border: 1px solid #b9a58655; border-radius: 16px; }
 .compact .pet .act-name { font-size: 16px; }
-.compact .pet .block { font-size: 12px; line-height: 1.6; }
-.compact .pet button { font-size: 11px; padding: 8px; line-height: 1.4; border-radius: 10px; }
+.compact .pet .block { font-size: max(var(--readable-min, 0px), 12px); line-height: 1.6; }
+.compact .pet button { font-size: max(var(--readable-min, 0px), 11px); padding: 8px; line-height: 1.4; border-radius: 10px; }
 @media (max-height: 650px) {
   .compact .plot { padding: 8px 4px; line-height: 1.3; }
   .compact .crop-icon { font-size: 24px; line-height: 1.1; }
-  .compact .plot .muted { font-size: 9px; line-height: 1.3; }
-  .compact .seeds button { padding: 7px 2px; font-size: 10px; }
+  .compact .plot .muted { font-size: max(var(--readable-min, 0px), 9px); line-height: 1.3; }
+  .compact .seeds button { padding: 7px 2px; font-size: max(var(--readable-min, 0px), 10px); }
   .compact .plots { margin-top: 8px; }
   .compact .garden-actions { margin: 10px 0; }
 }
@@ -163,23 +163,28 @@ onBeforeUnmount(() => { clearInterval(timer); save() })
 .scenic .plots { flex: 1; min-height: 0; padding: 12px; background: #d2c19e; border: 3px solid #af9976; border-radius: 20px; box-shadow: inset 0 3px 0 #91795222; }
 .scenic .plot { padding: 6px 4px; min-height: 0; justify-content: center; background: #eee0b9; border-color: #b49a6b; }
 .scenic .crop-icon { font-size: 30px; line-height: 1.1; }
-.scenic > .muted.block { font-size: 10px; line-height: 1.4; min-height: 28px; }
+.scenic > .muted.block { font-size: max(var(--readable-min, 0px), 10px); line-height: 1.4; min-height: 28px; }
 .scenic .garden-actions { flex-shrink: 0; margin-bottom: 0; }
 .scenic .pet { margin: auto 0; padding: 22px 16px; }
 .scenic .pet .act-name { font-size: 26px; display: block; margin-bottom: 12px; }
 .scenic .pet .block { line-height: 1.8; }
 .scenic .pet button { margin-top: 18px; }
 @media(max-height:650px) { .scenic .plot { flex-direction: row; gap: 5px; padding: 4px; }.scenic .crop-icon { font-size: 22px; line-height: 1; }.scenic .plots { padding: 7px; gap: 7px; }.scenic .seeds { margin-bottom: 7px; }.scenic .pet { padding: 14px; }.scenic .pet .act-name { font-size: 23px; margin-bottom: 7px; } }
-.basket-pages { display:flex; align-items:center; justify-content:center; gap:12px; margin-top:12px; font-size:11px; }
-.basket-pages button { margin:0; padding:5px 10px; line-height:1.5; font-size:11px; }
+.basket-pages { display:flex; align-items:center; justify-content:center; gap:12px; margin-top:12px; font-size: max(var(--readable-min, 0px), 11px); }
+.basket-pages button { margin:0; padding:5px 10px; line-height:1.5; font-size: max(var(--readable-min, 0px), 11px); }
 .scenic .basket-row { margin:auto 0; padding:18px 12px; border:1px solid var(--line); border-radius:16px; background:var(--card); }
-.embedded .seeds { margin:0 0 5px; gap:4px; }.embedded .seeds button { padding:5px 2px; font-size:10px; }
-.embedded > .muted.block { min-height:16px; font-size:9px; line-height:1.3; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.embedded .plots { margin-top:3px; padding:5px; gap:5px; border-width:2px; border-radius:12px; }.embedded .plot { padding:3px; flex-direction:row; gap:5px; font-size:10px; }.embedded .crop-icon { font-size:22px; line-height:1; }
-.embedded .garden-actions { margin:5px 0 0; gap:4px; }.embedded .garden-actions button { padding:6px 3px; font-size:10px; }
+.embedded .seeds { margin:0 0 5px; gap:4px; }.embedded .seeds button { padding:5px 2px; font-size: max(var(--readable-min, 0px), 10px); }
+.embedded > .muted.block { min-height:16px; font-size: max(var(--readable-min, 0px), 9px); line-height:1.3; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.embedded .plots { margin-top:3px; padding:5px; gap:5px; border-width:2px; border-radius:12px; }.embedded .plot { padding:3px; flex-direction:row; gap:5px; font-size: max(var(--readable-min, 0px), 10px); }.embedded .crop-icon { font-size:22px; line-height:1; }
+.embedded .garden-actions { margin:5px 0 0; gap:4px; }.embedded .garden-actions button { padding:6px 3px; font-size: max(var(--readable-min, 0px), 10px); }
 @media(max-height:650px){.embedded .crop-icon {font-size:18px}}
-@media(min-width:960px){.embedded .plot{flex-direction:column;gap:10px;font-size:12px}.embedded .crop-icon{font-size:38px}.embedded .seeds button{padding:8px;font-size:11px}}
-@media(max-height:650px) and (max-width:600px){.embedded .plots{grid-template-columns:repeat(4,minmax(0,1fr))}.embedded .plot{flex-direction:column;gap:0;padding:2px;font-size:9px;line-height:1}.embedded .crop-icon{font-size:16px;line-height:1}}
-.seed-supply{display:flex;align-items:center;justify-content:space-between;gap:4px;font-size:10px;color:var(--muted);margin:3px 0}.seed-supply button{margin:0;padding:4px 10px;font-size:10px;line-height:1.3;color:var(--ink)}
+@media(min-width:960px){.embedded .plot{flex-direction:column;gap:10px;font-size: max(var(--readable-min, 0px), 12px)}.embedded .crop-icon{font-size:38px}.embedded .seeds button{padding:8px;font-size: max(var(--readable-min, 0px), 11px)}}
+@media(max-height:650px) and (max-width:600px){.embedded .plots{grid-template-columns:repeat(4,minmax(0,1fr))}.embedded .plot{flex-direction:column;gap:0;padding:2px;font-size: max(var(--readable-min, 0px), 9px);line-height:1}.embedded .crop-icon{font-size:16px;line-height:1}}
+.seed-supply{display:flex;align-items:center;justify-content:space-between;gap:4px;font-size: max(var(--readable-min, 0px), 10px);color:var(--muted);margin:3px 0}.seed-supply button{margin:0;padding:4px 10px;font-size: max(var(--readable-min, 0px), 10px);line-height:1.3;color:var(--ink)}
 .embedded .seed-restock{flex:.55;min-width:38px}.embedded .plots{min-height:46px}
+@media(max-width:959px){
+  .garden.embedded .plots{grid-template-columns:repeat(2,minmax(0,1fr));min-height:170px}
+  .garden.embedded .plot{min-height:72px;flex-direction:column;gap:5px;line-height:1.4;padding:8px}
+  .garden.embedded .crop-icon{font-size:24px}
+}
 </style>

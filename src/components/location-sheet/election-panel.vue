@@ -75,7 +75,7 @@ const rows = computed(() => projection())
 }
 .cand-name {
   width: 260rpx;
-  font-size: 24rpx;
+  font-size: max(var(--readable-min, 0px), 24rpx);
 }
 .cand .track {
   flex: 1;
@@ -91,6 +91,6 @@ const rows = computed(() => projection())
 .pct {
   width: 100rpx;
   text-align: right;
-  font-size: 24rpx;
+  font-size: max(var(--readable-min, 0px), 24rpx);
 }
 </style>

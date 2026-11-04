@@ -172,7 +172,7 @@ onBeforeUnmount(() => {
   border-radius: 999rpx;
   border: var(--bw) solid var(--line);
   background: var(--card);
-  font-size: 26rpx;
+  font-size: max(var(--readable-min, 0px), 26rpx);
 }
 .tab-chip.on {
   background: var(--accent);
@@ -185,7 +185,7 @@ onBeforeUnmount(() => {
   border-radius: 20rpx;
   border: var(--bw) solid var(--line);
   background: var(--paper);
-  font-size: 28rpx;
+  font-size: max(var(--readable-min, 0px), 28rpx);
 }
 .grow {
   flex: 1;
@@ -196,7 +196,7 @@ onBeforeUnmount(() => {
   padding: 0 20rpx;
   height: 84rpx;
   box-sizing: border-box;
-  font-size: 24rpx;
+  font-size: max(var(--readable-min, 0px), 24rpx);
 }
 .gap {
   margin-top: 20rpx;

@@ -442,7 +442,7 @@ onBeforeUnmount(() => {
 .label {
   margin-top: 6rpx;
   padding: 2rpx 14rpx;
-  font-size: 22rpx;
+  font-size: max(var(--readable-min, 0px), 22rpx);
   font-weight: 700;
   white-space: nowrap;
   background: var(--card);
@@ -465,7 +465,7 @@ onBeforeUnmount(() => {
   border-style: dashed;
 }
 .tip {
-  font-size: 18rpx;
+  font-size: max(var(--readable-min, 0px), 18rpx);
   color: var(--muted);
   background: var(--card);
   border-radius: 999rpx;

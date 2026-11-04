@@ -5,4 +5,4 @@ import {fmtDay} from '../game/engine/calendar.js'
 import HomeGoals from './home-goals.vue'
 function realDate(at){const d=new Date(at);return '现实 '+d.getFullYear()+'/'+(d.getMonth()+1)+'/'+d.getDate()}
 </script>
-<style scoped>.homestead-journal{margin:8px 0 14px}.journal-title{font-weight:700;font-size:14px}.journal-entry{padding:12px 0;border-bottom:1px solid var(--line)}.journal-entry>text{display:block;font-size:12px;line-height:1.8}.journal-entry>text:first-child{font-weight:700}.journal-hint{display:block;font-size:10px!important;color:var(--muted);line-height:1.7;margin:6px 0}</style>
+<style scoped>.homestead-journal{margin:8px 0 14px}.journal-title{font-weight:700;font-size: max(var(--readable-min, 0px), 14px)}.journal-entry{padding:12px 0;border-bottom:1px solid var(--line)}.journal-entry>text{display:block;font-size: max(var(--readable-min, 0px), 12px);line-height:1.8}.journal-entry>text:first-child{font-weight:700}.journal-hint{display:block;font-size: max(var(--readable-min, 0px), 10px)!important;color:var(--muted);line-height:1.7;margin:6px 0}</style>

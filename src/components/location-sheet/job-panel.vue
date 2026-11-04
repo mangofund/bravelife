@@ -56,7 +56,7 @@ function onQuit() {
 .lv-title {
   width: 200rpx;
   font-weight: 600;
-  font-size: 26rpx;
+  font-size: max(var(--readable-min, 0px), 26rpx);
 }
 .lv-req {
   flex: 1;

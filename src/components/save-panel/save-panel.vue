@@ -121,7 +121,7 @@ function goAccount() {
   min-width: 0;
 }
 .slot-btn {
-  font-size: 24rpx;
+  font-size: max(var(--readable-min, 0px), 24rpx);
   padding: 8rpx 18rpx;
   margin-left: 10rpx;
   border-radius: 999rpx;

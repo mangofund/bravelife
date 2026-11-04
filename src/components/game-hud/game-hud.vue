@@ -108,10 +108,10 @@ const bars = computed(() => [
 }
 .gov {
   color: #ffd166;
-  font-size: 22rpx;
+  font-size: max(var(--readable-min, 0px), 22rpx);
 }
 .job {
-  font-size: 22rpx;
+  font-size: max(var(--readable-min, 0px), 22rpx);
   opacity: 0.75;
 }
 .clock {
@@ -127,7 +127,7 @@ const bars = computed(() => [
   font-variant-numeric: tabular-nums;
 }
 .date {
-  font-size: 22rpx;
+  font-size: max(var(--readable-min, 0px), 22rpx);
   opacity: 0.75;
 }
 .speeds {
@@ -137,7 +137,7 @@ const bars = computed(() => [
   margin-top: 6rpx;
 }
 .speed {
-  font-size: 20rpx;
+  font-size: max(var(--readable-min, 0px), 20rpx);
   min-width: 44rpx;
   text-align: center;
   padding: 2rpx 8rpx;
@@ -183,7 +183,7 @@ const bars = computed(() => [
   margin-right: 0;
 }
 .bar-label {
-  font-size: 22rpx;
+  font-size: max(var(--readable-min, 0px), 22rpx);
   margin-right: 6rpx;
 }
 .track {
@@ -199,7 +199,7 @@ const bars = computed(() => [
 }
 .hud.compact { padding: 7px 12px; }
 .compact .who { margin-left: 0; min-width: 0; }
-.compact .name { font-size: 13px; }
+.compact .name { font-size: max(var(--readable-min, 0px), 13px); }
 .compact .time { font-size: 20px; }
 .compact .money { font-size: 17px; }
 .compact .money-row { margin: 4px 0; }
@@ -207,8 +207,20 @@ const bars = computed(() => [
 .compact .clock { flex-direction: row; align-items: center; gap: 5px; max-width: none; }
 .compact .time { font-size: 18px; }
 .compact .speeds { margin-top: 0; flex-wrap: nowrap; }
-.compact .speed { min-width: 0; font-size: 9px; padding: 2px 4px; margin-left: 3px; }
+.compact .speed { min-width: 0; font-size: max(var(--readable-min, 0px), 9px); padding: 2px 4px; margin-left: 3px; }
 .compact .speed.skip { display: none; }
 .compact .money-row { margin: 2px 0; }
 .compact .who .name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+@media (max-width: 959px) {
+  .hud > .row:first-child { flex-wrap: wrap; gap: 6px; }
+  .hud .clock, .hud.compact .clock { width: 100%; max-width: none; flex-basis: 100%; display: flex; flex-direction: row; align-items: center; justify-content: space-between; gap: 4px; }
+  .hud .clock .date { display: none; }
+  .hud .speeds { display: flex; margin: 0; gap: 2px; flex-wrap: wrap; justify-content: flex-end; }
+  .hud .speed, .hud.compact .speed { display: flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; padding: 0 3px; box-sizing: border-box; border-radius: 10px; font-size: 14px; }
+  .hud .speed.skip { margin-left: 0; }
+  .hud.compact .speed.skip { display: none; }
+  .hud .time { flex-shrink: 0; }
+  .hud .who { margin-left: 8px; }
+  .hud .money-row { gap: 8px; flex-wrap: wrap; }
+}
 </style>

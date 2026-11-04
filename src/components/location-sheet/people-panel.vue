@@ -118,7 +118,7 @@ function onGift(id, itemId) {
 }
 .btn.mini {
   padding: 10rpx 22rpx;
-  font-size: 24rpx;
+  font-size: max(var(--readable-min, 0px), 24rpx);
   margin: 0 12rpx 12rpx 0;
   border-radius: 14rpx;
 }
@@ -135,6 +135,6 @@ function onGift(id, itemId) {
   margin: 0 12rpx 12rpx 0;
   border-radius: 14rpx;
   background: var(--paper-deep);
-  font-size: 24rpx;
+  font-size: max(var(--readable-min, 0px), 24rpx);
 }
 </style>

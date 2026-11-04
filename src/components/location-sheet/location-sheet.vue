@@ -259,7 +259,7 @@ function onAction(id) {
 }
 .good-name {
   font-weight: 600;
-  font-size: 24rpx;
+  font-size: max(var(--readable-min, 0px), 24rpx);
 }
 .mode.disabled {
   opacity: 0.45;
@@ -268,5 +268,5 @@ function onAction(id) {
   margin: 24rpx 0 40rpx;
 }
 .sheet.docked .head { padding-top: 12px; flex-shrink: 0; }
-.sheet.docked .close { font-size: 12px; line-height: 1.5; padding: 7px 10px; margin: 0; color: var(--ink); background: var(--card); border-radius: 12px; }
+.sheet.docked .close { font-size: max(var(--readable-min, 0px), 12px); line-height: 1.5; padding: 7px 10px; margin: 0; color: var(--ink); background: var(--card); border-radius: 12px; }
 </style>

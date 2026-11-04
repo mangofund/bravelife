@@ -222,7 +222,7 @@ function next() {
   border-radius: 16rpx;
   background: var(--paper);
   border: 2rpx solid transparent;
-  font-size: 26rpx;
+  font-size: max(var(--readable-min, 0px), 26rpx);
 }
 .opt.on,
 .pick.on {

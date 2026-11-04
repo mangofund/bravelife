@@ -46,7 +46,7 @@ watch(
   border-radius: 999rpx;
   background: rgba(42, 34, 28, 0.78);
   color: #fffaf0;
-  font-size: 26rpx;
+  font-size: max(var(--readable-min, 0px), 26rpx);
   font-weight: 600;
   animation: os-fly 5s linear forwards;
 }

@@ -121,13 +121,13 @@ function onNew() {
   color: var(--accent);
 }
 .logo-en {
-  font-size: 28rpx;
+  font-size: max(var(--readable-min, 0px), 28rpx);
   letter-spacing: 16rpx;
   color: var(--muted);
 }
 .tag {
   margin-top: 16rpx;
-  font-size: 24rpx;
+  font-size: max(var(--readable-min, 0px), 24rpx);
   text-align: center;
 }
 .actions {
@@ -149,7 +149,7 @@ function onNew() {
   flex: 1;
   margin: 0 6rpx;
   text-align: center;
-  font-size: 24rpx;
+  font-size: max(var(--readable-min, 0px), 24rpx);
   padding: 12rpx 0;
   background: var(--card);
   border: var(--bw) solid var(--line);
@@ -162,7 +162,7 @@ function onNew() {
 .foot {
   display: block;
   text-align: center;
-  font-size: 22rpx;
+  font-size: max(var(--readable-min, 0px), 22rpx);
   color: var(--ink);
   background: var(--card);
   border-radius: 999rpx;
