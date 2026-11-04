@@ -1,24 +1,30 @@
 <template>
-  <view class="home home-screen" :class="['scene-' + scene, { wide, 'tool-view': !!tool }]">
+  <view class="home home-screen" :class="['scene-' + scene, { wide, 'tool-view': !!tool, 'fixed-homestead': fixedPanel }]">
     <view v-if="!tool" class="home-heading">
-      <view><text class="home-eyebrow">{{ scene === 'room' ? 'MY LITTLE HOME' : 'MY EVERYDAY LIFE' }}</text><text class="home-title">{{ currentScene.icon }} {{ scene === 'room' ? home.name : currentScene.name }}</text></view>
+      <view><text class="home-eyebrow">{{ showingGarden ? 'MY GARDEN' : scene === 'room' ? 'MY LITTLE HOME' : 'MY EVERYDAY LIFE' }}</text><text class="home-title">{{ showingGarden ? '🌱 门前菜园' : currentScene.icon + ' ' + (scene === 'room' ? home.name : currentScene.name) }}</text></view>
       <view class="home-heading-right">
         <!-- #ifdef H5 || MP-WEIXIN -->
         <button v-if="scene === 'room' || scene === 'garden'" size="mini" :aria-pressed="threeD" @click="toggle3d">{{ threeD ? '切回 2D' : '试用 3D' }}</button>
         <!-- #endif --><text class="home-clean">✧ 整洁 {{ Math.round(state.clean) }}</text><button v-if="!atHome" size="mini" @click="travel('home')">回家</button><text v-else class="home-presence">在家 · 慢慢生活</text></view>
     </view>
-    <view v-if="scene !== 'garden'" class="scene-tip"><text>{{ feedback || currentScene.tip }}</text><button v-if="scene !== 'room'" @click="switchScene('room')">回房间 ↗</button></view>
-    <home-goals v-if="!tool" compact />
-    <view v-if="selected && scene === 'room'" class="placement-note"><text>摆放 {{ FURNITURE[selected].name }} · 点击地板</text><button @click="selected = ''">完成</button></view>
-    <view v-else-if="inspected && scene === 'room'" class="placement-note"><text>{{ FURNITURE[inspected.fid].name }}</text><view class="inline-buttons"><button @click="storeInspected">收回仓库</button><button @click="inspected = null">取消</button></view></view>
+    <view v-if="!fixedPanel && scene !== 'garden'" class="scene-tip"><text>{{ feedback || currentScene.tip }}</text><button v-if="scene !== 'room'" @click="switchScene('room')">回房间 ↗</button></view>
+    <home-goals v-if="!tool && !showingGarden" compact />
+    <view v-if="selected && scene === 'room' && !showingGarden" class="placement-note"><text>摆放 {{ FURNITURE[selected].name }} · 点击地板</text><button @click="selected = ''">完成</button></view>
+    <view v-else-if="inspected && scene === 'room' && !showingGarden" class="placement-note"><text>{{ FURNITURE[inspected.fid].name }}</text><view class="inline-buttons"><button @click="storeInspected">收回仓库</button><button @click="inspected = null">取消</button></view></view>
 
-    <view v-if="!tool" v-show="scene === 'room'" class="homestead" :class="{ arranging: !!selected }">
-    <view class="home-stage">
+    <view v-else-if="fixedPanel && !showingGarden" class="placement-note room-hint"><text>{{ feedback || '点击家具查看，点击空地移动。' }}</text></view>
+
+    <view v-if="!tool" v-show="scene === 'room'" class="homestead" :class="{ arranging: !!selected && !fixedPanel }">
+    <view v-show="!showingGarden" class="home-stage">
       <view class="home-sunlight" />
-      <view class="room-model" :style="{ transform: 'scale(' + roomScale + ')' }"><iso-room :selected="selected" :three-d="threeD && scene === 'room'" @3d-failure="fail3d" @placed="onPlaced" @inspect="inspected = $event" /></view>
+      <view class="room-model" :style="fixedPanel ? null : { transform: 'scale(' + roomScale + ')' }"><iso-room :selected="selected" :fill-stage="fixedPanel && !showingGarden" :layout-key="selected || inspected?.fid || ''" :three-d="threeD && scene === 'room' && !showingGarden" @3d-failure="fail3d" @placed="onPlaced" @inspect="inspected = $event" /></view>
       <view class="scene-detail"><text>装饰 {{ decor }} · 睡眠 ×{{ bed }}</text><text>{{ kitchen ? '厨房已就绪' : '今天也可以叫份外卖' }}</text></view>
     </view>
-      <view class="homestead-garden"><view class="garden-caption"><text>🌱 门前菜园</text><view><button :class="{ active: gardenSection === 'grow' }" @click="switchAudio(gardenSection, 'grow', v => gardenSection = v)">种植</button><button :class="{ active: gardenSection === 'basket' }" @click="switchAudio(gardenSection, 'basket', v => gardenSection = v)">收成</button></view></view><garden-view compact scenic embedded :feedback="feedback" :section="gardenSection" :three-d="threeD && scene === 'room'" @3d-failure="fail3d" /></view>
+      <view v-if="!fixedPanel || showingGarden" class="homestead-garden"><view class="garden-caption"><text v-if="!fixedPanel">🌱 门前菜园</text><view><button :class="{ active: gardenSection === 'grow' }" @click="switchAudio(gardenSection, 'grow', v => gardenSection = v)">种植</button><button :class="{ active: gardenSection === 'basket' }" @click="switchAudio(gardenSection, 'basket', v => gardenSection = v)">收成</button></view></view><garden-view compact scenic embedded :fixed-panel="fixedPanel" :feedback="feedback" :section="gardenSection" :three-d="threeD && scene === 'room'" @3d-failure="fail3d" /></view>
+    </view>
+    <view v-if="fixedPanel" class="homestead-switch" role="group" aria-label="家园场景">
+      <button :class="{ active: !showingGarden }" :aria-pressed="!showingGarden" @click="selectPanel('room')">🏠 家里</button>
+      <button :class="{ active: showingGarden }" :aria-pressed="showingGarden" @click="selectPanel('garden')">🌱 菜园</button>
     </view>
 
     <view v-if="scene !== 'room'" class="scene-area">
@@ -91,7 +97,21 @@ watch(() => ui.homeTip, tip => {
 })
 const roomScale = ref(1)
 const threeD = ref(false)
+const homePanel = ref('room')
+const fixedPanel = computed(() => {
+  // #ifdef MP-WEIXIN
+  return threeD.value && !props.tool && scene.value === 'room'
+  // #endif
+  // #ifndef MP-WEIXIN
+  return false
+  // #endif
+})
+const showingGarden = computed(() => fixedPanel.value && homePanel.value === 'garden')
+function selectPanel(id) {
+  switchAudio(homePanel.value, id, value => { homePanel.value = value })
+}
 function toggle3d() {
+  homePanel.value = 'room'
   threeD.value = !threeD.value
 }
 function fail3d() {
@@ -117,6 +137,7 @@ function storeInspected() { if (inspected.value) removeFurniture(inspected.value
 watch([scene, () => props.wide], () => { page.value = 0; measureRoom() })
 watch(foodSection, () => { page.value = 0 })
 function measureRoom() {
+  if (fixedPanel.value) return
   nextTick(() => uni.createSelectorQuery().in(instance.proxy).select('.home-stage').boundingClientRect().select('.iso').boundingClientRect().exec(rects => {
     const [area, room] = rects || []
     if (area && room && room.width && room.height) roomScale.value = Math.max(0.1, Math.min(props.wide ? 2.25 : 1.15, (area.width - 24) / (room.width / roomScale.value), (area.height - 24) / (room.height / roomScale.value)))
@@ -140,7 +161,11 @@ onBeforeUnmount(() => {
 })
 
 const selected = computed({ get:()=>ui.selectedFurniture, set:v=>{ui.selectedFurniture=v} })
-watch(selected, measureRoom)
+watch(selected, value => {
+  if (value) homePanel.value = 'room'
+  measureRoom()
+})
+watch(fixedPanel, measureRoom)
 const choreList = Object.keys(CHORES).map((id) => Object.assign({ id }, CHORES[id]))
 const inventoryPageSize = computed(() => props.wide ? 9 : 6)
 const home = computed(() => HOMES[state.home])
@@ -247,4 +272,30 @@ watch(pageCount, n => { page.value = Math.min(page.value, n - 1) })
   .home.home-screen .homestead-garden > .garden { flex: none; height: auto; min-height: 260px; }
   .home.home-screen .scene-content { overflow-y: auto; }
 }
+
+/* Native WebGL must stay inside a non-scrolling, untransformed viewport. */
+.home.home-screen.fixed-homestead { overflow: hidden; padding: 6px 12px; }
+.home.home-screen.fixed-homestead .homestead {
+  flex: 1; min-height: 0; overflow: hidden; margin-top: 4px;
+}
+.home.home-screen.fixed-homestead .home-stage,
+.home.home-screen.fixed-homestead .homestead-garden {
+  flex: 1; min-height: 0; overflow: hidden;
+}
+.fixed-homestead .room-model { width: 100%; height: 100%; }
+.home.home-screen.fixed-homestead .homestead-garden > .garden {
+  flex: 1; height: 0; min-height: 0;
+}
+.fixed-homestead .garden-caption > view { margin-left: auto; }
+.fixed-homestead .placement-note { box-sizing: border-box; min-height: 36px; }
+.fixed-homestead .room-hint { color: var(--muted); }
+.homestead-switch {
+  display: flex; flex-shrink: 0; gap: 8px; padding-top: 5px;
+}
+.homestead-switch button {
+  flex: 1; min-width: 0; min-height: 40px; margin: 0; padding: 6px 8px;
+  line-height: 1.4; font-size: 14px; border-radius: 10px;
+  background: var(--card); color: var(--ink);
+}
+.homestead-switch button.active { background: var(--hud); color: #fff4df; }
 </style>

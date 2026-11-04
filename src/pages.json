@@ -24,6 +24,9 @@
 		{
 			"path": "pages/game/game",
 			"style": {
+				// #ifdef MP-WEIXIN
+				"disableScroll": true,
+				// #endif
 				"navigationBarTitleText": "勇敢人生",
 				"h5": { "titleNView": false }
 			}

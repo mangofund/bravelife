@@ -1,13 +1,13 @@
 <template>
-  <view class="iso" :style="{ width: CW + 'rpx', height: CH + 'rpx' }" @tap="onTap">
+  <view class="iso" :style="fillStage ? { width: '100%', height: '100%' } : { width: CW + 'rpx', height: CH + 'rpx' }" @tap="onTap">
     <!-- #ifdef H5 || MP-WEIXIN -->
-    <scene-stage v-if="threeD" kind="room" :model="roomModel" :anchors="roomAnchors"
+    <scene-stage v-if="threeD" kind="room" :model="roomModel" :anchors="roomAnchors" :layout-key="layoutKey"
       @ready="threeReady = true" @failure="fail3d" @pick="pick3d" @projected="roomProjection = $event" />
     <view v-if="threeD && threeReady && atHome" class="iso-hero iso-hero-3d" :style="hero3dStyle">
       <hero-doll :profile="state.profile" :size="Math.round(TW * 1.05)" :pose="pose" :facing="facing" />
     </view>
     <!-- #endif -->
-    <template v-if="!threeD || !threeReady">
+    <template v-if="!fillStage && (!threeD || !threeReady)">
     <!-- 后面两面墙：沿房间左上、右上两条边立起来 -->
     <view class="wall wall-l" :style="wallL" />
     <view class="wall wall-r" :style="wallR"><view class="window" /></view>
@@ -52,7 +52,7 @@ import { FURNITURE, HOMES } from '../../game/data/world.js'
 import { art } from '../../game/themes.js'
 import { ui } from '../../game/ui.js'
 
-const props = defineProps({ selected: { type: String, default: '' }, threeD: Boolean })
+const props = defineProps({ selected: { type: String, default: '' }, threeD: Boolean, fillStage: Boolean, layoutKey: { type: String, default: '' } })
 const emit = defineEmits(['placed', 'inspect', '3d-failure'])
 const instance = getCurrentInstance()
 const threeReady = ref(false)

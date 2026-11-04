@@ -1,5 +1,5 @@
 <template>
-  <view class="garden" @click.stop :class="{ card: !compact, compact, scenic, embedded }">
+  <view class="garden" @click.stop :class="{ card: !compact, compact, scenic, embedded, 'fixed-panel': fixedPanel }">
     <view v-if="!compact" class="row between"><text class="act-name">🌱 我的菜园</text><text class="muted">{{ readyCount }} / 4 格成熟</text></view>
     <text v-if="!compact" class="muted block">按现实时间生长，离线也会长大。缺水生长变慢，成熟后不会腐烂。</text>
     <text v-if="!atHome" class="notice">回家后可以播种、收菜和照料宠物。</text>
@@ -81,7 +81,7 @@ import { useAction } from '../../game/use-action.js'
 import { state, save } from '../../game/engine/core.js'
 import { CROPS, PETS, HOUR } from '../../game/data/garden.js'
 import { syncGarden, sow, reap, waterGarden, useProduce, adopt, feed, cuddleCat, ripe } from '../../game/engine/garden.js'
-const props = defineProps({ section: { type: String, default: 'all' }, compact: Boolean, scenic: Boolean, embedded: Boolean, threeD: Boolean, feedback: { type: String, default: '' } })
+const props = defineProps({ section: { type: String, default: 'all' }, compact: Boolean, scenic: Boolean, embedded: Boolean, fixedPanel: Boolean, threeD: Boolean, feedback: { type: String, default: '' } })
 const emit = defineEmits(['3d-failure'])
 const threeReady = ref(false)
 watch(() => [props.threeD, props.section], () => { threeReady.value = false })
@@ -245,4 +245,10 @@ onBeforeUnmount(() => { clearInterval(timer); save() })
   font-size: 12px;
   line-height: 1.3;
 }
+
+.garden.fixed-panel .plots {
+  flex: 1; min-height: 0; margin-top: 3px; padding: 0; overflow: hidden;
+}
+.garden.fixed-panel .plot { min-height: 0; }
+.garden.fixed-panel .garden-actions { margin-bottom: 0; }
 </style>

@@ -22,7 +22,8 @@ import { petHabitat } from '../../game/pet-behavior.js'
 const props = defineProps({
   model: { type: Object, required: true },
   kind: { type: String, required: true },
-  anchors: { type: Array, required: true }
+  anchors: { type: Array, required: true },
+  layoutKey: { type: String, default: '' }
 })
 const emit = defineEmits(['pick', 'ready', 'failure', 'projected'])
 const surface = ref(null)
@@ -42,7 +43,7 @@ async function resizeNative() {
   nativeSize = size
   schedule()
 }
-watch(() => [ui.width, ui.height], () => nextTick(resizeNative))
+watch(() => [ui.width, ui.height, props.layoutKey], () => nextTick(resizeNative))
 // #endif
 function dimensions() {
   // #ifdef H5
