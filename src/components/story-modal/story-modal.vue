@@ -30,6 +30,8 @@
 <script setup>
 import { computed, ref, watch } from 'vue'
 import { state, storyView, chooseStory, doneReading } from '../../game/index.js'
+import { play } from '../../game/audio.js'
+import { actionAudio } from '../../game/action-audio.js'
 import { ui } from '../../game/ui.js'
 
 const index = ref(0)
@@ -56,17 +58,18 @@ const scene = computed(() => scenes.value[index.value] || null)
 const more = computed(() => index.value < scenes.value.length - 1)
 
 function nextScene() {
-  if (more.value) index.value += 1
+  if (more.value) { index.value += 1; play('dialogue') }
 }
 
 function pick(i) {
-  const r = chooseStory(i)
+  const r = actionAudio(() => chooseStory(i), 'dialogue')
   view.value = null
   after.value = r
   index.value = 0
 }
 
 function close() {
+  play('closePanel')
   after.value = null
   view.value = null
   doneReading()

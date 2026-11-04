@@ -1,5 +1,5 @@
 <template>
-  <view class="garden" :class="{ card: !compact, compact, scenic, embedded }">
+  <view class="garden" @click.stop :class="{ card: !compact, compact, scenic, embedded }">
     <view v-if="!compact" class="row between"><text class="act-name">🌱 我的菜园</text><text class="muted">{{ readyCount }} / 4 格成熟</text></view>
     <text v-if="!compact" class="muted block">按现实时间生长，离线也会长大。缺水生长变慢，成熟后不会腐烂。</text>
     <text v-if="!atHome" class="notice">回家后可以播种、收菜和照料宠物。</text>
@@ -18,8 +18,8 @@
       </button>
     </view>
     <view class="garden-actions">
-      <button size="mini" :disabled="!atHome || !readyCount" @click="act(() => reap())">收获成熟作物</button>
-      <button size="mini" :disabled="!atHome || !growingCount" @click="act(() => waterGarden())">浇水 · 免费</button>
+      <button size="mini" :disabled="!atHome || !readyCount" @click="act(() => reap(), readyCount > 0 ? 'harvest' : null)">收获成熟作物</button>
+      <button size="mini" :disabled="!atHome || !growingCount" @click="act(() => waterGarden(), null)">浇水 · 免费</button>
     </view>
     </block>
     <block v-if="section === 'all' || section === 'basket'">
@@ -41,7 +41,7 @@
       <template v-if="p.owned">
         <text class="block">{{ p.status }}</text>
         <text class="muted block">{{ p.food }} · 体力 {{ p.energy }}</text>
-        <button size="mini" :disabled="busy || !atHome || !p.canFeed || !p.stock" @click="act(() => feed(p.id))">追加24小时 · 库存{{ p.stock }}</button>
+        <button size="mini" :disabled="busy || !atHome || !p.canFeed || !p.stock" @click="act(() => feed(p.id), 'petFeed')">追加24小时 · 库存{{ p.stock }}</button>
         <text class="muted block">{{ p.canFeed ? '喂后可维持约' + p.after + '小时' : '最多提前备72小时，暂时无需添粮' }}</text><button size="mini" @click="requestFunction('shop',{category:'pet',product:'feed_'+p.id})">买口粮</button>
         <button v-if="p.id === 'cat'" size="mini" :disabled="!atHome" @click="act(() => cuddleCat())">陪陪小猫</button>
       </template>
@@ -60,6 +60,8 @@
 <script setup>
 import { computed, ref, watch, onMounted, onBeforeUnmount } from 'vue'
 import { ui, requestFunction } from '../../game/ui.js'
+import { play } from '../../game/audio.js'
+import { actionAudio } from '../../game/action-audio.js'
 import { useAction } from '../../game/use-action.js'
 import { state, save } from '../../game/engine/core.js'
 import { CROPS, PETS, HOUR } from '../../game/data/garden.js'
@@ -68,12 +70,12 @@ const props = defineProps({ section: { type: String, default: 'all' }, compact: 
 const confirming = ref('')
 const selected = computed({get:()=>ui.selectedSeed || 'radish',set:v=>ui.selectedSeed=v})
 const {busy,run}=useAction()
-function act(fn){return run(()=>{const ok=fn();refresh();return ok})}
+function act(fn, event = 'confirm'){return run(()=>actionAudio(()=>{const ok=fn();refresh();return ok}, event, { visibleFailure: true }))}
 const inspectIndex = ref(-1)
 const basketIndex = ref(0)
 function onPlotTap(index) {
   inspectIndex.value = index
-  if (!state.garden.plots[index]) act(() => sow(index, selected.value))
+  if (!state.garden.plots[index]) act(() => sow(index, selected.value), 'plant')
   refresh()
 }
 const now = ref(0)
@@ -111,7 +113,7 @@ const pets = computed(() => Object.keys(PETS).map(id => {
 }))
 const visiblePets = computed(() => pets.value.filter(p => !props.section.startsWith('pet-') || p.id === props.section.slice(4)))
 function confirmAdopt(id) {
-  if (confirming.value !== id) { confirming.value = id; return }
+  if (confirming.value !== id) { confirming.value = id; play('question'); return }
   act(() => adopt(id))
   confirming.value = ''
   refresh()

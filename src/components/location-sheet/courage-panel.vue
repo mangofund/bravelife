@@ -14,7 +14,7 @@
       <text>{{ quest.text }}</text>
       <text class="muted block">还剩 {{ quest.left }} 天 · 完成后勇气 +30，书页 +1</text>
     </view>
-    <view v-else class="act" @click="takeQuest">
+    <view v-else class="act" @click="actionAudio(() => takeQuest(), 'confirm', { visibleFailure: true })">
       <text class="act-icon">📜</text>
       <view class="act-main">
         <text class="act-name">向店主要一个课题</text>
@@ -41,7 +41,7 @@
       <text v-if="item.chapters.length < item.total" class="muted block">每集齐 5 枚书页，翻开下一章。</text>
     </block>
 
-    <view class="act" @click="petCat">
+    <view class="act" @click="actionAudio(() => petCat(), 'dialogue', { visibleFailure: true })">
       <text class="act-icon">🐈‍⬛</text>
       <view class="act-main">
         <text class="act-name">摸摸黑猫「夜」</text>
@@ -52,6 +52,7 @@
 </template>
 
 <script setup>
+import { actionAudio } from '../../game/action-audio.js'
 import { computed } from 'vue'
 import { state, stock, buyGood, takeQuest, questDef, heirloom, petCat, keeperLine } from '../../game/index.js'
 
@@ -66,7 +67,7 @@ const quest = computed(() => {
 
 function onBuy(g) {
   if (g.sold) return
-  buyGood(g.id)
+  actionAudio(() => buyGood(g.id), 'confirm', { visibleFailure: true })
 }
 </script>
 

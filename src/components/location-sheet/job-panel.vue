@@ -11,14 +11,16 @@
     </view>
     <view v-if="mine">
       <view class="muted progress">当前职位「{{ c.levels[state.job.level].title }}」，本职级已上 {{ state.job.shifts }} 班</view>
-      <view class="btn" :class="{ disabled: !!shiftErr }" @click="work">{{ shiftErr || '开始上班' }}</view>
+      <view class="btn" :class="{ disabled: !!shiftErr }" @click="actionAudio(() => work(), 'confirm', { visibleFailure: true, keyMoment: true })">{{ shiftErr || '开始上班' }}</view>
       <view class="btn ghost quit" @click="onQuit">辞职</view>
     </view>
-    <view v-else class="btn dark" @click="applyJob(careerId)">{{ state.job ? '跳槽到这里' : '应聘' }}（{{ c.levels[0].title }}）</view>
+    <view v-else class="btn dark" @click="actionAudio(() => applyJob(careerId), 'confirm', { visibleFailure: true })">{{ state.job ? '跳槽到这里' : '应聘' }}（{{ c.levels[0].title }}）</view>
   </view>
 </template>
 
 <script setup>
+import { play } from '../../game/audio.js'
+import { actionAudio } from '../../game/action-audio.js'
 import { computed } from 'vue'
 import { state, fmtMoney, reqText, applyJob, work, quitJob, canStartShift } from '../../game/index.js'
 import { CAREERS, PROMOTE_SHIFTS } from '../../game/data/jobs.js'
@@ -30,6 +32,7 @@ const mine = computed(() => !!state.job && state.job.career === props.careerId)
 const shiftErr = computed(() => (mine.value ? canStartShift() : ''))
 
 function onQuit() {
+  play('question')
   uni.showModal({
     title: '确定辞职？',
     content: '辞职后职级会清零。',

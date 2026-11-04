@@ -8,7 +8,7 @@
         <view class="desktop-date"><text class="desktop-hour">{{ fmtHour(state.hour) }}</text><text>{{ fmtDate(state.day) }} {{ weatherInfo().icon }}</text><text class="desktop-edition">生活经营版 · 11.03</text></view>
       </view>
       <view class="scene-layer">
-        <view v-if="sheet" class="location-scene"><location-sheet docked :loc-id="sheet" @close="sheet = ''" @gohome="goHome" @go="onGo" /></view>
+        <view v-if="sheet" class="location-scene"><location-sheet docked :loc-id="sheet" @close="closeSheetByUser" @gohome="goHome" @go="onGo" /></view>
         <city-map v-else-if="tab === 'map'" @open="onOpen" @arrive-home="tab = 'home'" />
         <home-view v-else-if="tab === 'home'" wide @tool="openHomeTool" />
         <scroll-view v-else-if="tab === 'status'" scroll-y class="desktop-record"><view class="record-title">人物志 <text>经历、能力与人生目标</text></view><view class="record-grid"><game-hud /><side-status /></view></scroll-view>
@@ -16,7 +16,7 @@
       </view>
       <view class="desktop-commandbar">
         <view class="desktop-objective"><text class="objective-label">近况</text><guide-bar compact :style="{ background: 'transparent' }" /></view>
-        <view class="desktop-commandrow"><view class="command-seal"><text>勇敢人生</text><text>生活指令</text></view><view class="desktop-commands"><view v-for="c in desktopCommands" :key="c.id" class="desktop-command-shell" @click.stop><button :id="'command-' + c.id" class="desktop-command" :class="{ active: commandActive(c) || (c.id === 'contacts' && socialMenu) }" :aria-label="c.name" :aria-expanded="c.id === 'contacts' ? socialMenu : undefined" @click="runCommand(c)"><text class="command-icon">{{ c.icon }}</text><text>{{ c.name }}</text><text v-if="c.id === 'contacts'" class="menu-caret">{{ socialMenu ? '▾' : '▴' }}</text></button><view v-if="c.id === 'contacts' && socialMenu" class="relation-flyout social-quick-menu"><button v-for="a in PHONE_APPS" :key="a.id" :class="{ active: popup === 'phone' && phoneApp === a.id }" @click="openPhone(a.id)"><text>{{ a.icon }}</text><text>{{ a.name }}</text><text v-if="a.id === 'msg' && state.unread" class="menu-unread">{{ state.unread }}</text></button></view><view v-if="c.id === 'room' && homeMenu" class="relation-flyout home-quick-menu"><button @click="closePopup">🏠 家园</button><button @click="openHomeTool('inventory')">📦 仓库</button><button @click="openHomeTool('food')">🍱 生活</button><button @click="openHomeTool('pets')">🐾 宠物</button></view></view></view><view class="desktop-time"><button aria-label="暂停或继续" @click="togglePause">{{ settings.speed ? '暂停' : '继续' }}</button><view class="time-speeds"><button v-for="v in SPEEDS.filter(x => x > 0)" :key="v" :class="{ active: settings.speed === v }" @click="setSpeed(v)">{{ v }}×</button></view></view></view>
+        <view class="desktop-commandrow"><view class="command-seal"><text>勇敢人生</text><text>生活指令</text></view><view class="desktop-commands"><view v-for="c in desktopCommands" :key="c.id" class="desktop-command-shell" @click.stop><button :id="'command-' + c.id" class="desktop-command" :class="{ active: commandActive(c) || (c.id === 'contacts' && socialMenu) }" :aria-label="c.name" :aria-expanded="c.id === 'contacts' ? socialMenu : undefined" @click="runCommand(c)"><text class="command-icon">{{ c.icon }}</text><text>{{ c.name }}</text><text v-if="c.id === 'contacts'" class="menu-caret">{{ socialMenu ? '▾' : '▴' }}</text></button><view v-if="c.id === 'contacts' && socialMenu" class="relation-flyout social-quick-menu"><button v-for="a in PHONE_APPS" :key="a.id" :class="{ active: popup === 'phone' && phoneApp === a.id }" @click="openPhone(a.id)"><text>{{ a.icon }}</text><text>{{ a.name }}</text><text v-if="a.id === 'msg' && state.unread" class="menu-unread">{{ state.unread }}</text></button></view><view v-if="c.id === 'room' && homeMenu" class="relation-flyout home-quick-menu"><button @click="closePopupByUser">🏠 家园</button><button @click="openHomeTool('inventory')">📦 仓库</button><button @click="openHomeTool('food')">🍱 生活</button><button @click="openHomeTool('pets')">🐾 宠物</button></view></view></view><view class="desktop-time"><button aria-label="暂停或继续" @click="togglePause">{{ settings.speed ? '暂停' : '继续' }}</button><view class="time-speeds"><button v-for="v in SPEEDS.filter(x => x > 0)" :key="v" :class="{ active: settings.speed === v }" @click="setSpeed(v)">{{ v }}×</button></view></view></view>
       </view>
     </block>
 
@@ -27,14 +27,14 @@
         <guide-bar :compact="!wide && tab === 'home'" />
       </view>
       <view class="content">
-        <location-sheet v-if="sheet" docked :loc-id="sheet" @close="sheet = ''" @gohome="goHome" @go="onGo" />
+        <location-sheet v-if="sheet" docked :loc-id="sheet" @close="closeSheetByUser" @gohome="goHome" @go="onGo" />
         <city-map v-else-if="tab === 'map'" @open="onOpen" @arrive-home="tab = 'home'" />
         <home-view v-else-if="tab === 'home'" @tool="openHomeTool" />
         <scroll-view v-else scroll-y class="pane"><phone-view :key="phoneApp" :initial-app="phoneApp" hide-apps /></scroll-view>
       </view>
       <view class="tabs" :class="{ 'popup-nav': !!popup || socialMenu || homeMenu }" @click.stop>
         <view v-if="socialMenu" class="relation-flyout social-quick-menu mobile-relation-flyout"><button v-for="a in PHONE_APPS" :key="a.id" :class="{ active: popup === 'phone' && phoneApp === a.id }" @click="openPhone(a.id)"><text>{{ a.icon }}</text><text>{{ a.name }}</text><text v-if="a.id === 'msg' && state.unread" class="menu-unread">{{ state.unread }}</text></button></view>
-        <view v-if="homeMenu" class="relation-flyout home-quick-menu mobile-relation-flyout"><button @click="closePopup">🏠 家园</button><button @click="openHomeTool('inventory')">📦 仓库</button><button @click="openHomeTool('food')">🍱 生活</button><button @click="openHomeTool('pets')">🐾 宠物</button></view>
+        <view v-if="homeMenu" class="relation-flyout home-quick-menu mobile-relation-flyout"><button @click="closePopupByUser">🏠 家园</button><button @click="openHomeTool('inventory')">📦 仓库</button><button @click="openHomeTool('food')">🍱 生活</button><button @click="openHomeTool('pets')">🐾 宠物</button></view>
         <view v-for="t in TABS" :key="t.id" :id="'mobile-' + t.id" class="tab" :class="{ on: popup === t.id || (t.id === 'phone' && socialMenu) || (tab === t.id && !popup) }" @click="switchTab(t.id)">
           <text class="tab-icon">{{ t.icon }}</text>
           <text class="tab-name">{{ t.name }}</text>
@@ -43,9 +43,9 @@
       </view>
     </block>
 
-    <view v-if="popup" class="function-backdrop" @click.stop="closePopup" />
+    <view v-if="popup" class="function-backdrop" @click.stop="closePopupByUser" />
     <view v-if="popup" class="function-popup" :style="popupStyle" role="dialog" aria-modal="true" :aria-label="popupTitle" @click.stop>
-      <view class="function-popup-head"><button v-if="returnPopup" aria-label="返回原功能" @click="restorePopup">‹ 返回</button><text>{{ popupTitle }}</text><button aria-label="关闭浮层" @click="closePopup">✕</button></view>
+      <view class="function-popup-head"><button v-if="returnPopup" aria-label="返回原功能" @click="restorePopup">‹ 返回</button><text>{{ popupTitle }}</text><button aria-label="关闭浮层" @click="closePopupByUser">✕</button></view>
       <scroll-view scroll-y class="function-popup-body">
         <phone-view v-if="popup === 'phone'" :key="phoneApp" :initial-app="phoneApp" hide-apps />
         <shop-view v-else-if="popup === 'shop'" />
@@ -81,6 +81,7 @@ import { LOCATION_MAP } from '../../game/data/locations.js'
 import { state, load, tickClock, save, fmtMoney, fmtHour, fmtDate, age, weatherInfo } from '../../game/index.js'
 import { settings, setSpeed, SPEEDS } from '../../game/themes.js'
 import { ui, requestWalk, requestNudge } from '../../game/ui.js'
+import { play, playTabSwitch } from '../../game/audio.js'
 import { autoCloudSave } from '../../game/account.js'
 
 const TABS = [
@@ -105,6 +106,10 @@ const instance = getCurrentInstance()
 const popupTitle = computed(() => popup.value === 'phone' ? (PHONE_APPS.find(a=>a.id===phoneApp.value)?.name || '关系') : ({shop:'商店',status:'人物',inventory:'家园仓库',life:'生活',pets:'宠物'})[popup.value] || '生活')
 watch(popup, value => { ui.popupActive = !!value })
 watch(() => ui.width, () => closePopup())
+function closePopupByUser(){
+  if(popup.value || socialMenu.value || homeMenu.value || ui.homeTip) play('closePanel')
+  closePopup()
+}
 function closePopup(){ returnPopup.value=null; popup.value=''; socialMenu.value=false; homeMenu.value=false; ui.homeTip=null }
 function showPopup(kind, anchor){
   ui.homeTip=null
@@ -121,6 +126,8 @@ function showPopup(kind, anchor){
   nextTick(()=>uni.createSelectorQuery().in(instance.proxy).select(anchor).boundingClientRect(rect=>position(rect)).exec())
 }
 function openHomeTool(id){
+  const target=id==='inventory'?'inventory':id==='pets'?'pets':'life'
+  if(popup.value!==target) play('openPanel')
   returnPopup.value=null
   socialMenu.value=false
   const key=id==='inventory'?'inventory':id==='pets'?'pets':'life'
@@ -135,6 +142,7 @@ function popupAnchor(kind){
   return '#mobile-'+(id==='room'?'home':id==='contacts'?'phone':id)
 }
 function restorePopup(){
+  if(returnPopup.value) play('closePanel')
   const previous=returnPopup.value
   if(!previous)return
   returnPopup.value=null
@@ -177,6 +185,7 @@ function commandActive(c){
   return popup.value===c.id
 }
 function runCommand(c){
+  navigationAudio(c.id==='contacts'?'phone':c.id==='room'?'home':c.id)
   returnPopup.value=null
   if(c.id==='contacts'){popup.value='';homeMenu.value=false;socialMenu.value=!socialMenu.value;return}
   if(c.id==='room'){popup.value='';socialMenu.value=false;homeMenu.value=!homeMenu.value;tab.value='home';ui.homeScene='room';return}
@@ -253,6 +262,10 @@ function teardown() {
 onHide(teardown)
 onUnload(teardown)
 
+function closeSheetByUser() {
+  if(sheet.value) play('closePanel')
+  sheet.value = ''
+}
 function onOpen(id) {
   if (id === 'home' && state.location === 'home') {
     tab.value = 'home'
@@ -262,6 +275,8 @@ function onOpen(id) {
 }
 
 function openPhone(app) {
+  if(popup.value !== 'phone') play('openPanel')
+  else if(phoneApp.value !== app) playTabSwitch()
   returnPopup.value=null
   phoneApp.value=app
   homeMenu.value=false
@@ -274,13 +289,24 @@ function focusCurrentLocation() {
 }
 
 function togglePause() {
+  play('toggle')
   if (settings.speed) {
     lastSpeed = settings.speed
     setSpeed(0)
   } else setSpeed(lastSpeed || 1)
 }
 
+function navigationAudio(id){
+  if(id==='phone' || id==='home') {
+    const open=id==='phone'?socialMenu.value:homeMenu.value
+    play(open?'closePanel':'openPanel')
+  } else if(['shop','life','status'].includes(id)) {
+    if(popup.value!==id) play('openPanel')
+  } else if(tab.value!==id) playTabSwitch()
+  else if(popup.value || socialMenu.value || homeMenu.value) play('closePanel')
+}
 function switchTab(id){
+  navigationAudio(id)
   returnPopup.value=null
   if(id==='phone'){popup.value='';homeMenu.value=false;socialMenu.value=!socialMenu.value;return}
   if(id==='home'){popup.value='';socialMenu.value=false;homeMenu.value=!homeMenu.value;sheet.value='';tab.value='home';ui.homeScene='room';return}

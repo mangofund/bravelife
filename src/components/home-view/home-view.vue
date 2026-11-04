@@ -15,14 +15,14 @@
       <view class="room-model" :style="{ transform: 'scale(' + roomScale + ')' }"><iso-room :selected="selected" @placed="onPlaced" @inspect="inspected = $event" /></view>
       <view class="scene-detail"><text>装饰 {{ decor }} · 睡眠 ×{{ bed }}</text><text>{{ kitchen ? '厨房已就绪' : '今天也可以叫份外卖' }}</text></view>
     </view>
-      <view class="homestead-garden"><view class="garden-caption"><text>🌱 门前菜园</text><view><button :class="{ active: gardenSection === 'grow' }" @click="gardenSection = 'grow'">种植</button><button :class="{ active: gardenSection === 'basket' }" @click="gardenSection = 'basket'">收成</button></view></view><garden-view compact scenic embedded :feedback="feedback" :section="gardenSection" /></view>
+      <view class="homestead-garden"><view class="garden-caption"><text>🌱 门前菜园</text><view><button :class="{ active: gardenSection === 'grow' }" @click="switchAudio(gardenSection, 'grow', v => gardenSection = v)">种植</button><button :class="{ active: gardenSection === 'basket' }" @click="switchAudio(gardenSection, 'basket', v => gardenSection = v)">收成</button></view></view><garden-view compact scenic embedded :feedback="feedback" :section="gardenSection" /></view>
     </view>
 
     <view v-if="scene !== 'room'" class="scene-area">
       <view v-if="currentScene.group === 'life'" class="scene-tabs life-tabs"><button v-for="s in lifeScenes" :key="s.id" :class="{ active: scene === s.id }" @click="switchScene(s.id)">{{ s.icon }} {{ s.short }}</button></view>
-      <view v-if="scene === 'garden'" class="scene-tabs"><button :class="{ active: gardenSection === 'grow' }" @click="gardenSection = 'grow'">种植</button><button :class="{ active: gardenSection === 'basket' }" @click="gardenSection = 'basket'">收成篮</button></view>
-      <view v-if="scene === 'food'" class="scene-tabs"><button :class="{ active: foodSection === 'delivery' }" @click="foodSection = 'delivery'">叫外卖</button><button :class="{ active: foodSection === 'cook' }" @click="foodSection = 'cook'">自己做</button></view>
-      <view v-if="scene === 'pets'" class="scene-tabs"><button :class="{ active: petSection === 'dog' }" @click="petSection = 'dog'">🐕 小狗</button><button :class="{ active: petSection === 'cat' }" @click="petSection = 'cat'">🐈 小猫</button></view>
+      <view v-if="scene === 'garden'" class="scene-tabs"><button :class="{ active: gardenSection === 'grow' }" @click="switchAudio(gardenSection, 'grow', v => gardenSection = v)">种植</button><button :class="{ active: gardenSection === 'basket' }" @click="switchAudio(gardenSection, 'basket', v => gardenSection = v)">收成篮</button></view>
+      <view v-if="scene === 'food'" class="scene-tabs"><button :class="{ active: foodSection === 'delivery' }" @click="switchAudio(foodSection, 'delivery', v => foodSection = v)">叫外卖</button><button :class="{ active: foodSection === 'cook' }" @click="switchAudio(foodSection, 'cook', v => foodSection = v)">自己做</button></view>
+      <view v-if="scene === 'pets'" class="scene-tabs"><button :class="{ active: petSection === 'dog' }" @click="switchAudio(petSection, 'dog', v => petSection = v)">🐕 小狗</button><button :class="{ active: petSection === 'cat' }" @click="switchAudio(petSection, 'cat', v => petSection = v)">🐈 小猫</button></view>
       <view class="scene-content" :class="{ 'garden-stage': scene === 'garden', 'pet-stage': scene === 'pets' }">
         <garden-view v-if="scene === 'garden' || scene === 'pets'" compact scenic :feedback="feedback" :section="scene === 'pets' ? 'pet-' + petSection : gardenSection" />
         <template v-if="scene === 'inventory'">
@@ -31,7 +31,7 @@
         <template v-if="scene === 'food'">
           <text v-if="!atHome" class="local-tip">先回家，再做饭或叫外卖。</text>
           <template v-if="foodSection === 'cook'">
-            <view class="scene-tabs"><button :class="{active:cookingSection==='garden'}" @click="cookingSection='garden'">菜园菜谱</button><button :class="{active:cookingSection==='classic'}" @click="cookingSection='classic'">家常料理</button></view>
+            <view class="scene-tabs"><button :class="{active:cookingSection==='garden'}" @click="switchAudio(cookingSection, 'garden', v => cookingSection = v)">菜园菜谱</button><button :class="{active:cookingSection==='classic'}" @click="switchAudio(cookingSection, 'classic', v => cookingSection = v)">家常料理</button></view>
             <recipe-view v-if="cookingSection==='garden'" />
             <template v-else>
             <text v-if="!kitchen" class="local-tip">还没有厨房设备，可以先叫份外卖。</text>
@@ -54,6 +54,7 @@
 </template>
 
 <script setup>
+import { switchAudio } from '../../game/action-audio.js'
 import { computed, ref, watch, nextTick, onMounted, onBeforeUnmount, getCurrentInstance } from 'vue'
 import HomeInventory from '../home-inventory.vue'
 import HomeGoals from '../home-goals.vue'

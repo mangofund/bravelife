@@ -30,7 +30,7 @@
         class="spot"
         :class="{ here: loc.here, closed: !loc.open, soon: loc.soon }"
         :style="{ left: loc.x + '%', top: loc.y + '%', transform: 'translate(-50%, -50%) rotate(' + (i % 2 ? 2 : -2) + 'deg)', zIndex: Math.round(loc.y) }"
-        @tap.stop="emit('open', loc.id)"
+        @tap.stop="play('openPanel'); emit('open', loc.id)"
       >
         <view class="sticker">
           <image v-if="!failed[loc.id]" class="sticker-img" :src="art(loc.id)" mode="aspectFill" @error="onImgError(loc.id)" />
@@ -55,6 +55,7 @@
 </template>
 
 <script setup>
+import { play } from '../../game/audio.js'
 import { computed, reactive, ref, watch, onMounted, onBeforeUnmount, getCurrentInstance, nextTick } from 'vue'
 import HeroDoll from '../hero-doll/hero-doll.vue'
 import { state, isOpen, travel, npcsAt, defaultMode, locVisible } from '../../game/index.js'

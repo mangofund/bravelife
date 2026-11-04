@@ -1,6 +1,6 @@
 <template>
   <view class="shop-view">
-    <scroll-view scroll-x class="category-scroll" :scroll-into-view="'shop-tab-' + category"><view class="shop-categories"><button v-for="c in categories" :id="'shop-tab-' + c.id" :key="c.id" :class="{ active: category === c.id }" @click="category = c.id">{{ c.name }}</button></view></scroll-view>
+    <scroll-view scroll-x class="category-scroll" :scroll-into-view="'shop-tab-' + category"><view class="shop-categories"><button v-for="c in categories" :id="'shop-tab-' + c.id" :key="c.id" :class="{ active: category === c.id }" @click="switchAudio(category, c.id, v => category = v)">{{ c.name }}</button></view></scroll-view>
     <text class="shop-hint">{{ hint }} · 余额 {{ fmtMoney(state.money) }}</text>
     <view v-for="g in goods" :key="g.id" class="shop-product" :class="{ focused: ui.shopProduct === g.id }">
       <view class="product-main"><text class="product-icon">{{ g.icon }}</text><view class="product-copy"><text>{{ g.name }}</text><text class="muted">{{ g.tip }}</text><text class="muted">已拥有 {{ owned(g) }} · {{ fmtMoney(g.price) }}</text></view><button :disabled="busy || state.money < g.price" @click="purchase(g)">{{ busy && pending === g.id ? '处理中' : confirming === g.id ? '确认' : '购买' }}</button></view>
@@ -16,6 +16,8 @@ import { state, describe, fmtMoney } from '../game/engine/core.js'
 import { ITEMS, FURNITURE } from '../game/data/world.js'
 import { SUPPLIES } from '../game/data/homestead.js'
 import { ui, requestFunction } from '../game/ui.js'
+import { play } from '../game/audio.js'
+import { actionAudio, switchAudio } from '../game/action-audio.js'
 import { useAction } from '../game/use-action.js'
 import { buyShopProduct } from '../game/engine/shop.js'
 const { busy, run } = useAction()
@@ -35,9 +37,9 @@ const goods = computed(() => {
 })
 function owned(g){return g.kind==='item'?(state.bag[g.id]||0):g.kind==='supply'?((g.category==='garden'?state.garden.seeds:state.garden.feed)[g.target]||0):(state.furniture.inv[g.id]||0)+state.furniture.placed.filter(p=>p.fid===g.id).length}
 function purchase(g){
-  if(g.price>=50000&&confirming.value!==g.id){confirming.value=g.id;return}
+  if(g.price>=50000&&confirming.value!==g.id){confirming.value=g.id;play('question');return}
   pending.value=g.id
-  run(()=>{const ok=buyShopProduct(g.kind,g.id);if(ok){bought.value=g.id;confirming.value=''}return ok})
+  run(()=>actionAudio(()=>{const ok=buyShopProduct(g.kind,g.id);if(ok){bought.value=g.id;confirming.value=''}return ok}, 'confirm', {visibleFailure:true}))
 }
 function usePurchase(g){
   if(g.category==='garden'){ui.selectedSeed=g.target;requestFunction('home');return}

@@ -84,7 +84,7 @@
     </view>
 
     <view v-if="app === 'contacts'">
-      <view class="contact-sections"><button :class="{active:contactSection==='friends'}" @click="contactSection='friends'">好友</button><button :class="{active:contactSection==='strategies'}" @click="contactSection='strategies'">策略</button></view>
+      <view class="contact-sections"><button :class="{active:contactSection==='friends'}" @click="switchAudio(contactSection, 'friends', v => contactSection = v)">好友</button><button :class="{active:contactSection==='strategies'}" @click="switchAudio(contactSection, 'strategies', v => contactSection = v)">策略</button></view>
       <strategy-notebook v-if="contactSection==='strategies'" />
       <template v-else>
       <ren-conversation />
@@ -150,6 +150,8 @@
 
 <script setup>
 import { computed, ref, watch } from 'vue'
+import { play, playTabSwitch } from '../../game/audio.js'
+import { switchAudio } from '../../game/action-audio.js'
 import HomesteadJournal from '../homestead-journal.vue'
 import StrategyNotebook from '../strategy-notebook.vue'
 import RenConversation from '../ren-conversation.vue'
@@ -189,6 +191,7 @@ watch(
 )
 
 function openApp(id) {
+  if (app.value !== id) playTabSwitch()
   app.value = id
   if (id === 'msg') state.unread = 0
 }
@@ -242,16 +245,19 @@ const titles = computed(() =>
 
 function onWear(t) {
   if (!t.owned) return
+  play('click')
   wearTitle(t.worn ? '' : t.id)
   save()
 }
 
 function onSave() {
   save()
+  play('confirm')
   uni.showToast({ title: '已存档', icon: 'success' })
 }
 
 function onRestart() {
+  play('question')
   uni.showModal({
     title: '重新开始？',
     content: '当前存档会被删除，无法恢复。',

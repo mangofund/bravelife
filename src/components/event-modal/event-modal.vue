@@ -4,12 +4,13 @@
       <text class="ev-icon">{{ ev.icon }}</text>
       <text class="ev-title">{{ ev.title }}</text>
       <text class="ev-text">{{ ev.text }}</text>
-      <view v-for="(c, i) in ev.choices" :key="i" class="btn ev-btn" :class="{ ghost: i > 0 }" @click="resolveEvent(i)">{{ c.label }}</view>
+      <view v-for="(c, i) in ev.choices" :key="i" class="btn ev-btn" :class="{ ghost: i > 0 }" @click="actionAudio(() => resolveEvent(i))">{{ c.label }}</view>
     </view>
   </view>
 </template>
 
 <script setup>
+import { actionAudio } from '../../game/action-audio.js'
 import { computed } from 'vue'
 import { state, eventById, resolveEvent } from '../../game/index.js'
 

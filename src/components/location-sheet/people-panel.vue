@@ -3,7 +3,7 @@
     <view class="section-title">👥 这里的人</view>
     <view v-if="inviteHere" class="notice row between">
       <text>{{ inviteName }} 约你今天在这里见面</text>
-      <view class="btn mini" @click="keepInvite">赴约</view>
+      <view class="btn mini" @click="socialAction(() => keepInvite())">赴约</view>
     </view>
     <view v-for="p in people" :key="p.id" class="card person">
       <view class="row">
@@ -19,12 +19,12 @@
         <text class="muted">{{ p.aff }}</text>
       </view>
       <view class="ops">
-        <view class="btn mini" @click="talk(p.id)">{{ p.known ? '聊天' : '打招呼' }}</view>
+        <view class="btn mini" @click="socialAction(() => talk(p.id), false)">{{ p.known ? '聊天' : '打招呼' }}</view>
         <block v-if="p.known">
           <view class="btn mini ghost" @click="toggleGift(p.id)">送礼</view>
-          <view class="btn mini ghost" :class="{ disabled: p.aff < 20 }" @click="goDate(p.id)">约会 {{ fmtMoney(DATE_COST) }}</view>
-          <view v-if="p.status === 'none' && p.aff >= CONFESS_MIN" class="btn mini pink" @click="confess(p.id)">表白</view>
-          <view v-if="p.status === 'dating'" class="btn mini pink" @click="propose(p.id)">求婚</view>
+          <view class="btn mini ghost" :class="{ disabled: p.aff < 20 }" @click="socialAction(() => goDate(p.id), false)">约会 {{ fmtMoney(DATE_COST) }}</view>
+          <view v-if="p.status === 'none' && p.aff >= CONFESS_MIN" class="btn mini pink" @click="socialAction(() => confess(p.id), true)">表白</view>
+          <view v-if="p.status === 'dating'" class="btn mini pink" @click="socialAction(() => propose(p.id), true)">求婚</view>
         </block>
       </view>
       <view v-if="giftFor === p.id" class="gifts">
@@ -42,6 +42,8 @@
 import { computed, ref } from 'vue'
 import { state, fmtMoney, npcsAt, rel, stageName, talk, giftList, giveGift, goDate, confess, propose, keepInvite } from '../../game/index.js'
 import { NPC_MAP, DATE_COST, CONFESS_MIN } from '../../game/data/npcs.js'
+import { play } from '../../game/audio.js'
+import { actionAudio } from '../../game/action-audio.js'
 import { ITEMS } from '../../game/data/world.js'
 
 const props = defineProps({ locId: { type: String, required: true } })
@@ -66,12 +68,15 @@ const inviteHere = computed(() => {
 })
 const inviteName = computed(() => (state.invite ? NPC_MAP[state.invite.npc].name : ''))
 
+function socialAction(fn, keyMoment = false) { return actionAudio(fn, 'dialogue', { visibleFailure: true, keyMoment }) }
+
 function toggleGift(id) {
+  play(giftFor.value === id ? 'closePanel' : 'openPanel')
   giftFor.value = giftFor.value === id ? '' : id
 }
 
 function onGift(id, itemId) {
-  giveGift(id, itemId)
+  socialAction(() => giveGift(id, itemId))
   giftFor.value = ''
 }
 </script>
