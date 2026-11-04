@@ -15,7 +15,7 @@
     <view v-if="!tool" v-show="scene === 'room'" class="homestead" :class="{ arranging: !!selected && !fixedPanel }">
     <view v-if="!showingGarden" class="home-stage">
       <view class="home-sunlight" />
-      <view class="room-model" :style="fixedPanel ? null : { transform: 'scale(' + roomScale + ')' }"><iso-room :selected="selected" :fill-stage="fixedPanel" :layout-key="selected || inspected?.fid || ''" :three-d="fixedPanel" @placed="onPlaced" @inspect="inspected = $event" /></view>
+      <view class="room-model" :style="fixedPanel ? null : { transform: 'scale(' + roomScale + ')' }"><iso-room :selected="selected" :fill-stage="fixedPanel" :layout-key="selected || inspected?.fid || ''" :three-d="fixedPanel" :scene-covered="sceneCovered" @placed="onPlaced" @inspect="inspected = $event" /></view>
       <view class="scene-detail"><text>装饰 {{ decor }} · 睡眠 ×{{ bed }}</text><text>{{ kitchen ? '厨房已就绪' : '今天也可以叫份外卖' }}</text></view>
     </view>
       <view v-if="!fixedPanel || showingGarden" class="homestead-garden">
@@ -27,7 +27,7 @@
           </view>
         </view>
         <garden-view class="homestead-garden-content" compact scenic embedded :fixed-panel="fixedPanel"
-          :feedback="feedback" :section="gardenSection" :three-d="fixedPanel" />
+          :feedback="feedback" :section="gardenSection" :three-d="fixedPanel" :scene-covered="sceneCovered" />
       </view>
     </view>
     <view v-if="fixedPanel" class="homestead-switch" role="group" aria-label="家园场景">
@@ -86,7 +86,7 @@ import {
 } from '../../game/index.js'
 import { FURNITURE, HOMES, ITEMS, DELIVERY, CHORES, DIRTY_LINE } from '../../game/data/world.js'
 
-const props = defineProps({ wide: { type: Boolean, default: false }, tool: { type: String, default: '' } })
+const props = defineProps({ wide: { type: Boolean, default: false }, sceneCovered: Boolean, tool: { type: String, default: '' } })
 const emit = defineEmits(['place', 'tool'])
 const toolScene = ref(props.tool)
 const scene = computed({ get: () => props.tool ? toolScene.value : (ui.homeScene === 'garden' ? 'room' : ui.homeScene), set: value => { if(props.tool) toolScene.value = value; else ui.homeScene = value } })

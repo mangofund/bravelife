@@ -11,9 +11,9 @@
     <text class="muted block">{{ scenic ? (feedback || plotHint) : selectedCrop.name + '正常生长约' + selectedCrop.hours + '小时，每格收获10份。点击空地播种。' }}</text>
     <view class="plots" :class="{ 'plots-3d': threeD }">
       <!-- #ifdef H5 || MP-WEIXIN -->
-      <scene-stage v-if="threeD && !sceneFailed" kind="garden" :model="gardenModel" :anchors="plotAnchors"
+      <scene-stage v-if="threeD && !sceneCovered && !sceneFailed" kind="garden" :model="gardenModel" :anchors="plotAnchors"
         @ready="threeReady = true" @failure="fail3d" @pick="onPlotTap" @projected="plotProjection = $event" />
-      <template v-if="threeD && threeReady">
+      <template v-if="threeD && !sceneCovered && threeReady">
         <button v-for="(p, i) in plots" :key="i" class="plot-label" :style="plotProjection[i]"
           :aria-label="plotLabel(p, i)" @click.stop="onPlotTap(i)">{{ p ? p.name : '播种' }}</button>
       </template>
@@ -88,9 +88,10 @@ import { useAction } from '../../game/use-action.js'
 import { state, save } from '../../game/engine/core.js'
 import { CROPS, PETS, HOUR } from '../../game/data/garden.js'
 import { syncGarden, sow, reap, waterGarden, useProduce, adopt, feed, cuddleCat, ripe } from '../../game/engine/garden.js'
-const props = defineProps({ section: { type: String, default: 'all' }, compact: Boolean, scenic: Boolean, embedded: Boolean, fixedPanel: Boolean, threeD: Boolean, feedback: { type: String, default: '' } })
+const props = defineProps({ section: { type: String, default: 'all' }, compact: Boolean, scenic: Boolean, embedded: Boolean, fixedPanel: Boolean, threeD: Boolean, sceneCovered: Boolean, feedback: { type: String, default: '' } })
 const threeReady = ref(false)
 const sceneFailed = ref(false)
+watch(() => props.sceneCovered, () => { threeReady.value = false })
 watch(() => [props.threeD, props.section], () => { threeReady.value = false; sceneFailed.value = false })
 function plotLabel(plot, index) {
   return plot ? plot.name + '，' + plot.stage : '第' + (index + 1) + '格，播种'

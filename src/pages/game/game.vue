@@ -32,7 +32,7 @@
         <view class="guided-scene">
         <location-sheet v-if="sheet" docked :loc-id="sheet" @close="closeSheetByUser" @gohome="goHome" @go="onGo" />
         <city-map v-else-if="tab === 'map'" @open="onOpen" @arrive-home="tab = 'home'" />
-        <home-view v-else-if="tab === 'home'" @tool="openHomeTool" />
+        <home-view v-else-if="tab === 'home'" :scene-covered="homeCanvasCovered" @tool="openHomeTool" />
         <scroll-view v-else scroll-y class="pane"><phone-view :key="phoneApp" :initial-app="phoneApp" hide-apps /></scroll-view>
         </view>
       </view>
@@ -109,6 +109,15 @@ const popup = ref('')
 const popupStyle = ref({})
 const returnPopup=ref(null)
 const menuOpen = computed(() => !!popup.value || socialMenu.value || homeMenu.value)
+const homeCanvasCovered = computed(() => {
+  // #ifdef MP-WEIXIN
+  // A native WebGL surface can paint above ordinary popup views.
+  return !ui.gameVisible || menuOpen.value || !!state.pendingEvent || !!state.pendingStory || ui.reading
+  // #endif
+  // #ifndef MP-WEIXIN
+  return false
+  // #endif
+})
 const mainGuide = computed(() => tab.value === 'home' ? ui.homeScene : 'map')
 const instance = getCurrentInstance()
 const popupTitle = computed(() => popup.value === 'phone' ? (PHONE_APPS.find(a=>a.id===phoneApp.value)?.name || '关系') : ({shop:'商店',status:'人物',inventory:'家园仓库',life:'生活',pets:'宠物'})[popup.value] || '生活')

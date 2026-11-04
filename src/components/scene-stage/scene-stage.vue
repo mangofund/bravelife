@@ -123,6 +123,7 @@ function schedule() {
 
 function renderFrame(time) {
   frame = 0
+  if (!active) return
   try {
     const { width: clientWidth, height: clientHeight } = dimensions()
     if (!clientWidth || !clientHeight) return
