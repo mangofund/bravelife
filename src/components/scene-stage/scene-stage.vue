@@ -37,9 +37,17 @@ function measureNative(withNode = false) {
       .fields({ node: withNode, size: true, rect: true }).exec(result => resolve(result?.[0]))
   })
 }
+async function waitForNativeCanvas() {
+  // The component can mount before WeChat finishes laying out a newly selected panel.
+  for (let attempt = 0; active && attempt < 8; attempt++) {
+    const measured = await measureNative(true)
+    if (measured?.node && measured.width > 0 && measured.height > 0) return measured
+    await new Promise(resolve => setTimeout(resolve, 50))
+  }
+}
 async function resizeNative() {
   const size = await measureNative()
-  if (!active || !size) return
+  if (!active || !size?.width || !size.height) return
   nativeSize = size
   schedule()
 }
@@ -94,41 +102,56 @@ function fail() {
 
 function schedule() {
   if (!active || !view || frame) return
-  frame = requestFrame(time => {
-    frame = 0
-    try {
-      const { width: clientWidth, height: clientHeight } = dimensions()
-      if (!clientWidth || !clientHeight) return
-      const rebuilt = dirty
-      if (rebuilt) {
-        const model = build(props.model)
-        view.setModel(model)
-        updatePets = addScenePets(model.root, props.kind, props.model, state.garden.pets)
-        dirty = false
-      }
-      const moving = updatePets?.(time) && visible()
-      if (moving) schedule()
-      if (moving && !rebuilt && ready.value && clientWidth === lastWidth && clientHeight === lastHeight && time - lastDraw < 32) return
-      lastDraw = time
-      if (view.draw(clientWidth, clientHeight)) {
-        const first = !ready.value
-        if (first || rebuilt || clientWidth !== lastWidth || clientHeight !== lastHeight) {
-          projectAnchors()
-          lastWidth = clientWidth
-          lastHeight = clientHeight
-        }
-        if (first) {
-          ready.value = true
-          emit('ready')
-          // #ifdef MP-WEIXIN
-          nextTick(resizeNative)
-          // #endif
-        }
-      }
-    } catch {
-      fail()
+  // WeChat may defer canvas animation callbacks until its first visible draw.
+  // #ifdef MP-WEIXIN
+  if (!ready.value) {
+    renderFrame(Date.now())
+    return
+  }
+  // #endif
+  frame = requestFrame(renderFrame)
+}
+
+function renderFrame(time) {
+  frame = 0
+  try {
+    const { width: clientWidth, height: clientHeight } = dimensions()
+    if (!clientWidth || !clientHeight) return
+    const rebuilt = dirty
+    if (rebuilt) {
+      const model = build(props.model)
+      view.setModel(model)
+      updatePets = addScenePets(model.root, props.kind, props.model, state.garden.pets)
+      dirty = false
     }
-  })
+    // #ifdef MP-WEIXIN
+    time = Date.now()
+    // #endif
+    const moving = updatePets?.(time) && visible()
+    if (moving && !rebuilt && ready.value && clientWidth === lastWidth && clientHeight === lastHeight && time - lastDraw < 32) {
+      schedule()
+      return
+    }
+    lastDraw = time
+    if (view.draw(clientWidth, clientHeight)) {
+      const first = !ready.value
+      if (first || rebuilt || clientWidth !== lastWidth || clientHeight !== lastHeight) {
+        projectAnchors()
+        lastWidth = clientWidth
+        lastHeight = clientHeight
+      }
+      if (first) {
+        ready.value = true
+        emit('ready')
+        // #ifdef MP-WEIXIN
+        nextTick(resizeNative)
+        // #endif
+      }
+    }
+    if (moving && ready.value) schedule()
+  } catch {
+    fail()
+  }
 }
 
 function pick(clientX, clientY, rect) {
@@ -180,7 +203,7 @@ onMounted(async () => {
     // #endif
     // #ifdef MP-WEIXIN
     await nextTick()
-    const measured = await measureNative(true)
+    const measured = await waitForNativeCanvas()
     if (!active) return
     canvas = measured?.node
     if (!canvas || !measured.width || !measured.height) throw new Error('Native canvas unavailable')

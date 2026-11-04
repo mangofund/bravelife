@@ -1,5 +1,5 @@
 {
-  "release": "miniprogram-fixed-homestead-3d-2026-11-04",
+  "release": "miniprogram-garden-switch-fix-2026-11-04",
   "date": "2026-11-04",
-  "changes": ["weixin-fixed-homestead-panel", "persistent-room-garden-switch", "single-native-canvas"]
+  "changes": ["weixin-garden-viewport", "native-canvas-layout-retry", "garden-2d-fallback"]
 }

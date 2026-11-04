@@ -15,12 +15,23 @@
     <view v-else-if="fixedPanel && !showingGarden" class="placement-note room-hint"><text>{{ feedback || '点击家具查看，点击空地移动。' }}</text></view>
 
     <view v-if="!tool" v-show="scene === 'room'" class="homestead" :class="{ arranging: !!selected && !fixedPanel }">
-    <view v-show="!showingGarden" class="home-stage">
+    <view v-if="!showingGarden" class="home-stage">
       <view class="home-sunlight" />
       <view class="room-model" :style="fixedPanel ? null : { transform: 'scale(' + roomScale + ')' }"><iso-room :selected="selected" :fill-stage="fixedPanel && !showingGarden" :layout-key="selected || inspected?.fid || ''" :three-d="threeD && scene === 'room' && !showingGarden" @3d-failure="fail3d" @placed="onPlaced" @inspect="inspected = $event" /></view>
       <view class="scene-detail"><text>装饰 {{ decor }} · 睡眠 ×{{ bed }}</text><text>{{ kitchen ? '厨房已就绪' : '今天也可以叫份外卖' }}</text></view>
     </view>
-      <view v-if="!fixedPanel || showingGarden" class="homestead-garden"><view class="garden-caption"><text v-if="!fixedPanel">🌱 门前菜园</text><view><button :class="{ active: gardenSection === 'grow' }" @click="switchAudio(gardenSection, 'grow', v => gardenSection = v)">种植</button><button :class="{ active: gardenSection === 'basket' }" @click="switchAudio(gardenSection, 'basket', v => gardenSection = v)">收成</button></view></view><garden-view compact scenic embedded :fixed-panel="fixedPanel" :feedback="feedback" :section="gardenSection" :three-d="threeD && scene === 'room'" @3d-failure="fail3d" /></view>
+      <view v-if="!fixedPanel || showingGarden" class="homestead-garden">
+        <view class="garden-caption">
+          <text v-if="!fixedPanel">🌱 门前菜园</text>
+          <view>
+            <button :class="{ active: gardenSection === 'grow' }" @click="switchAudio(gardenSection, 'grow', v => gardenSection = v)">种植</button>
+            <button :class="{ active: gardenSection === 'basket' }" @click="switchAudio(gardenSection, 'basket', v => gardenSection = v)">收成</button>
+          </view>
+        </view>
+        <garden-view class="homestead-garden-content" compact scenic embedded :fixed-panel="fixedPanel"
+          :feedback="feedback" :section="gardenSection" :three-d="threeD && scene === 'room' && !garden3dFailed"
+          @3d-failure="failGarden3d" />
+      </view>
     </view>
     <view v-if="fixedPanel" class="homestead-switch" role="group" aria-label="家园场景">
       <button :class="{ active: !showingGarden }" :aria-pressed="!showingGarden" @click="selectPanel('room')">🏠 家里</button>
@@ -98,6 +109,7 @@ watch(() => ui.homeTip, tip => {
 const roomScale = ref(1)
 const threeD = ref(false)
 const homePanel = ref('room')
+const garden3dFailed = ref(false)
 const fixedPanel = computed(() => {
   // #ifdef MP-WEIXIN
   return threeD.value && !props.tool && scene.value === 'room'
@@ -108,11 +120,23 @@ const fixedPanel = computed(() => {
 })
 const showingGarden = computed(() => fixedPanel.value && homePanel.value === 'garden')
 function selectPanel(id) {
-  switchAudio(homePanel.value, id, value => { homePanel.value = value })
+  switchAudio(homePanel.value, id, value => {
+    if (value === 'garden') gardenSection.value = 'grow'
+    homePanel.value = value
+  })
 }
 function toggle3d() {
   homePanel.value = 'room'
+  garden3dFailed.value = false
   threeD.value = !threeD.value
+}
+function failGarden3d() {
+  if (!fixedPanel.value) {
+    fail3d()
+    return
+  }
+  garden3dFailed.value = true
+  uni.showToast({ title: '菜园 3D 暂不可用，已显示 2D 菜园', icon: 'none' })
 }
 function fail3d() {
   if (!threeD.value) return
@@ -283,8 +307,8 @@ watch(pageCount, n => { page.value = Math.min(page.value, n - 1) })
   flex: 1; min-height: 0; overflow: hidden;
 }
 .fixed-homestead .room-model { width: 100%; height: 100%; }
-.home.home-screen.fixed-homestead .homestead-garden > .garden {
-  flex: 1; height: 0; min-height: 0;
+.home.home-screen.fixed-homestead .homestead-garden-content {
+  display: block; flex: 1; height: 0; min-height: 0;
 }
 .fixed-homestead .garden-caption > view { margin-left: auto; }
 .fixed-homestead .placement-note { box-sizing: border-box; min-height: 36px; }

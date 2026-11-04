@@ -246,8 +246,9 @@ onBeforeUnmount(() => { clearInterval(timer); save() })
   line-height: 1.3;
 }
 
+.garden.scenic.fixed-panel { height: 100%; min-height: 0; margin: 0; }
 .garden.fixed-panel .plots {
-  flex: 1; min-height: 0; margin-top: 3px; padding: 0; overflow: hidden;
+  flex: 1; min-height: 80px; margin-top: 3px; padding: 0; overflow: hidden;
 }
 .garden.fixed-panel .plot { min-height: 0; }
 .garden.fixed-panel .garden-actions { margin-bottom: 0; }
