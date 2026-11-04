@@ -59,6 +59,19 @@
       <text class="function-popup-tip">{{ ui.homeTip ? ui.homeTip.text : '点击窗口外收起' }}</text>
     </view>
     <scene-guide :scene="mainGuide" :visible="ready && !menuOpen && !sheet && !state.pendingEvent && !state.pendingStory && !ui.reading && !ui.selectedFurniture" />
+    <!-- #ifdef H5 -->
+    <view v-if="authorPreview" class="author-preview" @click.stop>
+      <button v-if="!preview" :disabled="authorStarting" @click="startPreview">代玩</button>
+      <template v-else>
+        <text role="status">{{ previewMessage }}</text>
+        <button v-if="previewPaused && previewSteps.length" @click="advancePreview(false)">单步</button>
+        <button v-if="previewSteps.length" @click="togglePreview">{{ previewPaused ? '继续' : '暂停' }}</button>
+        <button v-if="!previewManual" @click="takePreviewControl">接管</button>
+        <button @click="stopPreview">退出演示</button>
+      </template>
+    </view>
+    <view v-if="preview && !previewManual" class="author-preview-shield" />
+    <!-- #endif -->
     <event-modal />
     <story-modal />
     <inner-os />
@@ -89,6 +102,10 @@ import { settings, setSpeed, SPEEDS } from '../../game/themes.js'
 import { ui, requestWalk, requestNudge } from '../../game/ui.js'
 import { play, playTabSwitch } from '../../game/audio.js'
 import { autoCloudSave } from '../../game/account.js'
+// #ifdef H5
+import { api, getToken } from '../../game/api.js'
+import { beginRehearsal, endRehearsal } from '../../game/engine/core.js'
+// #endif
 
 const TABS = [
   { id: 'map', name: '地图', icon: '🗺️' },
@@ -99,6 +116,8 @@ const TABS = [
   { id: 'phone', name: '关系', icon: '👥' }
 ]
 
+const preview = ref(false)
+const previewManual = ref(false)
 const ready = ref(false)
 const tab = ref('map')
 const sheet = ref('')
@@ -229,7 +248,7 @@ function startClock() {
     // 登录后每 60 秒把进度同步到云端自动存档
     seconds += 1
     if (seconds % 60 === 0) autoCloudSave()
-    if (!ready.value || !settings.speed || state.pendingEvent || state.pendingStory || ui.reading) return
+    if (!ready.value || preview.value || !settings.speed || state.pendingEvent || state.pendingStory || ui.reading) return
     tickClock(settings.speed)
   }, 1000)
 }
@@ -241,6 +260,7 @@ function stopClock() {
 // 电脑键盘快捷键（只在网页版生效）
 let lastSpeed = 1
 function onKey(e) {
+  if (preview.value && !previewManual.value) return
   const tag = e.target && e.target.tagName
   if (tag === 'INPUT' || tag === 'TEXTAREA') return
   if (popup.value && e.key !== 'Escape') return
@@ -265,10 +285,20 @@ onShow(() => {
   ui.gameVisible = true
   startClock()
   // #ifdef H5
+  const token = getToken()
+  const visit = ++previewVisit
+  if (token) api('GET', '/api/me/preview').then(() => {
+    if (previewVisit === visit && getToken() === token) authorPreview.value = true
+  }).catch(() => {})
   window.addEventListener('keydown', onKey)
   // #endif
 })
 function teardown() {
+  // #ifdef H5
+  previewVisit++
+  authorPreview.value = false
+  stopPreview()
+  // #endif
   ui.gameVisible = false
   closePopup()
   ui.popupActive=false
@@ -338,6 +368,121 @@ function goHome() {
   sheet.value = ''
   tab.value = 'home'
 }
+
+// #ifdef H5
+const authorPreview = ref(false)
+const authorStarting = ref(false)
+const previewPaused = ref(false)
+const previewMessage = ref('')
+const previewSteps = ref([])
+let previewVisit = 0
+let previewTimer
+let previewNavigation
+
+function stopPreview() {
+  clearTimeout(previewTimer)
+  previewSteps.value = []
+  if (!preview.value) return
+  endRehearsal()
+  preview.value = false
+  closePopup()
+  Object.assign(ui, previewNavigation.ui)
+  tab.value = previewNavigation.tab
+  sheet.value = previewNavigation.sheet
+  previewNavigation = null
+}
+
+function clickPreviewControl(id) {
+  const button = document.getElementById(id)
+  if (!button || button.disabled || !button.getClientRects().length) return false
+  button.scrollIntoView({ block: 'nearest' })
+  button.click()
+  return true
+}
+
+function advancePreview(automatic) {
+  const step = previewSteps.value[0]
+  if (!step) return
+  const [label, action, verify] = step
+  const applied = action()
+  if (applied === false || (verify && !verify())) {
+    previewMessage.value = '演示停在「' + label + '」。请检查当前界面，或接管后亲自操作。'
+    previewPaused.value = true
+    previewSteps.value = []
+    return
+  }
+  previewSteps.value = previewSteps.value.slice(1)
+  previewMessage.value = previewSteps.value.length ? label : label + '。演示完成，退出即可回到原存档。'
+  if (automatic && previewSteps.value.length) previewTimer = setTimeout(() => advancePreview(true), 1600)
+}
+
+function togglePreview() {
+  clearTimeout(previewTimer)
+  previewPaused.value = !previewPaused.value
+  if (!previewPaused.value) advancePreview(true)
+}
+
+function takePreviewControl() {
+  clearTimeout(previewTimer)
+  previewSteps.value = []
+  previewManual.value = true
+  previewMessage.value = '已接管演示副本，退出后恢复原进度。'
+}
+
+async function startPreview() {
+  if (authorStarting.value || preview.value) return
+  const visit = previewVisit
+  const token = getToken()
+  authorStarting.value = true
+  try {
+    await api('POST', '/api/me/preview')
+    if (visit !== previewVisit || token !== getToken()) return
+    const plot = state.garden.plots.findIndex(p => !p)
+    if (state.location !== 'home' || plot < 0 || state.pendingEvent || state.pendingStory || ui.reading) {
+      uni.showToast({ title: '请先回家、留一块空地并完成当前事件', icon: 'none' })
+      return
+    }
+    if (!beginRehearsal()) return
+    previewNavigation = { tab: tab.value, sheet: sheet.value, ui: {
+      homeScene: ui.homeScene, selectedSeed: ui.selectedSeed, shopCategory: ui.shopCategory,
+      shopProduct: ui.shopProduct, selectedFurniture: ui.selectedFurniture, homeTools: { ...ui.homeTools }
+    } }
+    previewManual.value = false
+    previewPaused.value = false
+    preview.value = true
+    const seeds = state.garden.seeds.radish || 0
+    const food = state.garden.feed.dog || 0
+    const openShop = () => showPopup('shop', popupAnchor('shop'))
+    const steps = [
+      ['打开商店', openShop],
+      ['到园艺区选萝卜种子', () => clickPreviewControl('shop-tab-garden')],
+      ['买一份种子，种子会进入家园仓库', () => clickPreviewControl('shop-buy-seed_radish'), () => state.garden.seeds.radish === seeds + 1],
+      ['切到宠物区', () => clickPreviewControl('shop-tab-pet')],
+      ['买一份狗粮，回家再喂', () => clickPreviewControl('shop-buy-feed_dog'), () => state.garden.feed.dog === food + 1],
+      ['回家查看菜园', () => { closePopup(); goHome() }],
+      ['打开菜园面板', () => document.getElementById('home-garden-panel')?.getAttribute('aria-pressed') === 'true' || clickPreviewControl('home-garden-panel')],
+      ['选择萝卜种子', () => clickPreviewControl('garden-seed-radish')],
+      ['点击空地，播种消耗一份种子', () => clickPreviewControl('garden-plot-' + plot), () => !!state.garden.plots[plot] && (state.garden.seeds.radish || 0) === seeds],
+      ['打开小狗照料面板', () => { ui.homeTools.pet = 'dog'; openHomeTool('pets') }]
+    ]
+    if (!state.garden.pets.dog) steps.push(
+      ['查看小狗领养费用', () => clickPreviewControl('garden-adopt-dog')],
+      ['确认领养，小狗会来到家园', () => clickPreviewControl('garden-adopt-dog'), () => !!state.garden.pets.dog]
+    )
+    steps.push(['喂小狗，追加一天口粮', () => clickPreviewControl('garden-feed-dog'), () => (state.garden.feed.dog || 0) === food])
+    previewSteps.value = steps
+    advancePreview(true)
+  } catch (e) {
+    if (visit === previewVisit) {
+      stopPreview()
+      if (e.status === 401 || e.status === 404) authorPreview.value = false
+      uni.showToast({ title: '无法启动代玩', icon: 'none' })
+    }
+  } finally {
+    authorStarting.value = false
+  }
+}
+// #endif
 
 // 地点面板点「前往」：关掉面板，切到地图，主人公走过去
 function onGo(id, mode) {
@@ -443,4 +588,7 @@ function onGo(id, mode) {
   .function-popup { max-height: calc(100dvh - 100px); }
   .game .function-popup-head { padding: 6px 12px; }
 }
+.author-preview { position:fixed; top:12px; right:12px; z-index:10002; display:flex; align-items:center; flex-wrap:wrap; gap:6px; max-width:min(92vw, 480px); padding:8px; background:#1d1b33; color:#fff4df; border-radius:8px; }
+.author-preview button { margin:0; font-size:13px; }
+.author-preview-shield { position:fixed; inset:0; z-index:10001; }
 </style>

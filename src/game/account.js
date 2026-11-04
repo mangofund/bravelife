@@ -1,6 +1,6 @@
 import { reactive, watch } from 'vue'
 import { api, getToken, setToken } from './api.js'
-import { state, resetState, initialState, save, hasSave, load, fmtMoney } from './engine/core.js'
+import { state, resetState, initialState, save, hasSave, load, fmtMoney, isRehearsing } from './engine/core.js'
 import { settings, setTheme, setSpeed } from './themes.js'
 
 // 账号状态（不进游戏存档）
@@ -122,7 +122,7 @@ export function listSaves() {
 }
 
 export async function saveToSlot(slot) {
-  if (!account.user || !state.started) return false
+  if (!account.user || !state.started || isRehearsing()) return false
   account.syncing = true
   try {
     await api('PUT', '/api/saves/' + slot, { data: JSON.parse(JSON.stringify(state)), summary: summary() })

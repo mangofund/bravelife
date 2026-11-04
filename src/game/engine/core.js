@@ -79,7 +79,24 @@ export function resetState(next) {
   })
 }
 
+let originalState = null
+
+export function isRehearsing() { return originalState !== null }
+
+export function beginRehearsal() {
+  if (isRehearsing() || !state.started) return false
+  originalState = JSON.stringify(state)
+  return true
+}
+
+export function endRehearsal() {
+  if (!isRehearsing()) return
+  resetState(JSON.parse(originalState))
+  originalState = null
+}
+
 export function save() {
+  if (isRehearsing()) return true
   try {
     uni.setStorageSync(SAVE_KEY, JSON.stringify(state))
     return true

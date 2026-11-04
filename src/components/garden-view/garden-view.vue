@@ -5,7 +5,7 @@
     <text v-if="!atHome" class="notice">回家后可以播种、收菜和照料宠物。</text>
     <block v-if="section === 'all' || section === 'grow'">
     <view class="seeds">
-      <button v-for="c in crops" :key="c.id" size="mini" :class="{ chosen: selected === c.id }" @click="selected = c.id">{{ c.icon }} {{ c.name }} ×{{ state.garden.seeds[c.id] || 0 }}</button><button v-if="embedded" class="seed-restock" @click="requestFunction('shop',{category:'garden',product:'seed_'+selected})">补货</button>
+      <button v-for="c in crops" :id="'garden-seed-' + c.id" :key="c.id" size="mini" :class="{ chosen: selected === c.id }" @click="selected = c.id">{{ c.icon }} {{ c.name }} ×{{ state.garden.seeds[c.id] || 0 }}</button><button v-if="embedded" class="seed-restock" @click="requestFunction('shop',{category:'garden',product:'seed_'+selected})">补货</button>
     </view>
     <view v-if="!embedded" class="seed-supply"><text>播种消耗1份种子 · 按现实时间生长</text><button @click="requestFunction('shop',{category:'garden',product:'seed_'+selected})">补货</button></view>
     <text class="muted block">{{ scenic ? (feedback || plotHint) : selectedCrop.name + '正常生长约' + selectedCrop.hours + '小时，每格收获10份。点击空地播种。' }}</text>
@@ -15,7 +15,7 @@
         @ready="threeReady = true" @failure="fail3d" @pick="onPlotTap" @projected="plotProjection = $event" />
       <template v-if="threeD && !sceneCovered && threeReady">
         <pet-residents environment="garden" :points="projectedPetPoints" />
-        <button v-for="(p, i) in plots" :key="i" class="plot-label" :style="plotProjection[i]"
+        <button v-for="(p, i) in plots" :key="i" class="plot-label" :id="'garden-plot-' + i" :style="plotProjection[i]"
           :aria-label="plotLabel(p, i)" @click.stop="onPlotTap(i)">{{ p ? p.name : '播种' }}</button>
       </template>
       <view v-if="threeD && sceneFailed" class="scene-unavailable">
@@ -58,7 +58,7 @@
       <template v-if="p.owned">
         <text class="block">{{ p.status }}</text>
         <text class="muted block">{{ p.food }} · 体力 {{ p.energy }} · 亲密度 {{ p.bond }}/100</text>
-        <button size="mini" :disabled="busy || !atHome || !p.canFeed || !p.stock" @click="act(() => feed(p.id), 'petFeed')">追加24小时 · 库存{{ p.stock }}</button>
+        <button :id="'garden-feed-' + p.id" size="mini" :disabled="busy || !atHome || !p.canFeed || !p.stock" @click="act(() => feed(p.id), 'petFeed')">追加24小时 · 库存{{ p.stock }}</button>
         <text class="muted block">{{ p.canFeed ? '喂后可维持约' + p.after + '小时' : '最多提前备72小时，暂时无需添粮' }}</text><button size="mini" @click="requestFunction('shop',{category:'pet',product:'feed_'+p.id})">买口粮</button>
         <button size="mini" :disabled="busy || !atHome" @click="act(() => hugPet(p.id))">抱抱</button>
         <button v-if="p.id === 'cat'" size="mini" :disabled="!atHome" @click="act(() => cuddleCat())">陪陪小猫</button>
@@ -66,7 +66,7 @@
       <template v-else>
         <text class="muted block">{{ p.id === 'dog' ? '饱腹时在园看守，饿了回房睡觉，睡觉体力消耗极小。' : '在家陪伴你，喂饱后每日首次陪伴可恢复心情。' }}</text>
         <text v-if="confirming === p.id" class="muted block">含一天口粮；以后每份100日元，可追加24现实小时。</text>
-        <button size="mini" :disabled="!atHome || state.money < p.adoption" @click="confirmAdopt(p.id)">{{ confirming === p.id ? '确认领养 · ' : '领养安置 · ' }}{{ p.adoption }}円</button>
+        <button :id="'garden-adopt-' + p.id" size="mini" :disabled="!atHome || state.money < p.adoption" @click="confirmAdopt(p.id)">{{ confirming === p.id ? '确认领养 · ' : '领养安置 · ' }}{{ p.adoption }}円</button>
         <button v-if="confirming === p.id" size="mini" @click="confirming = ''">暂不领养</button>
       </template>
     </view>

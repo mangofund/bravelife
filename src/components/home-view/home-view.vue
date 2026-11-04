@@ -32,7 +32,7 @@
     </view>
     <view v-if="fixedPanel" class="homestead-switch" role="group" aria-label="家园场景">
       <button :class="{ active: !showingGarden }" :aria-pressed="!showingGarden" @click="selectPanel('room')">🏠 家里</button>
-      <button :class="{ active: showingGarden }" :aria-pressed="showingGarden" @click="selectPanel('garden')">🌱 菜园</button>
+      <button id="home-garden-panel" :class="{ active: showingGarden }" :aria-pressed="showingGarden" @click="selectPanel('garden')">🌱 菜园</button>
     </view>
 
     <view v-if="scene !== 'room'" class="scene-area">

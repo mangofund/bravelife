@@ -128,6 +128,11 @@ async function route(request, env) {
 
   const user = await requireUser(env, request)
 
+  if (path === '/api/me/preview' && (method === 'GET' || method === 'POST')) {
+    if (!env.BRAVELIFE_AUTHOR_ID || String(user.id) !== env.BRAVELIFE_AUTHOR_ID) throw new HttpError(404, '接口不存在')
+    return json({ ok: true }, 200, { 'Cache-Control': 'no-store' })
+  }
+
   if (path === '/api/me' && method === 'GET') {
     return json({ user: publicUser(user), settings: JSON.parse(user.settings || '{}') })
   }
