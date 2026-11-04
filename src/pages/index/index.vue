@@ -12,11 +12,16 @@
     <view class="actions">
       <view v-if="saved" class="btn" @click="onContinue">继续人生</view>
       <view class="btn" :class="{ ghost: saved }" @click="onNew">开始新的人生</view>
+      <!-- #ifdef MP-WEIXIN -->
+      <navigator class="btn ghost" url="/pages/settings/settings">设置</navigator>
+      <!-- #endif -->
+      <!-- #ifndef MP-WEIXIN -->
       <view class="themes">
         <view v-for="t in THEMES" :key="t.id" class="theme-chip" :class="{ on: settings.theme === t.id }" @click="onTheme(t.id)">
           {{ t.icon }} {{ t.name }}
         </view>
       </view>
+      <!-- #endif -->
       <view class="btn ghost" @click="goAccount">{{ account.user ? '☁️ ' + displayName(account.user) + ' · 云存档已开启' : '登录 / 注册（云端保存进度）' }}</view>
       <navigator class="foot feedback-link" url="/pages/feedback/feedback">玩家反馈</navigator>
       <!-- #ifdef H5 -->

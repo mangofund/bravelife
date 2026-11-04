@@ -1,7 +1,7 @@
 <template>
   <view class="card">
     <view class="section-title">☁️ 账号与存档</view>
-    <view class="row between"><text>游戏音效</text><switch :checked="!soundMuted" aria-label="游戏音效" @change="changeSound" /></view>
+    <sound-setting />
     <block v-if="!account.user">
       <text class="muted block">游客模式：进度只保存在这台设备上。登录后会自动上传，换设备也能继续。</text>
       <view class="btn" @click="goAccount">登录 / 注册</view>
@@ -28,15 +28,10 @@
 
 <script setup>
 import { computed, ref, watch } from 'vue'
-import { isMuted, setMuted, play } from '../../game/audio.js'
+import SoundSetting from '../sound-setting.vue'
 import { fmtHour } from '../../game/index.js'
 import { account, displayName, listSaves, saveToSlot, loadFromSlot, SLOT_NAMES } from '../../game/account.js'
 
-const soundMuted = ref(isMuted())
-function changeSound(event) {
-  soundMuted.value = setMuted(!event.detail.value)
-  if (!soundMuted.value) play('toggle')
-}
 const remote = ref([])
 const loading = ref(false)
 

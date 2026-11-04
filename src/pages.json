@@ -7,6 +7,14 @@
 				"h5": { "titleNView": false }
 			}
 		},
+		// #ifdef MP-WEIXIN
+		{
+			"path": "pages/settings/settings",
+			"style": {
+				"navigationBarTitleText": "设置"
+			}
+		},
+		// #endif
 		{
 			"path": "pages/create/create",
 			"style": {
