@@ -339,6 +339,16 @@ onShow(() => {
   startClock()
   // #ifdef H5
   const token = getToken()
+  if (preview.value && token === previewSessionToken) {
+    // H5 emits onShow when a browser tab becomes visible again.
+    // Keep the in-memory run and let its absolute deadline reconcile any throttling.
+    if (updatePreviewCountdown() && !previewPaused.value && previewSteps.value.length) {
+      clearTimeout(previewTimer)
+      previewTimer = setTimeout(() => advancePreview(true), 0)
+    }
+    return
+  }
+  if (preview.value) stopPreview()
   const visit = ++previewVisit
   if (token) api('GET', '/api/me/preview').then(() => {
     if (previewVisit === visit && getToken() === token) {
@@ -367,7 +377,12 @@ function teardown() {
   window.removeEventListener('keydown', onKey)
   // #endif
 }
-onHide(teardown)
+onHide(() => {
+  // #ifdef H5
+  if (document.hidden && preview.value) return
+  // #endif
+  teardown()
+})
 onUnload(teardown)
 
 function closeSheetByUser() {
@@ -516,6 +531,7 @@ const earnAmount = ref('5000')
 const previewMinutes = ref('15')
 const previewRemaining = ref(null)
 let previewDeadline = 0
+let previewSessionToken = ''
 let previewCountdown
 let earnGoal = null
 let previewOpeningBalance = 0
@@ -553,6 +569,7 @@ function updatePreviewCountdown() {
 
 function stopPreview() {
   savePreviewRun('已退出', '作者退出或离开游戏')
+  previewSessionToken = ''
   clearTimeout(previewTimer)
   clearPreviewCountdown()
   previewSteps.value = []
@@ -879,6 +896,7 @@ async function startPreview(targeted) {
       homeScene: ui.homeScene, selectedSeed: ui.selectedSeed, shopCategory: ui.shopCategory,
       shopProduct: ui.shopProduct, selectedFurniture: ui.selectedFurniture, homeTools: { ...ui.homeTools }
     } }
+    previewSessionToken = token
     previewOpeningBalance = state.money
     earnGoal = targeted ? { day: state.day, startBalance: state.money, balance: state.money + amount } : null
     previewTrace.value = []
