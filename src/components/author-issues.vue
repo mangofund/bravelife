@@ -21,6 +21,7 @@
             </view>
             <button :aria-expanded="expandedRun === run.id" @click="expandedRun = expandedRun === run.id ? '' : run.id">{{ expandedRun === run.id ? '收起步骤' : '查看步骤' }}</button>
             <button @click="emit('export-run', run)">导出本次 JSON</button>
+            <button @click="emit('analyze-run', run)">交给 Codex 分析</button>
           </view>
           <view v-if="expandedRun === run.id" class="run-steps">
             <p v-if="!run.steps.length">本次未执行步骤。</p>
@@ -56,7 +57,7 @@
 import { computed, ref } from 'vue'
 
 const props = defineProps({ issues: { type: Array, required: true }, runs: { type: Array, required: true } })
-const emit = defineEmits(['add', 'close', 'export', 'export-run'])
+const emit = defineEmits(['add', 'close', 'export', 'export-run', 'analyze-run'])
 const categories = ['功能', '产品', '设计', '策划']
 const section = ref('runs')
 const expandedRun = ref('')

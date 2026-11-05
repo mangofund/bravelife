@@ -131,7 +131,7 @@
         {{ showPreviewGoals ? '收起工作台 ▾' : preview ? '影子主程 · ' + (previewManual ? '已接管' : previewPaused ? '已暂停' : previewSteps.length ? '代玩中' : '查看结果') : '影子主程 ▴' }}
       </button>
     </view>
-    <author-issues v-if="authorPreview && showAuthorIssues" :issues="authorIssues" :runs="previewRuns" @export-run="downloadPreviewRun"
+    <author-issues v-if="authorPreview && showAuthorIssues" :issues="authorIssues" :runs="previewRuns" @export-run="downloadPreviewRun" @analyze-run="analyzePreviewRun"
       @close="showAuthorIssues = false" @add="addAuthorIssue" @export="downloadAuthorIssues" />
     <view v-if="preview && !previewManual" class="author-preview-shield" />
     <!-- #endif -->
@@ -644,6 +644,35 @@ function recordPreviewActivity(type) {
 
 function downloadPreviewRun(run) {
   downloadPreviewJson('bravelife-playtest', { schema: 3, exportedAt: new Date().toISOString(), ...run })
+}
+
+async function analyzePreviewRun(run) {
+  if (!authorPreview.value) return
+  const key = 'bravelife_codex_pairing_v1'
+  const saved = uni.getStorageSync(key)
+  const pairing = saved || window.prompt('首次使用：请输入 Mac 本机的 BraveLife 配对码')
+  if (!pairing) return
+  if (!/^[a-f0-9]{48}$/.test(pairing.trim())) {
+    uni.showToast({ title: '配对码格式不正确', icon: 'none' })
+    return
+  }
+  try {
+    if (!saved) uni.setStorageSync(key, pairing.trim())
+    const jobId = crypto.randomUUID()
+    const payload = JSON.stringify({
+      jobId, run, issues: authorIssues.value.filter(issue => issue.runId === run.id)
+    })
+    const encoder = new TextEncoder()
+    const signingKey = await crypto.subtle.importKey('raw', encoder.encode(pairing.trim()),
+      { name: 'HMAC', hash: 'SHA-256' }, false, ['sign'])
+    const signature = await crypto.subtle.sign('HMAC', signingKey, encoder.encode(payload))
+    downloadPreviewJson('bravelife-codex-' + jobId, {
+      schema: 1, payload, signature: Array.from(new Uint8Array(signature), byte => byte.toString(16).padStart(2, '0')).join('')
+    })
+    uni.showToast({ title: '已下载分析任务，请查看 Mac 上的报告', icon: 'none' })
+  } catch {
+    uni.showToast({ title: '无法生成 Codex 分析任务', icon: 'none' })
+  }
 }
 
 const AUTHOR_ISSUES_KEY = 'bravelife_author_issues_v1'
