@@ -61,6 +61,7 @@
     <scene-guide :scene="mainGuide" :visible="ready && !menuOpen && !sheet && !state.pendingEvent && !state.pendingStory && !ui.reading && !ui.selectedFurniture" />
     <!-- #ifdef H5 -->
     <view v-if="authorPreview" class="author-preview" @click.stop>
+      <button @click="openAuthorIssues">代理问题</button>
       <template v-if="!preview">
         <input v-if="showPreviewGoals" v-model="earnAmount" inputmode="numeric" aria-label="今日净赚日元" placeholder="今日净赚 ¥" />
         <button v-if="showPreviewGoals" :disabled="authorStarting" @click="startPreview(true)">按目标代玩</button>
@@ -76,6 +77,8 @@
         <button @click="stopPreview">退出演示</button>
       </template>
     </view>
+    <author-issues v-if="authorPreview && showAuthorIssues" :issues="authorIssues"
+      @close="showAuthorIssues = false" @add="addAuthorIssue" @export="downloadAuthorIssues" />
     <view v-if="preview && !previewManual" class="author-preview-shield" />
     <!-- #endif -->
     <event-modal />
@@ -109,6 +112,7 @@ import { ui, requestWalk, requestNudge } from '../../game/ui.js'
 import { play, playTabSwitch } from '../../game/audio.js'
 import { autoCloudSave } from '../../game/account.js'
 // #ifdef H5
+import AuthorIssues from '../../components/author-issues.vue'
 import { api, getToken } from '../../game/api.js'
 import { beginRehearsal, endRehearsal, dailyUsed } from '../../game/engine/core.js'
 import { freePreviewMode, previewArrival } from '../../game/free-preview.js'
@@ -270,6 +274,9 @@ function stopClock() {
 // 电脑键盘快捷键（只在网页版生效）
 let lastSpeed = 1
 function onKey(e) {
+  // #ifdef H5
+  if (showAuthorIssues.value) return
+  // #endif
   if (preview.value && !previewManual.value) return
   const tag = e.target && e.target.tagName
   if (tag === 'INPUT' || tag === 'TEXTAREA') return
@@ -298,7 +305,10 @@ onShow(() => {
   const token = getToken()
   const visit = ++previewVisit
   if (token) api('GET', '/api/me/preview').then(() => {
-    if (previewVisit === visit && getToken() === token) authorPreview.value = true
+    if (previewVisit === visit && getToken() === token) {
+      authorPreview.value = true
+      loadAuthorIssues()
+    }
   }).catch(() => {})
   window.addEventListener('keydown', onKey)
   // #endif
@@ -307,6 +317,8 @@ function teardown() {
   // #ifdef H5
   previewVisit++
   authorPreview.value = false
+  showAuthorIssues.value = false
+  authorIssues.value = []
   stopPreview()
   // #endif
   ui.gameVisible = false
@@ -381,6 +393,46 @@ function goHome() {
 
 // #ifdef H5
 const authorPreview = ref(false)
+const showAuthorIssues = ref(false)
+const authorIssues = ref([])
+const AUTHOR_ISSUES_KEY = 'bravelife_author_issues_v1'
+
+function loadAuthorIssues() {
+  try {
+    const data = uni.getStorageSync(AUTHOR_ISSUES_KEY)
+    authorIssues.value = Array.isArray(data) ? data : []
+  } catch {
+    authorIssues.value = []
+  }
+}
+
+function openAuthorIssues() {
+  if (preview.value && previewSteps.value.length && !previewPaused.value) togglePreview()
+  showAuthorIssues.value = true
+}
+
+function addAuthorIssue(issue) {
+  if (!authorPreview.value) return
+  const now = new Date().toISOString()
+  const existing = authorIssues.value.find(item =>
+    item.category === issue.category && item.title === issue.title && item.source === issue.source)
+  const entry = {
+    ...issue, id: existing?.id || crypto.randomUUID(), firstSeen: existing?.firstSeen || now,
+    lastSeen: now, count: (existing?.count || 0) + 1
+  }
+  authorIssues.value = [entry, ...authorIssues.value.filter(item => item.id !== entry.id)].slice(0, 200)
+  try {
+    uni.setStorageSync(AUTHOR_ISSUES_KEY, authorIssues.value)
+  } catch {
+    uni.showToast({ title: '问题暂未保存，请先导出', icon: 'none' })
+  }
+}
+
+function downloadAuthorIssues() {
+  downloadPreviewJson('bravelife-author-issues', {
+    schema: 1, exportedAt: new Date().toISOString(), issues: authorIssues.value
+  })
+}
 const authorStarting = ref(false)
 const previewPaused = ref(false)
 const previewMessage = ref('')
@@ -432,10 +484,14 @@ function previewSnapshot() {
 
 function downloadPreviewTrace() {
   const data = { schema: 2, exportedAt: new Date().toISOString(), goal: earnGoal, steps: previewTrace.value }
+  downloadPreviewJson('bravelife-playtest', data)
+}
+
+function downloadPreviewJson(prefix, data) {
   const url = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }))
   const link = document.createElement('a')
   link.href = url
-  link.download = 'bravelife-playtest-' + Date.now() + '.json'
+  link.download = prefix + '-' + Date.now() + '.json'
   link.click()
   setTimeout(() => URL.revokeObjectURL(url), 1000)
 }
@@ -448,8 +504,10 @@ function advancePreview(automatic) {
   const previousTxn = state.txns[0]
   const previousRelations = Object.fromEntries(Object.entries(state.social).map(([id, rel]) => [id, rel.aff]))
   let ok = false
+  let reviewCategory
   try {
     const outcome = action()
+    reviewCategory = outcome?.reviewCategory
     if (outcome?.label) label = outcome.label
     ok = outcome !== false && outcome?.ok !== false && (!verify || verify())
   } catch (error) {
@@ -460,8 +518,12 @@ function advancePreview(automatic) {
   const relationships = Object.entries(state.social)
     .filter(([id, rel]) => previousRelations[id] !== rel.aff)
     .map(([id, rel]) => ({ id, before: previousRelations[id] ?? null, after: rel.aff }))
-  previewTrace.value = [...previewTrace.value.slice(-199), { label, ok, before, after: previewSnapshot(), transactions, relationships }]
+  const evidence = { label, ok, before, after: previewSnapshot(), transactions, relationships }
+  previewTrace.value = [...previewTrace.value.slice(-199), evidence]
   if (!ok) {
+    if (reviewCategory !== false) addAuthorIssue({
+      category: reviewCategory || '功能', title: label, source: '代玩自动记录', evidence
+    })
     previewMessage.value = '演示停在「' + label + '」。请检查当前界面，或接管后亲自操作。'
     previewPaused.value = true
     previewSteps.value = []
@@ -545,12 +607,12 @@ function playPreviewScene() {
   }
   lastPreviewStoryControl = null
   if (choices.some(choice => choice.dataset.previewAuthor === 'yes')) {
-    return { ok: false, label: title + ' · 人生方向请作者接管选择' }
+    return { ok: false, reviewCategory: false, label: title + ' · 人生方向请作者接管选择' }
   }
   const budget = earnGoal ? 0 : Math.max(0, state.money - previewOpeningBalance)
   const choice = choices.sort((a, b) => Number(a.dataset.previewCost) - Number(b.dataset.previewCost))[0]
   const cost = Number(choice.dataset.previewCost)
-  if (cost > budget) return { ok: false, label: title + ' · 可选分支超出预算，请作者接管' }
+  if (cost > budget) return { ok: false, reviewCategory: '产品', label: title + ' · 可选分支超出预算，请作者接管' }
   return {
     ok: clickPreviewElement(choice),
     label: title + ' · ' + choice.textContent.trim() + ' · 选预计支出最低的分支（¥' + cost + '）'
