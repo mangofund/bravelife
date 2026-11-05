@@ -65,8 +65,12 @@
       <template v-if="!preview">
         <label v-if="showPreviewGoals" class="preview-duration">
           <text>代玩时长（分钟）</text>
-          <input v-model="previewMinutes" inputmode="numeric" aria-label="代玩时长（分钟）" placeholder="10" />
+          <input v-model="previewMinutes" inputmode="numeric" aria-label="代玩时长（分钟）" placeholder="15" />
         </label>
+        <template v-if="showPreviewGoals">
+          <button v-for="minutes in [15, 30]" :key="minutes" :aria-pressed="Number(previewMinutes) === minutes"
+            @click="previewMinutes = String(minutes)">{{ minutes }} 分钟</button>
+        </template>
         <input v-if="showPreviewGoals" v-model="earnAmount" inputmode="numeric" aria-label="今日净赚日元" placeholder="今日净赚 ¥" />
         <button v-if="showPreviewGoals" :disabled="authorStarting" @click="startPreview(true)">按目标代玩</button>
         <button v-if="showPreviewGoals" :disabled="authorStarting" @click="startPreview(false)">自由试玩</button>
@@ -445,7 +449,7 @@ const previewSteps = ref([])
 const previewTrace = ref([])
 const showPreviewGoals = ref(false)
 const earnAmount = ref('5000')
-const previewMinutes = ref('10')
+const previewMinutes = ref('15')
 const previewRemaining = ref(null)
 let previewDeadline = 0
 let previewCountdown
@@ -780,7 +784,7 @@ function planPreviewGarden() {
 
 async function startPreview(targeted) {
   if (authorStarting.value || preview.value) return
-  const minutesInput = String(previewMinutes.value).trim() || '10'
+  const minutesInput = String(previewMinutes.value).trim() || '15'
   const minutes = Number(minutesInput)
   if (!/^\d+$/.test(minutesInput) || minutes < 1 || minutes > 1440) {
     uni.showToast({ title: '请输入 1–1440 分钟的整数', icon: 'none' })
