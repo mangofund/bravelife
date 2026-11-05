@@ -64,7 +64,7 @@
       <view v-if="showPreviewGoals" id="author-preview-panel" class="preview-panel" aria-label="影子主程工作台">
         <view class="preview-head">
           <view><text class="preview-kicker">作者工作台</text><text class="preview-title">影子主程</text></view>
-          <button class="preview-quiet" @click="openAuthorIssues">问题记录 · {{ authorIssues.length }}</button>
+          <button class="preview-quiet" @click="openAuthorIssues">代玩数据</button>
         </view>
         <template v-if="!preview">
           <view class="preview-section">
@@ -113,7 +113,7 @@
         {{ showPreviewGoals ? '收起工作台 ▾' : preview ? '影子主程 · ' + (previewManual ? '已接管' : previewPaused ? '已暂停' : previewSteps.length ? '代玩中' : '查看结果') : '影子主程 ▴' }}
       </button>
     </view>
-    <author-issues v-if="authorPreview && showAuthorIssues" :issues="authorIssues"
+    <author-issues v-if="authorPreview && showAuthorIssues" :issues="authorIssues" :runs="previewRuns" @export-run="downloadPreviewRun"
       @close="showAuthorIssues = false" @add="addAuthorIssue" @export="downloadAuthorIssues" />
     <view v-if="preview && !previewManual" class="author-preview-shield" />
     <!-- #endif -->
@@ -344,6 +344,7 @@ onShow(() => {
     if (previewVisit === visit && getToken() === token) {
       authorPreview.value = true
       loadAuthorIssues()
+      loadPreviewRuns()
     }
   }).catch(() => {})
   window.addEventListener('keydown', onKey)
@@ -431,6 +432,41 @@ function goHome() {
 const authorPreview = ref(false)
 const showAuthorIssues = ref(false)
 const authorIssues = ref([])
+const previewRuns = ref([])
+const PREVIEW_RUNS_KEY = 'bravelife_author_runs_v1'
+let activePreviewRun = null
+let runStorageWarning = false
+
+function loadPreviewRuns() {
+  try {
+    const data = uni.getStorageSync(PREVIEW_RUNS_KEY)
+    previewRuns.value = Array.isArray(data) ? data.map(run =>
+      run.status === '进行中' ? { ...run, status: '已中断' } : run) : []
+  } catch {
+    previewRuns.value = []
+  }
+}
+
+function savePreviewRun(status, summary = previewMessage.value) {
+  if (!activePreviewRun) return
+  const run = {
+    ...activePreviewRun, status, summary, updatedAt: new Date().toISOString(),
+    steps: previewTrace.value, final: previewSnapshot()
+  }
+  previewRuns.value = [run, ...previewRuns.value.filter(item => item.id !== run.id)]
+  if (status !== '进行中') activePreviewRun = null
+  try {
+    uni.setStorageSync(PREVIEW_RUNS_KEY, previewRuns.value)
+  } catch {
+    if (!runStorageWarning) uni.showToast({ title: '浏览器存储不足，请导出代玩数据', icon: 'none' })
+    runStorageWarning = true
+  }
+}
+
+function downloadPreviewRun(run) {
+  downloadPreviewJson('bravelife-playtest', { schema: 2, exportedAt: new Date().toISOString(), ...run })
+}
+
 const AUTHOR_ISSUES_KEY = 'bravelife_author_issues_v1'
 
 function loadAuthorIssues() {
@@ -511,10 +547,12 @@ function updatePreviewCountdown() {
   previewSteps.value = []
   previewPaused.value = true
   previewMessage.value = '代玩时间已到。可以导出记录、接管或退出演示。'
+  savePreviewRun('时间到')
   return false
 }
 
 function stopPreview() {
+  savePreviewRun('已退出', '作者退出或离开游戏')
   clearTimeout(previewTimer)
   clearPreviewCountdown()
   previewSteps.value = []
@@ -546,8 +584,7 @@ function previewSnapshot() {
 }
 
 function downloadPreviewTrace() {
-  const data = { schema: 2, exportedAt: new Date().toISOString(), goal: earnGoal, steps: previewTrace.value }
-  downloadPreviewJson('bravelife-playtest', data)
+  if (previewRuns.value[0]) downloadPreviewRun(previewRuns.value[0])
 }
 
 function downloadPreviewJson(prefix, data) {
@@ -583,22 +620,28 @@ function advancePreview(automatic) {
     .filter(([id, rel]) => previousRelations[id] !== rel.aff)
     .map(([id, rel]) => ({ id, before: previousRelations[id] ?? null, after: rel.aff }))
   const evidence = { label, ok, before, after: previewSnapshot(), transactions, relationships }
-  previewTrace.value = [...previewTrace.value.slice(-199), evidence]
+  previewTrace.value = [...previewTrace.value, evidence]
   if (!ok) {
     if (reviewCategory !== false) addAuthorIssue({
-      category: reviewCategory || '功能', title: label, source: '代玩自动记录', evidence
+      category: reviewCategory || '功能', title: label, source: '代玩自动记录', evidence, runId: activePreviewRun?.id
     })
     previewMessage.value = '演示停在「' + label + '」。请检查当前界面，或接管后亲自操作。'
     previewPaused.value = true
     previewSteps.value = []
     clearPreviewCountdown()
+    savePreviewRun('已停下')
     return
   }
   previewSteps.value = previewSteps.value.slice(1)
   previewMessage.value = label
   if (!previewSteps.value.length) previewSteps.value = planPreview()
-  if (!previewSteps.value.length) clearPreviewCountdown()
-  else if (automatic) previewTimer = setTimeout(() => advancePreview(true), 1600)
+  if (!previewSteps.value.length) {
+    clearPreviewCountdown()
+    savePreviewRun('已结束')
+  } else {
+    savePreviewRun('进行中')
+    if (automatic) previewTimer = setTimeout(() => advancePreview(true), 1600)
+  }
 }
 
 function togglePreview() {
@@ -613,6 +656,7 @@ function takePreviewControl() {
   previewSteps.value = []
   previewManual.value = true
   previewMessage.value = '已接管演示副本，退出后恢复原进度。'
+  savePreviewRun('已接管')
 }
 
 function openPreviewGarden() {
@@ -838,6 +882,11 @@ async function startPreview(targeted) {
     previewOpeningBalance = state.money
     earnGoal = targeted ? { day: state.day, startBalance: state.money, balance: state.money + amount } : null
     previewTrace.value = []
+    activePreviewRun = {
+      id: crypto.randomUUID(), startedAt: new Date().toISOString(), minutes,
+      mode: targeted ? '按目标代玩' : '自由试玩', goal: earnGoal, initial: previewSnapshot()
+    }
+    runStorageWarning = false
     previewGardenTried = false
     previewActivities.clear()
     previewActivityDay = 0
@@ -853,6 +902,8 @@ async function startPreview(targeted) {
       updatePreviewCountdown()
       previewCountdown = setInterval(updatePreviewCountdown, 1000)
       advancePreview(true)
+    } else {
+      savePreviewRun('已结束')
     }
   } catch (e) {
     if (visit === previewVisit) {
