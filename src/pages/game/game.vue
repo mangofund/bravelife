@@ -298,7 +298,11 @@ function startClock() {
     // 登录后每 60 秒把进度同步到云端自动存档
     seconds += 1
     if (seconds % 60 === 0) autoCloudSave()
-    if (!ready.value || preview.value || !settings.speed || state.pendingEvent || state.pendingStory || ui.reading) return
+    // #ifdef H5
+    // The rehearsal stays open for review after its queue ends.
+    if (preview.value && previewSteps.value.length) return
+    // #endif
+    if (!ready.value || !settings.speed || state.pendingEvent || state.pendingStory || ui.reading) return
     tickClock(settings.speed)
   }, 1000)
 }
