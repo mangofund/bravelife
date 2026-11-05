@@ -150,8 +150,9 @@ export function propose(id) {
 export function keepInvite() {
   const inv = state.invite
   if (!inv || inv.done || inv.day !== state.day) return fail('今天没有邀约')
-  const err = here(inv.npc)
-  if (err) return fail('要在约定的时间去约定的地点')
+  if (state.location !== inv.loc || state.hour < inv.from || state.hour >= inv.to) {
+    return fail('要在约定的时间去约定的地点')
+  }
   inv.done = true
   passTime(1.5)
   addStats({ mood: 12 })

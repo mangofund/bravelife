@@ -54,6 +54,7 @@ export function defaultMode(toId) {
 function rollEvent(mode) {
   if (Math.random() > EVENT_CHANCE * (EVENT_RATE[mode] || 1)) return
   const pool = EVENTS.filter((ev) => {
+    if (ev.modes && !ev.modes.includes(mode)) return false
     if (!ev.cond) return true
     return Object.keys(ev.cond).every((k) => (k === 'money' ? state.money >= ev.cond[k] : state.skills[k] >= ev.cond[k]))
   })

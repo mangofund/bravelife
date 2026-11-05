@@ -22,3 +22,17 @@ export function previewArrival(destination) {
   if (hour >= 24 || energy < 35 || hunger < 20 || !isOpen(LOCATION_MAP[destination], hour)) return null
   return { hour, hours, energy, hunger }
 }
+
+
+// Invitations can be attended after a short wait, if the venue and needs allow it.
+export function previewInvite() {
+  const invite = state.invite
+  if (!invite || invite.done || invite.day !== state.day) return null
+  const arrival = previewArrival(invite.loc)
+  if (!arrival) return null
+  const start = Math.max(arrival.hour, invite.from)
+  const wait = start - arrival.hour
+  if (start >= invite.to || !isOpen(LOCATION_MAP[invite.loc], start) ||
+      arrival.energy - wait * 2.5 < 35 || arrival.hunger - wait * (isMinor() ? 1.2 : 3) < 30) return null
+  return { invite, wait }
+}

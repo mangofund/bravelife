@@ -151,10 +151,11 @@ import { autoCloudSave } from '../../game/account.js'
 import AuthorIssues from '../../components/author-issues.vue'
 import { api, getToken } from '../../game/api.js'
 import { beginRehearsal, endRehearsal, dailyUsed } from '../../game/engine/core.js'
-import { freePreviewMode, previewArrival } from '../../game/free-preview.js'
-import { NPCS } from '../../game/data/npcs.js'
+import { reviewPreviewStep } from '../../game/preview-review.js'
+import { freePreviewMode, previewArrival, previewInvite } from '../../game/free-preview.js'
+import { NPCS, NPC_MAP } from '../../game/data/npcs.js'
 import { planEarnings } from '../../game/earn-preview.js'
-import { applyJob, doAction, locVisible, npcsAt, sleep, spotOf, talk, travel, useItem, wait, work } from '../../game/index.js'
+import { applyJob, doAction, eventById, keepInvite, locVisible, npcsAt, sleep, spotOf, talk, travel, useItem, wait, work } from '../../game/index.js'
 // #endif
 
 const TABS = [
@@ -344,6 +345,7 @@ onShow(() => {
   // #ifdef H5
   const token = getToken()
   if (preview.value && token === previewSessionToken) {
+    recordPreviewActivity('回到前台')
     // H5 emits onShow when a browser tab becomes visible again.
     // Keep the in-memory run and let its absolute deadline reconcile any throttling.
     if (updatePreviewCountdown() && !previewPaused.value && previewSteps.value.length) {
@@ -383,7 +385,10 @@ function teardown() {
 }
 onHide(() => {
   // #ifdef H5
-  if (document.hidden && preview.value) return
+  if (document.hidden && preview.value) {
+    recordPreviewActivity('切到后台')
+    return
+  }
   // #endif
   teardown()
 })
@@ -482,8 +487,14 @@ function savePreviewRun(status, summary = previewMessage.value) {
   }
 }
 
+function recordPreviewActivity(type) {
+  if (!activePreviewRun) return
+  activePreviewRun.activity.push({ type, at: new Date().toISOString() })
+  savePreviewRun('进行中')
+}
+
 function downloadPreviewRun(run) {
-  downloadPreviewJson('bravelife-playtest', { schema: 2, exportedAt: new Date().toISOString(), ...run })
+  downloadPreviewJson('bravelife-playtest', { schema: 3, exportedAt: new Date().toISOString(), ...run })
 }
 
 const AUTHOR_ISSUES_KEY = 'bravelife_author_issues_v1'
@@ -557,10 +568,18 @@ function clearPreviewCountdown() {
 
 function updatePreviewCountdown() {
   if (!previewDeadline) return false
-  const remaining = previewDeadline - Date.now()
+  const checkedAt = Date.now()
+  const remaining = previewDeadline - checkedAt
   if (remaining > 0) {
     previewRemaining.value = Math.ceil(remaining / 1000)
     return true
+  }
+  if (activePreviewRun) {
+    activePreviewRun.deadlineDelayMs = -remaining
+    if (remaining <= -5000) addAuthorIssue({
+      category: '产品', title: '代玩到期处理延迟', source: '代玩自动记录', runId: activePreviewRun.id,
+      evidence: { label: '到期处理晚了 ' + Math.round(-remaining / 1000) + ' 秒', before: previewSnapshot() }
+    })
   }
   clearPreviewCountdown()
   clearTimeout(previewTimer)
@@ -601,7 +620,7 @@ function clickPreviewElement(button) {
 }
 
 function previewSnapshot() {
-  return { location: state.location, day: state.day, hour: state.hour, money: state.money, stats: { ...state.stats } }
+  return { location: state.location, day: state.day, hour: state.hour, money: state.money, stats: { ...state.stats }, invite: state.invite ? { ...state.invite } : null }
 }
 
 function downloadPreviewTrace() {
@@ -623,12 +642,15 @@ function advancePreview(automatic) {
   if (!step) return
   let [label, action, verify] = step
   const before = previewSnapshot()
+  const startedAt = new Date().toISOString()
+  const previousEvent = state.pendingEvent
   const previousTxn = state.txns[0]
   const previousRelations = Object.fromEntries(Object.entries(state.social).map(([id, rel]) => [id, rel.aff]))
   let ok = false
   let reviewCategory
+  let outcome
   try {
-    const outcome = action()
+    outcome = action()
     reviewCategory = outcome?.reviewCategory
     if (outcome?.label) label = outcome.label
     ok = outcome !== false && outcome?.ok !== false && (!verify || verify())
@@ -640,7 +662,15 @@ function advancePreview(automatic) {
   const relationships = Object.entries(state.social)
     .filter(([id, rel]) => previousRelations[id] !== rel.aff)
     .map(([id, rel]) => ({ id, before: previousRelations[id] ?? null, after: rel.aff }))
-  const evidence = { label, ok, before, after: previewSnapshot(), transactions, relationships }
+  const triggeredEvent = previousEvent !== state.pendingEvent && state.pendingEvent ? eventById(state.pendingEvent) : null
+  const evidence = {
+    label, ok, startedAt, finishedAt: new Date().toISOString(), visibility: document.visibilityState,
+    before, after: previewSnapshot(), transactions, relationships,
+    travelMode: outcome?.travelMode, attendedInvite: outcome?.attendedInvite, eventId: triggeredEvent?.id
+  }
+  for (const issue of reviewPreviewStep(evidence, outcome?.travelMode, triggeredEvent)) {
+    addAuthorIssue({ ...issue, source: '代玩自动记录', evidence, runId: activePreviewRun?.id })
+  }
   previewTrace.value = [...previewTrace.value, evidence]
   if (!ok) {
     if (reviewCategory !== false) addAuthorIssue({
@@ -668,6 +698,7 @@ function advancePreview(automatic) {
 function togglePreview() {
   clearTimeout(previewTimer)
   previewPaused.value = !previewPaused.value
+  recordPreviewActivity(previewPaused.value ? '暂停' : '继续')
   if (!previewPaused.value) advancePreview(true)
 }
 
@@ -694,7 +725,7 @@ function previewTravel(destination, reason) {
     sheet.value = destination
     if (!mode || !travel(destination, mode.id)) return false
     if (destination === 'home') goHome()
-    return true
+    return { travelMode: mode.id }
   }, () => state.location === destination]]
 }
 
@@ -713,7 +744,7 @@ function planEarningsStep(route = planEarnings(earnGoal)) {
       closePopup()
       tab.value = 'map'
       sheet.value = step.destination
-      return travel(step.destination, step.mode)
+      return { ok: travel(step.destination, step.mode), travelMode: step.mode }
     }]]
     case 'apply': return [['申请' + route.jobName + ' · ' + summary, () => applyJob(step.career)]]
     case 'work': return [['开始上班 · ' + summary, work]]
@@ -783,6 +814,18 @@ function planPreview() {
   if (earnGoal) return planEarningsStep()
 
   const current = state.location
+  const appointment = previewInvite()
+  if (appointment) {
+    const { invite, wait: waitHours } = appointment
+    const name = NPC_MAP[invite.npc].name
+    if (current !== invite.loc) return previewTravel(invite.loc, '赶赴' + name + '的邀约')
+    if (waitHours > 0.001) return [['在约定地点等' + name, () => wait(waitHours)]]
+    return [['赴约 · ' + name, () => {
+      const ok = keepInvite()
+      return { ok, attendedInvite: ok }
+    }]]
+  }
+
   const { energy, hunger, mood } = state.stats
   if (energy < 35) {
     if (current !== 'home') return previewTravel('home', '精力偏低，先回家休息')
@@ -906,7 +949,7 @@ async function startPreview(targeted) {
     previewTrace.value = []
     activePreviewRun = {
       id: crypto.randomUUID(), startedAt: new Date().toISOString(), minutes,
-      mode: targeted ? '按目标代玩' : '自由试玩', goal: earnGoal, initial: previewSnapshot()
+      mode: targeted ? '按目标代玩' : '自由试玩', goal: earnGoal, initial: previewSnapshot(), activity: []
     }
     runStorageWarning = false
     previewGardenTried = false
@@ -921,6 +964,7 @@ async function startPreview(targeted) {
     previewSteps.value = planPreview()
     if (previewSteps.value.length) {
       previewDeadline = Date.now() + minutes * 60_000
+      activePreviewRun.deadlineAt = new Date(previewDeadline).toISOString()
       updatePreviewCountdown()
       previewCountdown = setInterval(updatePreviewCountdown, 1000)
       advancePreview(true)

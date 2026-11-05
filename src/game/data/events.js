@@ -14,7 +14,7 @@ export const EVENTS = [
     ]
   },
   {
-    id: 'delay', icon: '🚃', title: '电车延误',
+    id: 'delay', modes: ['train'], icon: '🚃', title: '电车延误',
     text: '线路发生故障，车厢里挤满了人。',
     choices: [{ label: '只能等了', effects: { hours: 1, mood: -5, energy: -5 } }]
   },
