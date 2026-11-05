@@ -380,6 +380,7 @@ onShow(() => {
       loadAuthorIssues()
       loadPreviewRuns()
       loadPreviewDraft()
+      restorePreviewSession(token)
     }
   }).catch(() => {})
   window.addEventListener('keydown', onKey)
@@ -391,7 +392,7 @@ function teardown() {
   authorPreview.value = false
   showAuthorIssues.value = false
   authorIssues.value = []
-  stopPreview()
+  stopPreview(false, true)
   // #endif
   ui.gameVisible = false
   closePopup()
@@ -538,6 +539,70 @@ async function restorePreviewDraft() {
 }
 
 const PREVIEW_RUNS_KEY = 'bravelife_author_runs_v1'
+const PREVIEW_SESSION_KEY = 'bravelife_author_session_v1'
+
+function clearPreviewSession() {
+  try { sessionStorage.removeItem(PREVIEW_SESSION_KEY) } catch {}
+}
+
+function savePreviewSession(runId) {
+  try {
+    sessionStorage.setItem(PREVIEW_SESSION_KEY, JSON.stringify({
+      runId, deadline: previewDeadline, navigation: capturePreviewNavigation(),
+      popup: popup.value, phoneApp: phoneApp.value,
+      gardenTried: previewGardenTried, activities: [...previewActivities], activityDay: previewActivityDay,
+      contact: previewContact, contactDay: previewContactDay
+    }))
+  } catch {}
+}
+
+function restorePreviewSession(token) {
+  if (!state.started || preview.value || isRehearsing()) return
+  let session
+  try { session = JSON.parse(sessionStorage.getItem(PREVIEW_SESSION_KEY) || 'null') } catch { return }
+  if (!session) return
+  const run = previewRuns.value.find(item => item.id === session.runId && item.status === '已中断')
+  if (!run || !Number.isFinite(session.deadline)) {
+    clearPreviewSession()
+    return
+  }
+
+  const { steps, status, summary, updatedAt, final, ...metadata } = run
+  activePreviewRun = { ...metadata, activity: [...metadata.activity || []] }
+  previewNavigation = capturePreviewNavigation()
+  previewSessionToken = token
+  previewTrace.value = steps
+  earnGoal = run.goal
+  previewOpeningBalance = run.initial.money
+  previewGardenTried = session.gardenTried
+  previewActivities = new Set(session.activities)
+  previewActivityDay = session.activityDay
+  previewContact = session.contact
+  previewContactDay = session.contactDay
+  lastPreviewStoryControl = null
+  const navigation = session.navigation
+  Object.assign(ui, navigation.ui)
+  tab.value = navigation.tab
+  sheet.value = navigation.sheet
+  phoneApp.value = session.phoneApp
+  if (session.popup) showPopup(session.popup, popupAnchor(session.popup))
+  previewManual.value = false
+  previewPaused.value = true
+  showPreviewGoals.value = true
+  preview.value = true
+  previewDeadline = session.deadline
+  if (!updatePreviewCountdown()) return
+  previewSteps.value = planPreview()
+  if (!previewSteps.value.length) {
+    clearPreviewCountdown()
+    savePreviewRun('已结束')
+    return
+  }
+  previewMessage.value = '已恢复代玩现场。点击继续，从当前进度重新规划。'
+  recordPreviewActivity('刷新后恢复')
+  previewCountdown = setInterval(updatePreviewCountdown, 1000)
+}
+
 let activePreviewRun = null
 let runStorageWarning = false
 
@@ -558,7 +623,11 @@ function savePreviewRun(status, summary = previewMessage.value) {
     steps: previewTrace.value, final: previewSnapshot()
   }
   previewRuns.value = [run, ...previewRuns.value.filter(item => item.id !== run.id)]
-  if (status !== '进行中') activePreviewRun = null
+  if (status === '进行中') savePreviewSession(run.id)
+  else {
+    clearPreviewSession()
+    activePreviewRun = null
+  }
   try {
     uni.setStorageSync(PREVIEW_RUNS_KEY, previewRuns.value)
   } catch {
@@ -697,8 +766,14 @@ function discardPreview() {
   if (wasDraft) clearPreviewDraft()
 }
 
-function stopPreview(keepProgress = false) {
-  savePreviewRun('已退出', '作者退出或离开游戏')
+function stopPreview(keepProgress = false, preserveSession = false) {
+  if (preserveSession && activePreviewRun) {
+    savePreviewRun('进行中')
+    activePreviewRun = null
+  } else {
+    savePreviewRun('已退出', '作者退出或离开游戏')
+    clearPreviewSession()
+  }
   previewSessionToken = ''
   clearTimeout(previewTimer)
   clearPreviewCountdown()
