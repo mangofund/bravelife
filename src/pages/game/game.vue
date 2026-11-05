@@ -93,17 +93,27 @@
         </template>
         <template v-else>
           <view class="preview-progress">
-            <text class="preview-label">{{ previewManual ? '已接管' : previewPaused ? '已暂停' : previewSteps.length ? '正在代玩' : '试玩结果' }}</text>
-            <text v-if="previewRemaining !== null" class="preview-clock" aria-label="代玩剩余时间">{{ Math.floor(previewRemaining / 60) }}:{{ String(previewRemaining % 60).padStart(2, '0') }}</text>
-            <text class="preview-message" role="status">{{ previewMessage }}</text>
+            <view class="preview-progress-head">
+              <text class="preview-label">{{ previewManual ? '已接管' : !previewSteps.length ? '试玩结果' : previewPaused ? '已暂停' : '正在代玩' }}</text>
+              <text class="preview-clock" aria-label="代玩剩余时间">{{ previewRemaining === null ? '—:—' : Math.floor(previewRemaining / 60) + ':' + String(previewRemaining % 60).padStart(2, '0') }}</text>
+            </view>
+            <scroll-view scroll-y class="preview-log" role="log" aria-label="代玩操作日志"
+              :scroll-into-view="'preview-log-end-' + previewTrace.length + '-' + Number(!previewSteps.length)">
+              <view v-for="(step, index) in previewTrace.slice(-80)" :key="Math.max(0, previewTrace.length - 80) + index" class="preview-log-row">
+                <text class="preview-log-index">{{ Math.max(0, previewTrace.length - 80) + index + 1 }}</text>
+                <text>{{ step.ok ? '›' : '!' }} {{ step.label }}</text>
+              </view>
+              <text v-if="!previewTrace.length || !previewSteps.length" class="preview-log-note">{{ previewMessage }}</text>
+              <view :id="'preview-log-end-' + previewTrace.length + '-' + Number(!previewSteps.length)" class="preview-log-end" />
+            </scroll-view>
           </view>
-          <view class="preview-options">
-            <button v-if="previewSteps.length" class="preview-primary" @click="togglePreview">{{ previewPaused ? '继续' : '暂停' }}</button>
-            <button v-if="previewPaused && previewSteps.length" @click="advancePreview(false)">单步</button>
-            <button v-if="!previewManual" @click="takePreviewControl">接管</button>
+          <view class="preview-options preview-run-controls">
+            <button class="preview-primary" :disabled="!previewSteps.length" @click="togglePreview">{{ previewPaused && previewSteps.length ? '继续' : '暂停' }}</button>
+            <button :disabled="!previewPaused || !previewSteps.length" @click="advancePreview(false)">单步</button>
+            <button :disabled="previewManual" @click="takePreviewControl">接管</button>
           </view>
           <view class="preview-options preview-footer">
-            <button v-if="previewTrace.length" class="preview-quiet" @click="downloadPreviewTrace">导出试玩记录</button>
+            <button :disabled="!previewTrace.length" class="preview-quiet" @click="downloadPreviewTrace">导出试玩记录</button>
             <button class="preview-quiet" @click="stopPreview">退出演示</button>
           </view>
         </template>
@@ -1108,7 +1118,13 @@ function onGo(id, mode) {
 .preview-field input { width:104px; box-sizing:border-box; padding:4px 8px; border:1px solid var(--paper-deep); border-radius:6px; background:var(--card); color:var(--ink); text-align:right; }
 .preview-panel > .preview-primary { width:100%; }
 .preview-clock { display:block; font-size:24px; font-weight:700; font-variant-numeric:tabular-nums; }
-.preview-message { display:block; margin-top:5px; font-size:14px; line-height:1.5; overflow-wrap:anywhere; }
+.preview-progress-head { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:6px; }
+.preview-log { display:block; height:clamp(64px, 24dvh, 160px); box-sizing:border-box; background:var(--card); border:1px solid var(--paper-deep); border-radius:6px; font:13px/1.5 ui-monospace, SFMono-Regular, Consolas, monospace; }
+.preview-log-row { display:grid; grid-template-columns:3ch minmax(0, 1fr); gap:8px; padding:4px 8px; border-bottom:1px solid var(--paper-deep); overflow-wrap:anywhere; }
+.preview-log-index { text-align:right; color:var(--muted); }
+.preview-log-note { display:block; padding:4px 8px; color:var(--muted); overflow-wrap:anywhere; }
+.preview-log-end { height:1px; }
+.preview-run-controls { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); }
 .author-preview .preview-quiet { background:transparent; color:var(--ink); box-shadow:inset 0 0 0 1px var(--paper-deep); }
 .preview-footer { margin-top:10px; }
 .author-preview-shield { position:fixed; inset:0; z-index:10001; }
