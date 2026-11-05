@@ -63,6 +63,10 @@
     <view v-if="authorPreview" class="author-preview" @click.stop>
       <button @click="openAuthorIssues">代理问题</button>
       <template v-if="!preview">
+        <label v-if="showPreviewGoals" class="preview-duration">
+          <text>代玩时长（分钟）</text>
+          <input v-model="previewMinutes" inputmode="numeric" aria-label="代玩时长（分钟）" placeholder="10" />
+        </label>
         <input v-if="showPreviewGoals" v-model="earnAmount" inputmode="numeric" aria-label="今日净赚日元" placeholder="今日净赚 ¥" />
         <button v-if="showPreviewGoals" :disabled="authorStarting" @click="startPreview(true)">按目标代玩</button>
         <button v-if="showPreviewGoals" :disabled="authorStarting" @click="startPreview(false)">自由试玩</button>
@@ -70,6 +74,7 @@
       </template>
       <template v-else>
         <text role="status">{{ previewMessage }}</text>
+        <text v-if="previewRemaining !== null" aria-label="代玩剩余时间">剩余 {{ Math.floor(previewRemaining / 60) }}:{{ String(previewRemaining % 60).padStart(2, '0') }}</text>
         <button v-if="previewPaused && previewSteps.length" @click="advancePreview(false)">单步</button>
         <button v-if="previewSteps.length" @click="togglePreview">{{ previewPaused ? '继续' : '暂停' }}</button>
         <button v-if="!previewManual" @click="takePreviewControl">接管</button>
@@ -440,6 +445,10 @@ const previewSteps = ref([])
 const previewTrace = ref([])
 const showPreviewGoals = ref(false)
 const earnAmount = ref('5000')
+const previewMinutes = ref('10')
+const previewRemaining = ref(null)
+let previewDeadline = 0
+let previewCountdown
 let earnGoal = null
 let previewOpeningBalance = 0
 let previewVisit = 0
@@ -452,8 +461,30 @@ let previewContact = ''
 let previewContactDay = 0
 let lastPreviewStoryControl = null
 
+function clearPreviewCountdown() {
+  clearInterval(previewCountdown)
+  previewDeadline = 0
+  previewRemaining.value = null
+}
+
+function updatePreviewCountdown() {
+  if (!previewDeadline) return false
+  const remaining = previewDeadline - Date.now()
+  if (remaining > 0) {
+    previewRemaining.value = Math.ceil(remaining / 1000)
+    return true
+  }
+  clearPreviewCountdown()
+  clearTimeout(previewTimer)
+  previewSteps.value = []
+  previewPaused.value = true
+  previewMessage.value = '代玩时间已到。可以导出记录、接管或退出演示。'
+  return false
+}
+
 function stopPreview() {
   clearTimeout(previewTimer)
+  clearPreviewCountdown()
   previewSteps.value = []
   earnGoal = null
   showPreviewGoals.value = false
@@ -497,6 +528,7 @@ function downloadPreviewJson(prefix, data) {
 }
 
 function advancePreview(automatic) {
+  if (!updatePreviewCountdown()) return
   const step = previewSteps.value[0]
   if (!step) return
   let [label, action, verify] = step
@@ -527,12 +559,14 @@ function advancePreview(automatic) {
     previewMessage.value = '演示停在「' + label + '」。请检查当前界面，或接管后亲自操作。'
     previewPaused.value = true
     previewSteps.value = []
+    clearPreviewCountdown()
     return
   }
   previewSteps.value = previewSteps.value.slice(1)
   previewMessage.value = label
   if (!previewSteps.value.length) previewSteps.value = planPreview()
-  if (automatic && previewSteps.value.length) previewTimer = setTimeout(() => advancePreview(true), 1600)
+  if (!previewSteps.value.length) clearPreviewCountdown()
+  else if (automatic) previewTimer = setTimeout(() => advancePreview(true), 1600)
 }
 
 function togglePreview() {
@@ -543,6 +577,7 @@ function togglePreview() {
 
 function takePreviewControl() {
   clearTimeout(previewTimer)
+  clearPreviewCountdown()
   previewSteps.value = []
   previewManual.value = true
   previewMessage.value = '已接管演示副本，退出后恢复原进度。'
@@ -745,6 +780,12 @@ function planPreviewGarden() {
 
 async function startPreview(targeted) {
   if (authorStarting.value || preview.value) return
+  const minutesInput = String(previewMinutes.value).trim() || '10'
+  const minutes = Number(minutesInput)
+  if (!/^\d+$/.test(minutesInput) || minutes < 1 || minutes > 1440) {
+    uni.showToast({ title: '请输入 1–1440 分钟的整数', icon: 'none' })
+    return
+  }
   const input = String(earnAmount.value).trim()
   const amount = Number(input)
   if (targeted && (!/^\d+$/.test(input) || amount <= 0 || !Number.isSafeInteger(state.money + amount))) {
@@ -775,7 +816,12 @@ async function startPreview(targeted) {
     previewPaused.value = false
     preview.value = true
     previewSteps.value = planPreview()
-    advancePreview(true)
+    if (previewSteps.value.length) {
+      previewDeadline = Date.now() + minutes * 60_000
+      updatePreviewCountdown()
+      previewCountdown = setInterval(updatePreviewCountdown, 1000)
+      advancePreview(true)
+    }
   } catch (e) {
     if (visit === previewVisit) {
       stopPreview()
@@ -893,6 +939,8 @@ function onGo(id, mode) {
   .game .function-popup-head { padding: 6px 12px; }
 }
 .author-preview { position:fixed; top:12px; right:12px; z-index:10002; display:flex; align-items:center; flex-wrap:wrap; gap:6px; max-width:min(92vw, 480px); padding:8px; background:#1d1b33; color:#fff4df; border-radius:8px; }
+.preview-duration { display:flex; align-items:center; gap:6px; }
+.preview-duration input { width:64px; background:#fff4df; color:#1d1b33; border-radius:4px; padding:0 4px; }
 .author-preview button { margin:0; font-size:13px; }
 .author-preview-shield { position:fixed; inset:0; z-index:10001; }
 </style>
