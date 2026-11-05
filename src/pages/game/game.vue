@@ -398,6 +398,7 @@ let previewActivities = new Set()
 let previewActivityDay = 0
 let previewContact = ''
 let previewContactDay = 0
+let lastPreviewStoryControl = null
 
 function stopPreview() {
   clearTimeout(previewTimer)
@@ -530,10 +531,19 @@ function playPreviewScene() {
   const event = story ? null : document.querySelector('.ev-mask')
   const title = (story?.querySelector('.st-title') || event?.querySelector('.ev-title'))?.textContent.trim() || '当前情节'
   const choices = Array.from((story || event)?.querySelectorAll('[data-preview-cost]') || [])
-  if (!choices.length) return {
-    ok: clickPreviewElement(story?.querySelector('.st-btn, .st-scene')),
-    label: title + ' · 继续阅读'
+  if (!choices.length) {
+    const close = story?.querySelector('[data-preview-close]')
+    const next = story?.querySelector('[data-preview-advance]')
+    const control = close || next
+    const index = next?.dataset.previewAdvance
+    if (!control || (lastPreviewStoryControl?.element === control && lastPreviewStoryControl.index === index)) {
+      return { ok: false, label: title + ' · 剧情没有继续推进，请接管' }
+    }
+    const ok = clickPreviewElement(control)
+    if (ok) lastPreviewStoryControl = { element: control, index }
+    return { ok, label: title + (close ? ' · 确认并关闭剧情' : ' · 继续阅读第 ' + (Number(index) + 2) + ' 段') }
   }
+  lastPreviewStoryControl = null
   if (choices.some(choice => choice.dataset.previewAuthor === 'yes')) {
     return { ok: false, label: title + ' · 人生方向请作者接管选择' }
   }
@@ -698,6 +708,7 @@ async function startPreview(targeted) {
     previewActivityDay = 0
     previewContact = ''
     previewContactDay = 0
+    lastPreviewStoryControl = null
     previewManual.value = false
     previewPaused.value = false
     preview.value = true

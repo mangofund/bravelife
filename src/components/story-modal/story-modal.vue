@@ -6,7 +6,7 @@
         <text class="st-title">{{ head.title }}</text>
       </view>
 
-      <view v-if="scene" class="st-scene" @click="nextScene">
+      <view v-if="scene" class="st-scene" :data-preview-advance="more ? index : null" @click="nextScene">
         <text v-if="scene.who && scene.who !== '旁白'" class="st-who">{{ scene.who }}</text>
         <text class="st-text" :class="{ narr: !scene.who || scene.who === '旁白' }">{{ scene.text }}</text>
         <text class="st-more">{{ more ? '点击继续 ▶' : '' }}</text>
@@ -20,7 +20,7 @@
         </block>
         <block v-else>
           <text v-if="after.msg" class="st-result">{{ after.msg }}</text>
-          <view class="btn st-btn" @click="close">好</view>
+          <view class="btn st-btn" data-preview-close @click="close">好</view>
         </block>
       </block>
     </view>
