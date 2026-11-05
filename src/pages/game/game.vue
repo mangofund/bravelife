@@ -66,7 +66,15 @@
           <view><text class="preview-kicker">作者工作台</text><text class="preview-title">影子主程</text></view>
           <button class="preview-quiet" @click="openAuthorIssues">代玩数据</button>
         </view>
-        <template v-if="!preview">
+        <view v-if="!preview && previewDraft" class="preview-section">
+          <text class="preview-label">发现上次的代玩进度</text>
+          <text>第 {{ previewDraft.data.day }} 天 · {{ fmtHour(previewDraft.data.hour) }}</text>
+          <view class="preview-options">
+            <button class="preview-primary" :disabled="authorStarting" @click="restorePreviewDraft">恢复进度</button>
+            <button :disabled="authorStarting" @click="clearPreviewDraft">丢弃草稿</button>
+          </view>
+        </view>
+        <template v-else-if="!preview">
           <view class="preview-section">
             <text class="preview-label">试玩模式</text>
             <view class="preview-options" role="group" aria-label="试玩模式">
@@ -112,7 +120,7 @@
           </view>
           <view class="preview-options preview-footer">
             <button :disabled="!previewTrace.length" class="preview-quiet" @click="downloadPreviewTrace">导出试玩记录</button>
-            <button class="preview-quiet" @click="stopPreview()">退出演示</button>
+            <button class="preview-quiet" @click="discardPreview">退出演示</button>
             <button v-if="!previewSteps.length" class="preview-primary" @click="keepPreviewProgress">保留本次进度</button>
           </view>
         </template>
@@ -370,6 +378,7 @@ onShow(() => {
       authorPreview.value = true
       loadAuthorIssues()
       loadPreviewRuns()
+      loadPreviewDraft()
     }
   }).catch(() => {})
   window.addEventListener('keydown', onKey)
@@ -466,6 +475,77 @@ const authorPreview = ref(false)
 const showAuthorIssues = ref(false)
 const authorIssues = ref([])
 const previewRuns = ref([])
+const previewDraft = ref(null)
+const PREVIEW_DRAFT_KEY = 'bravelife_author_draft_v1'
+let draftStorageWarning = false
+
+function loadPreviewDraft() {
+  try {
+    const draft = uni.getStorageSync(PREVIEW_DRAFT_KEY)
+    previewDraft.value = draft?.data?.started ? draft : null
+  } catch {
+    previewDraft.value = null
+  }
+}
+
+function savePreviewDraft(runId) {
+  try {
+    const draft = { runId, data: JSON.parse(JSON.stringify(state)) }
+    uni.setStorageSync(PREVIEW_DRAFT_KEY, draft)
+    previewDraft.value = draft
+  } catch {
+    if (!draftStorageWarning) uni.showToast({ title: '代玩草稿保存失败', icon: 'none' })
+    draftStorageWarning = true
+  }
+}
+
+function clearPreviewDraft() {
+  try {
+    uni.removeStorageSync(PREVIEW_DRAFT_KEY)
+    previewDraft.value = null
+  } catch {
+    uni.showToast({ title: '无法清除代玩草稿', icon: 'none' })
+  }
+}
+
+function capturePreviewNavigation() {
+  return { tab: tab.value, sheet: sheet.value, ui: {
+    homeScene: ui.homeScene, selectedSeed: ui.selectedSeed, shopCategory: ui.shopCategory,
+    shopProduct: ui.shopProduct, selectedFurniture: ui.selectedFurniture, homeTools: { ...ui.homeTools }
+  } }
+}
+
+async function restorePreviewDraft() {
+  if (!previewDraft.value || authorStarting.value || preview.value) return
+  const token = getToken()
+  const visit = previewVisit
+  authorStarting.value = true
+  try {
+    await api('POST', '/api/me/preview')
+    if (visit !== previewVisit || token !== getToken()) return
+    const draft = previewDraft.value
+    if (!draft || !beginRehearsal(JSON.parse(JSON.stringify(draft.data)))) return
+    previewNavigation = capturePreviewNavigation()
+    previewSessionToken = token
+    previewTrace.value = previewRuns.value.find(run => run.id === draft.runId)?.steps || []
+    previewSteps.value = []
+    previewManual.value = true
+    previewPaused.value = false
+    preview.value = true
+    closePopup()
+    if (state.location === 'home') goHome()
+    else {
+      tab.value = 'map'
+      sheet.value = ''
+    }
+    previewMessage.value = '已恢复代玩进度并接管，可选择保留到正式存档。'
+  } catch {
+    uni.showToast({ title: '无法恢复代玩进度', icon: 'none' })
+  } finally {
+    authorStarting.value = false
+  }
+}
+
 const PREVIEW_RUNS_KEY = 'bravelife_author_runs_v1'
 let activePreviewRun = null
 let runStorageWarning = false
@@ -486,6 +566,7 @@ function savePreviewRun(status, summary = previewMessage.value) {
     ...activePreviewRun, status, summary, updatedAt: new Date().toISOString(),
     steps: previewTrace.value, final: previewSnapshot()
   }
+  savePreviewDraft(run.id)
   previewRuns.value = [run, ...previewRuns.value.filter(item => item.id !== run.id)]
   if (status !== '进行中') activePreviewRun = null
   try {
@@ -615,8 +696,14 @@ function keepPreviewProgress() {
     return
   }
   stopPreview(true)
+  clearPreviewDraft()
   autoCloudSave()
   uni.showToast({ title: '已保存到当前存档', icon: 'none' })
+}
+
+function discardPreview() {
+  stopPreview()
+  clearPreviewDraft()
 }
 
 function stopPreview(keepProgress = false) {
@@ -658,7 +745,8 @@ function previewSnapshot() {
 }
 
 function downloadPreviewTrace() {
-  if (previewRuns.value[0]) downloadPreviewRun(previewRuns.value[0])
+  const run = previewRuns.value.find(item => item.id === previewDraft.value?.runId) || previewRuns.value[0]
+  if (run) downloadPreviewRun(run)
 }
 
 function downloadPreviewJson(prefix, data) {
@@ -973,10 +1061,8 @@ async function startPreview(targeted) {
     await api('POST', '/api/me/preview')
     if (visit !== previewVisit || token !== getToken()) return
     if (!beginRehearsal()) return
-    previewNavigation = { tab: tab.value, sheet: sheet.value, ui: {
-      homeScene: ui.homeScene, selectedSeed: ui.selectedSeed, shopCategory: ui.shopCategory,
-      shopProduct: ui.shopProduct, selectedFurniture: ui.selectedFurniture, homeTools: { ...ui.homeTools }
-    } }
+    previewNavigation = capturePreviewNavigation()
+    draftStorageWarning = false
     previewSessionToken = token
     previewOpeningBalance = state.money
     earnGoal = targeted ? { day: state.day, startBalance: state.money, balance: state.money + amount } : null

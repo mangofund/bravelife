@@ -83,9 +83,10 @@ let originalState = null
 
 export function isRehearsing() { return originalState !== null }
 
-export function beginRehearsal() {
+export function beginRehearsal(draft) {
   if (isRehearsing() || !state.started) return false
   originalState = JSON.stringify(state)
+  if (draft) resetState(draft)
   return true
 }
 
