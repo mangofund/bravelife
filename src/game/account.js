@@ -168,14 +168,27 @@ export async function syncAfterLogin() {
 
 // 游戏中定时把进度写到云端自动存档；失败不打扰玩家
 let autoBusy = false
-export async function autoCloudSave() {
-  if (!account.user || !state.started || autoBusy) return
+let queuedAutoToken = ''
+export async function autoCloudSave(queueLatest = false) {
+  if (!account.user || !state.started || isRehearsing()) return
+  const token = getToken()
+  if (!token) return
+  if (autoBusy) {
+    if (queueLatest) queuedAutoToken = token
+    return
+  }
   autoBusy = true
   try {
-    await saveToSlot('auto')
-  } catch (e) {
-    // 网络不好时下次再试
+    do {
+      queuedAutoToken = ''
+      try {
+        await saveToSlot('auto')
+      } catch {
+        // A later action or the normal auto-save will retry.
+      }
+    } while (queuedAutoToken === token && getToken() === token)
   } finally {
     autoBusy = false
+    queuedAutoToken = ''
   }
 }

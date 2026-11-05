@@ -97,6 +97,7 @@
               <input v-model="previewMinutes" inputmode="numeric" aria-label="自定义试玩分钟数" placeholder="15" />
             </label>
           </view>
+          <text class="preview-label">代玩会更新当前存档，并同步到云端。</text>
           <button class="preview-primary" :disabled="authorStarting" @click="startPreview(previewTargeted)">{{ authorStarting ? '正在准备…' : '开始代玩' }}</button>
         </template>
         <template v-else>
@@ -120,8 +121,8 @@
           </view>
           <view class="preview-options preview-footer">
             <button :disabled="!previewTrace.length" class="preview-quiet" @click="downloadPreviewTrace">导出试玩记录</button>
-            <button class="preview-quiet" @click="discardPreview">退出演示</button>
-            <button v-if="!previewSteps.length" class="preview-primary" @click="keepPreviewProgress">保留本次进度</button>
+            <button class="preview-quiet" @click="discardPreview">{{ restoringDraft ? '退出草稿' : '退出代玩' }}</button>
+            <button v-if="restoringDraft" class="preview-primary" @click="keepPreviewProgress">保留本次进度</button>
           </view>
         </template>
       </view>
@@ -167,7 +168,7 @@ import { autoCloudSave } from '../../game/account.js'
 // #ifdef H5
 import AuthorIssues from '../../components/author-issues.vue'
 import { api, getToken } from '../../game/api.js'
-import { beginRehearsal, commitRehearsal, endRehearsal, dailyUsed } from '../../game/engine/core.js'
+import { beginRehearsal, commitRehearsal, endRehearsal, isRehearsing, dailyUsed } from '../../game/engine/core.js'
 import { reviewPreviewStep } from '../../game/preview-review.js'
 import { freePreviewMode, previewArrival, previewInvite } from '../../game/free-preview.js'
 import { NPCS, NPC_MAP } from '../../game/data/npcs.js'
@@ -477,7 +478,7 @@ const authorIssues = ref([])
 const previewRuns = ref([])
 const previewDraft = ref(null)
 const PREVIEW_DRAFT_KEY = 'bravelife_author_draft_v1'
-let draftStorageWarning = false
+const restoringDraft = ref(false)
 
 function loadPreviewDraft() {
   try {
@@ -485,17 +486,6 @@ function loadPreviewDraft() {
     previewDraft.value = draft?.data?.started ? draft : null
   } catch {
     previewDraft.value = null
-  }
-}
-
-function savePreviewDraft(runId) {
-  try {
-    const draft = { runId, data: JSON.parse(JSON.stringify(state)) }
-    uni.setStorageSync(PREVIEW_DRAFT_KEY, draft)
-    previewDraft.value = draft
-  } catch {
-    if (!draftStorageWarning) uni.showToast({ title: '代玩草稿保存失败', icon: 'none' })
-    draftStorageWarning = true
   }
 }
 
@@ -529,6 +519,7 @@ async function restorePreviewDraft() {
     previewSessionToken = token
     previewTrace.value = previewRuns.value.find(run => run.id === draft.runId)?.steps || []
     previewSteps.value = []
+    restoringDraft.value = true
     previewManual.value = true
     previewPaused.value = false
     preview.value = true
@@ -566,7 +557,6 @@ function savePreviewRun(status, summary = previewMessage.value) {
     ...activePreviewRun, status, summary, updatedAt: new Date().toISOString(),
     steps: previewTrace.value, final: previewSnapshot()
   }
-  savePreviewDraft(run.id)
   previewRuns.value = [run, ...previewRuns.value.filter(item => item.id !== run.id)]
   if (status !== '进行中') activePreviewRun = null
   try {
@@ -697,13 +687,14 @@ function keepPreviewProgress() {
   }
   stopPreview(true)
   clearPreviewDraft()
-  autoCloudSave()
+  autoCloudSave(true)
   uni.showToast({ title: '已保存到当前存档', icon: 'none' })
 }
 
 function discardPreview() {
+  const wasDraft = restoringDraft.value
   stopPreview()
-  clearPreviewDraft()
+  if (wasDraft) clearPreviewDraft()
 }
 
 function stopPreview(keepProgress = false) {
@@ -715,10 +706,13 @@ function stopPreview(keepProgress = false) {
   earnGoal = null
   showPreviewGoals.value = false
   if (!preview.value) return
-  endRehearsal()
+  const wasDraft = restoringDraft.value
+  if (wasDraft) endRehearsal()
+  else if (save()) autoCloudSave(true)
+  restoringDraft.value = false
   preview.value = false
   closePopup()
-  if (keepProgress) {
+  if (keepProgress || !wasDraft) {
     tab.value = state.location === 'home' ? 'home' : 'map'
     sheet.value = ''
   } else {
@@ -745,7 +739,7 @@ function previewSnapshot() {
 }
 
 function downloadPreviewTrace() {
-  const run = previewRuns.value.find(item => item.id === previewDraft.value?.runId) || previewRuns.value[0]
+  const run = restoringDraft.value ? previewRuns.value.find(item => item.id === previewDraft.value?.runId) : previewRuns.value[0]
   if (run) downloadPreviewRun(run)
 }
 
@@ -784,6 +778,13 @@ function advancePreview(automatic) {
   const relationships = Object.entries(state.social)
     .filter(([id, rel]) => previousRelations[id] !== rel.aff)
     .map(([id, rel]) => ({ id, before: previousRelations[id] ?? null, after: rel.aff }))
+  if (save()) {
+    autoCloudSave(true)
+  } else {
+    label += ' · 本地存档失败'
+    ok = false
+    reviewCategory = '功能'
+  }
   const triggeredEvent = previousEvent !== state.pendingEvent && state.pendingEvent ? eventById(state.pendingEvent) : null
   const evidence = {
     label, ok, startedAt, finishedAt: new Date().toISOString(), visibility: document.visibilityState,
@@ -829,7 +830,7 @@ function takePreviewControl() {
   clearPreviewCountdown()
   previewSteps.value = []
   previewManual.value = true
-  previewMessage.value = '已接管演示副本，退出后恢复原进度。'
+  previewMessage.value = '已接管，继续操作会写入当前存档。'
   savePreviewRun('已接管')
 }
 
@@ -1060,9 +1061,8 @@ async function startPreview(targeted) {
   try {
     await api('POST', '/api/me/preview')
     if (visit !== previewVisit || token !== getToken()) return
-    if (!beginRehearsal()) return
+    if (!state.started || isRehearsing()) return
     previewNavigation = capturePreviewNavigation()
-    draftStorageWarning = false
     previewSessionToken = token
     previewOpeningBalance = state.money
     earnGoal = targeted ? { day: state.day, startBalance: state.money, balance: state.money + amount } : null
