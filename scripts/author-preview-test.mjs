@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { webcrypto } from 'node:crypto'
 import worker from '../worker/index.js'
-import { beginRehearsal, endRehearsal, resetState, save, state } from '../src/game/engine/core.js'
+import { beginRehearsal, commitRehearsal, endRehearsal, resetState, save, state } from '../src/game/engine/core.js'
 import { buyShopProduct } from '../src/game/engine/shop.js'
 
 globalThis.crypto ||= webcrypto
@@ -36,4 +36,11 @@ endRehearsal()
 assert.equal(JSON.stringify(state), original)
 assert.equal(buyShopProduct('supply', 'seed_radish'), true)
 assert.equal(JSON.parse(saved).money, 950)
-console.log('PASS: author authorization, local save isolation and restore')
+assert.equal(beginRehearsal(), true)
+assert.equal(buyShopProduct('supply', 'seed_radish'), true)
+assert.equal(JSON.parse(saved).money, 950)
+assert.equal(commitRehearsal(), true)
+endRehearsal()
+assert.equal(JSON.parse(saved).money, 900)
+assert.equal(state.money, 900)
+console.log('PASS: author authorization, local save isolation, restore and explicit commit')

@@ -95,6 +95,15 @@ export function endRehearsal() {
   originalState = null
 }
 
+export function commitRehearsal() {
+  if (!isRehearsing()) return false
+  const backup = originalState
+  originalState = null
+  if (save()) return true
+  originalState = backup
+  return false
+}
+
 export function save() {
   if (isRehearsing()) return true
   try {

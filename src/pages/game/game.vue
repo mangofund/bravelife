@@ -97,15 +97,13 @@
               <text class="preview-label">{{ previewManual ? '已接管' : !previewSteps.length ? '试玩结果' : previewPaused ? '已暂停' : '正在代玩' }}</text>
               <text class="preview-clock" aria-label="代玩剩余时间">{{ previewRemaining === null ? '—:—' : Math.floor(previewRemaining / 60) + ':' + String(previewRemaining % 60).padStart(2, '0') }}</text>
             </view>
-            <scroll-view scroll-y class="preview-log" role="log" aria-label="代玩操作日志"
-              :scroll-into-view="'preview-log-end-' + previewTrace.length + '-' + Number(!previewSteps.length)">
+            <view id="author-preview-log" class="preview-log" role="log" aria-label="代玩操作日志" tabindex="0">
               <view v-for="(step, index) in previewTrace.slice(-80)" :key="Math.max(0, previewTrace.length - 80) + index" class="preview-log-row">
                 <text class="preview-log-index">{{ Math.max(0, previewTrace.length - 80) + index + 1 }}</text>
                 <text>{{ step.ok ? '›' : '!' }} {{ step.label }}</text>
               </view>
               <text v-if="!previewTrace.length || !previewSteps.length" class="preview-log-note">{{ previewMessage }}</text>
-              <view :id="'preview-log-end-' + previewTrace.length + '-' + Number(!previewSteps.length)" class="preview-log-end" />
-            </scroll-view>
+            </view>
           </view>
           <view class="preview-options preview-run-controls">
             <button class="preview-primary" :disabled="!previewSteps.length" @click="togglePreview">{{ previewPaused && previewSteps.length ? '继续' : '暂停' }}</button>
@@ -114,7 +112,8 @@
           </view>
           <view class="preview-options preview-footer">
             <button :disabled="!previewTrace.length" class="preview-quiet" @click="downloadPreviewTrace">导出试玩记录</button>
-            <button class="preview-quiet" @click="stopPreview">退出演示</button>
+            <button class="preview-quiet" @click="stopPreview()">退出演示</button>
+            <button v-if="!previewSteps.length" class="preview-primary" @click="keepPreviewProgress">保留本次进度</button>
           </view>
         </template>
       </view>
@@ -160,7 +159,7 @@ import { autoCloudSave } from '../../game/account.js'
 // #ifdef H5
 import AuthorIssues from '../../components/author-issues.vue'
 import { api, getToken } from '../../game/api.js'
-import { beginRehearsal, endRehearsal, dailyUsed } from '../../game/engine/core.js'
+import { beginRehearsal, commitRehearsal, endRehearsal, dailyUsed } from '../../game/engine/core.js'
 import { reviewPreviewStep } from '../../game/preview-review.js'
 import { freePreviewMode, previewArrival, previewInvite } from '../../game/free-preview.js'
 import { NPCS, NPC_MAP } from '../../game/data/npcs.js'
@@ -551,6 +550,15 @@ const previewMessage = ref('')
 const previewSteps = ref([])
 const previewTrace = ref([])
 const showPreviewGoals = ref(false)
+// Wait for the new row and any wrapping text to affect the log height.
+watch(
+  [showPreviewGoals, preview, () => previewTrace.value.length, () => previewSteps.value.length, previewMessage],
+  () => {
+    const log = document.getElementById('author-preview-log')
+    if (log) log.scrollTop = log.scrollHeight
+  },
+  { flush: 'post' }
+)
 const previewTargeted = ref(false)
 const earnAmount = ref('5000')
 const previewMinutes = ref('15')
@@ -600,7 +608,18 @@ function updatePreviewCountdown() {
   return false
 }
 
-function stopPreview() {
+function keepPreviewProgress() {
+  if (!authorPreview.value || getToken() !== previewSessionToken || previewSteps.value.length) return
+  if (!commitRehearsal()) {
+    uni.showToast({ title: '保存失败，演示仍保留，请重试', icon: 'none' })
+    return
+  }
+  stopPreview(true)
+  autoCloudSave()
+  uni.showToast({ title: '已保存到当前存档', icon: 'none' })
+}
+
+function stopPreview(keepProgress = false) {
   savePreviewRun('已退出', '作者退出或离开游戏')
   previewSessionToken = ''
   clearTimeout(previewTimer)
@@ -612,9 +631,14 @@ function stopPreview() {
   endRehearsal()
   preview.value = false
   closePopup()
-  Object.assign(ui, previewNavigation.ui)
-  tab.value = previewNavigation.tab
-  sheet.value = previewNavigation.sheet
+  if (keepProgress) {
+    tab.value = state.location === 'home' ? 'home' : 'map'
+    sheet.value = ''
+  } else {
+    Object.assign(ui, previewNavigation.ui)
+    tab.value = previewNavigation.tab
+    sheet.value = previewNavigation.sheet
+  }
   previewNavigation = null
 }
 
@@ -1119,11 +1143,10 @@ function onGo(id, mode) {
 .preview-panel > .preview-primary { width:100%; }
 .preview-clock { display:block; font-size:24px; font-weight:700; font-variant-numeric:tabular-nums; }
 .preview-progress-head { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:6px; }
-.preview-log { display:block; height:clamp(64px, 24dvh, 160px); box-sizing:border-box; background:var(--card); border:1px solid var(--paper-deep); border-radius:6px; font:13px/1.5 ui-monospace, SFMono-Regular, Consolas, monospace; }
+.preview-log { display:block; overflow-y:auto; overscroll-behavior:contain; height:clamp(64px, 24dvh, 160px); box-sizing:border-box; background:var(--card); border:1px solid var(--paper-deep); border-radius:6px; font:13px/1.5 ui-monospace, SFMono-Regular, Consolas, monospace; }
 .preview-log-row { display:grid; grid-template-columns:3ch minmax(0, 1fr); gap:8px; padding:4px 8px; border-bottom:1px solid var(--paper-deep); overflow-wrap:anywhere; }
 .preview-log-index { text-align:right; color:var(--muted); }
 .preview-log-note { display:block; padding:4px 8px; color:var(--muted); overflow-wrap:anywhere; }
-.preview-log-end { height:1px; }
 .preview-run-controls { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); }
 .author-preview .preview-quiet { background:transparent; color:var(--ink); box-shadow:inset 0 0 0 1px var(--paper-deep); }
 .preview-footer { margin-top:10px; }
