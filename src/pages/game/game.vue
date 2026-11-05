@@ -61,30 +61,57 @@
     <scene-guide :scene="mainGuide" :visible="ready && !menuOpen && !sheet && !state.pendingEvent && !state.pendingStory && !ui.reading && !ui.selectedFurniture" />
     <!-- #ifdef H5 -->
     <view v-if="authorPreview" class="author-preview" @click.stop>
-      <button @click="openAuthorIssues">代理问题</button>
-      <template v-if="!preview">
-        <label v-if="showPreviewGoals" class="preview-duration">
-          <text>代玩时长（分钟）</text>
-          <input v-model="previewMinutes" inputmode="numeric" aria-label="代玩时长（分钟）" placeholder="15" />
-        </label>
-        <template v-if="showPreviewGoals">
-          <button v-for="minutes in [15, 30]" :key="minutes" :aria-pressed="Number(previewMinutes) === minutes"
-            @click="previewMinutes = String(minutes)">{{ minutes }} 分钟</button>
+      <view v-if="showPreviewGoals" id="author-preview-panel" class="preview-panel" aria-label="影子主程工作台">
+        <view class="preview-head">
+          <view><text class="preview-kicker">作者工作台</text><text class="preview-title">影子主程</text></view>
+          <button class="preview-quiet" @click="openAuthorIssues">问题记录 · {{ authorIssues.length }}</button>
+        </view>
+        <template v-if="!preview">
+          <view class="preview-section">
+            <text class="preview-label">试玩模式</text>
+            <view class="preview-options" role="group" aria-label="试玩模式">
+              <button :aria-pressed="!previewTargeted" @click="previewTargeted = false">自由试玩</button>
+              <button :aria-pressed="previewTargeted" @click="previewTargeted = true">按目标代玩</button>
+            </view>
+            <label v-if="previewTargeted" class="preview-field">
+              <text>今日净赚（日元）</text>
+              <input v-model="earnAmount" inputmode="numeric" aria-label="今日净赚日元" />
+            </label>
+          </view>
+          <view class="preview-section">
+            <text class="preview-label">试玩时长</text>
+            <view class="preview-options" role="group" aria-label="试玩时长快捷选项">
+              <button v-for="minutes in [15, 30]" :key="minutes" :aria-pressed="Number(previewMinutes) === minutes"
+                @click="previewMinutes = String(minutes)">{{ minutes }} 分钟</button>
+            </view>
+            <label class="preview-field">
+              <text>自定义（分钟）</text>
+              <input v-model="previewMinutes" inputmode="numeric" aria-label="自定义试玩分钟数" placeholder="15" />
+            </label>
+          </view>
+          <button class="preview-primary" :disabled="authorStarting" @click="startPreview(previewTargeted)">{{ authorStarting ? '正在准备…' : '开始代玩' }}</button>
         </template>
-        <input v-if="showPreviewGoals" v-model="earnAmount" inputmode="numeric" aria-label="今日净赚日元" placeholder="今日净赚 ¥" />
-        <button v-if="showPreviewGoals" :disabled="authorStarting" @click="startPreview(true)">按目标代玩</button>
-        <button v-if="showPreviewGoals" :disabled="authorStarting" @click="startPreview(false)">自由试玩</button>
-        <button v-else @click="showPreviewGoals = true">代玩</button>
-      </template>
-      <template v-else>
-        <text role="status">{{ previewMessage }}</text>
-        <text v-if="previewRemaining !== null" aria-label="代玩剩余时间">剩余 {{ Math.floor(previewRemaining / 60) }}:{{ String(previewRemaining % 60).padStart(2, '0') }}</text>
-        <button v-if="previewPaused && previewSteps.length" @click="advancePreview(false)">单步</button>
-        <button v-if="previewSteps.length" @click="togglePreview">{{ previewPaused ? '继续' : '暂停' }}</button>
-        <button v-if="!previewManual" @click="takePreviewControl">接管</button>
-        <button v-if="previewTrace.length" @click="downloadPreviewTrace">导出试玩记录</button>
-        <button @click="stopPreview">退出演示</button>
-      </template>
+        <template v-else>
+          <view class="preview-progress">
+            <text class="preview-label">{{ previewManual ? '已接管' : previewPaused ? '已暂停' : previewSteps.length ? '正在代玩' : '试玩结果' }}</text>
+            <text v-if="previewRemaining !== null" class="preview-clock" aria-label="代玩剩余时间">{{ Math.floor(previewRemaining / 60) }}:{{ String(previewRemaining % 60).padStart(2, '0') }}</text>
+            <text class="preview-message" role="status">{{ previewMessage }}</text>
+          </view>
+          <view class="preview-options">
+            <button v-if="previewSteps.length" class="preview-primary" @click="togglePreview">{{ previewPaused ? '继续' : '暂停' }}</button>
+            <button v-if="previewPaused && previewSteps.length" @click="advancePreview(false)">单步</button>
+            <button v-if="!previewManual" @click="takePreviewControl">接管</button>
+          </view>
+          <view class="preview-options preview-footer">
+            <button v-if="previewTrace.length" class="preview-quiet" @click="downloadPreviewTrace">导出试玩记录</button>
+            <button class="preview-quiet" @click="stopPreview">退出演示</button>
+          </view>
+        </template>
+      </view>
+      <button class="preview-launcher" :aria-expanded="showPreviewGoals" aria-controls="author-preview-panel"
+        @click="showPreviewGoals = !showPreviewGoals">
+        {{ showPreviewGoals ? '收起工作台 ▾' : preview ? '影子主程 · ' + (previewManual ? '已接管' : previewPaused ? '已暂停' : previewSteps.length ? '代玩中' : '查看结果') : '影子主程 ▴' }}
+      </button>
     </view>
     <author-issues v-if="authorPreview && showAuthorIssues" :issues="authorIssues"
       @close="showAuthorIssues = false" @add="addAuthorIssue" @export="downloadAuthorIssues" />
@@ -448,6 +475,7 @@ const previewMessage = ref('')
 const previewSteps = ref([])
 const previewTrace = ref([])
 const showPreviewGoals = ref(false)
+const previewTargeted = ref(false)
 const earnAmount = ref('5000')
 const previewMinutes = ref('15')
 const previewRemaining = ref(null)
@@ -942,10 +970,29 @@ function onGo(id, mode) {
   .function-popup { max-height: calc(100dvh - 100px); }
   .game .function-popup-head { padding: 6px 12px; }
 }
-.author-preview { position:fixed; bottom:calc(72px + env(safe-area-inset-bottom, 0px)); left:calc(12px + env(safe-area-inset-left, 0px)); z-index:10002; display:flex; align-items:center; flex-wrap:wrap; gap:6px; max-width:min(92vw, 480px); padding:8px; background:#1d1b33; color:#fff4df; border-radius:8px; }
+.author-preview { position:fixed; bottom:calc(72px + env(safe-area-inset-bottom, 0px)); left:calc(12px + env(safe-area-inset-left, 0px)); z-index:10002; color:var(--ink); }
 .wide .author-preview { bottom:104px; }
-.preview-duration { display:flex; align-items:center; gap:6px; }
-.preview-duration input { width:64px; background:#fff4df; color:#1d1b33; border-radius:4px; padding:0 4px; }
-.author-preview button { margin:0; font-size:13px; }
+.author-preview button { margin:0; font-size:14px; line-height:1.35; padding:8px 12px; color:var(--ink); background:var(--paper); border-radius:8px; }
+.author-preview button::after { border:0; }
+.author-preview .preview-launcher, .author-preview .preview-primary { background:var(--hud); color:white; font-weight:700; }
+.preview-launcher { box-shadow:0 3px 12px #17152533; }
+.preview-panel { width:min(350px, calc(100vw - 32px)); max-height:calc(100dvh - 160px - env(safe-area-inset-bottom, 0px)); box-sizing:border-box; overflow:auto; overscroll-behavior:contain; margin-bottom:8px; padding:14px; border:1px solid var(--paper-deep); border-radius:12px; background:var(--card); box-shadow:0 10px 28px #17152544; }
+.wide .preview-panel { max-height:calc(100dvh - 190px); }
+.preview-head, .preview-field { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.preview-head { margin-bottom:12px; }
+.preview-kicker, .preview-label { display:block; font-size:12px; color:var(--muted); }
+.preview-title { display:block; font:700 20px var(--title-font); }
+.preview-section, .preview-progress { padding:10px; margin-bottom:10px; border-radius:8px; background:var(--paper); }
+.preview-options { display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; }
+.preview-options button { flex:1; }
+.preview-section .preview-options button { background:var(--card); }
+.preview-section .preview-options button[aria-pressed="true"] { background:var(--hud); color:white; }
+.preview-field { margin-top:8px; font-size:13px; }
+.preview-field input { width:104px; box-sizing:border-box; padding:4px 8px; border:1px solid var(--paper-deep); border-radius:6px; background:var(--card); color:var(--ink); text-align:right; }
+.preview-panel > .preview-primary { width:100%; }
+.preview-clock { display:block; font-size:24px; font-weight:700; font-variant-numeric:tabular-nums; }
+.preview-message { display:block; margin-top:5px; font-size:14px; line-height:1.5; overflow-wrap:anywhere; }
+.author-preview .preview-quiet { background:transparent; color:var(--ink); box-shadow:inset 0 0 0 1px var(--paper-deep); }
+.preview-footer { margin-top:10px; }
 .author-preview-shield { position:fixed; inset:0; z-index:10001; }
 </style>

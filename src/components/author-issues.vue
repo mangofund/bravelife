@@ -43,13 +43,13 @@ function addNote() {
 
 <style scoped>
 .issues-overlay { position: fixed; inset: 0; z-index: 10003; display: grid; place-items: center; padding: 16px; background: #161425bd; }
-.issues-panel { width: min(100%, 680px); max-height: 85vh; overflow: auto; box-sizing: border-box; padding: 18px; background: #fff8ed; color: #221c30; border-radius: 16px; }
+.issues-panel { width: min(100%, 680px); max-height: 85vh; overflow: auto; box-sizing: border-box; padding: 18px; background: var(--card); color: var(--ink); border-radius: 16px; }
 .issues-heading, .issues-tabs { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
 .issues-heading > view { flex: 1; }
 .issues-heading strong { font-size: 20px; }
-.issues-subtitle, .issues-item small { display: block; color: #554e63; }
-.issues-panel button { margin: 0; font-size: 14px; }
-.issues-tabs button[aria-pressed="true"] { background: #322744; color: white; }
-.issues-form textarea { width: 100%; box-sizing: border-box; height: 72px; margin-bottom: 8px; padding: 8px; border: 1px solid #b5aab9; border-radius: 6px; }
-.issues-item { border-top: 1px solid #ded3dc; margin-top: 12px; padding-top: 10px; overflow-wrap: anywhere; }
+.issues-subtitle, .issues-item small { display: block; color: var(--muted); }
+.issues-panel button { margin: 0; font-size: 14px; background: var(--paper); color: var(--ink); }
+.issues-tabs button[aria-pressed="true"] { background: var(--hud); color: white; }
+.issues-form textarea { width: 100%; box-sizing: border-box; height: 72px; margin-bottom: 8px; padding: 8px; border: 1px solid var(--paper-deep); background: var(--paper); color: var(--ink); border-radius: 6px; }
+.issues-item { border-top: 1px solid var(--paper-deep); margin-top: 12px; padding-top: 10px; overflow-wrap: anywhere; }
 </style>
