@@ -178,4 +178,18 @@ function tagClass(tag) {
   font-weight: 700;
   margin-bottom: 16rpx;
 }
+/* #ifdef H5 */
+.st-mask {
+  align-items: center;
+  padding: 16px;
+  box-sizing: border-box;
+}
+.st-box {
+  max-height: 100%;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border-radius: 32rpx;
+  padding: 32rpx;
+}
+/* #endif */
 </style>
