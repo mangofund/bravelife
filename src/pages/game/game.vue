@@ -942,7 +942,8 @@ function onGo(id, mode) {
   .function-popup { max-height: calc(100dvh - 100px); }
   .game .function-popup-head { padding: 6px 12px; }
 }
-.author-preview { position:fixed; top:12px; right:12px; z-index:10002; display:flex; align-items:center; flex-wrap:wrap; gap:6px; max-width:min(92vw, 480px); padding:8px; background:#1d1b33; color:#fff4df; border-radius:8px; }
+.author-preview { position:fixed; bottom:calc(72px + env(safe-area-inset-bottom, 0px)); left:calc(12px + env(safe-area-inset-left, 0px)); z-index:10002; display:flex; align-items:center; flex-wrap:wrap; gap:6px; max-width:min(92vw, 480px); padding:8px; background:#1d1b33; color:#fff4df; border-radius:8px; }
+.wide .author-preview { bottom:104px; }
 .preview-duration { display:flex; align-items:center; gap:6px; }
 .preview-duration input { width:64px; background:#fff4df; color:#1d1b33; border-radius:4px; padding:0 4px; }
 .author-preview button { margin:0; font-size:13px; }
