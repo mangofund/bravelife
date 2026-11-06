@@ -39,6 +39,113 @@ const scenes = {
   fuji: ['yard', 0xa9c5a5, [['mountain', 0, -.85], ['tree', -2, .05], ['tree', 2, -.3], ['pond', .8, .35]]]
 }
 
+// Each venue has its own finish, display and foreground furnishing.
+const finishes = {
+  konbini: ['tile', 0x568f78, 'products', 'crate'],
+  ramen: ['wood', 0x9c4436, 'menu', 'lantern'],
+  tsukiji: ['stone', 0x427987, 'market', 'crate'],
+  marunouchi: ['tile', 0x48637c, 'windows', 'plant'],
+  shibuya_tech: ['wood', 0x628b81, 'posters', 'table'],
+  gym: ['tile', 0x485a67, 'mirror', 'crate'],
+  library: ['wood', 0x815d45, 'books', 'plant'],
+  karaoke: ['wood', 0x8d487a, 'acoustic', 'stool'],
+  izakaya: ['wood', 0x934638, 'menu', 'crate'],
+  club: ['tile', 0x694a9d, 'acoustic', 'stool'],
+  onsen: ['tile', 0x477b81, 'windows', 'crate'],
+  shrine: ['grass', 0x9b4c41, 'path', 'lantern'],
+  temple: ['stone', 0xaa5844, 'market', 'crate'],
+  park: ['grass', 0xa26985, 'path', 'plant'],
+  akiba: ['tile', 0x485a92, 'products', 'speaker'],
+  hospital: ['tile', 0x578e87, 'windows', 'stool'],
+  police: ['tile', 0x406486, 'posters', 'plant'],
+  ginza: ['tile', 0xa06971, 'mirror', 'plant'],
+  furniture: ['wood', 0x94674a, 'posters', 'stool'],
+  livehouse: ['wood', 0x694765, 'acoustic', 'crate'],
+  cityhall: ['tile', 0x627c78, 'posters', 'plant'],
+  estate: ['wood', 0x778a67, 'windows', 'plant'],
+  beach: ['sand', 0xd58264, 'shore', 'crate'],
+  school: ['wood', 0x718c6c, 'windows', 'books'],
+  courage: ['wood', 0x92533f, 'products', 'lantern'],
+  airport: ['stone', 0x60768c, 'runway', 'crate'],
+  fuji: ['grass', 0x657b6c, 'trail', 'bench']
+}
+
+const floorShades = {
+  wood: [0xe3b680, 0xf2cc99, 0xebbe89],
+  tile: [0xe8e1d0, 0xd8d2c4, 0xf1e8d9],
+  stone: [0xbdb6a7, 0xc8c0b0, 0xaea99e],
+  grass: [0xadc17e, 0x9db676, 0xb6c98a],
+  sand: [0xe8c58b, 0xf0d4a1, 0xeacb95]
+}
+
+function buildShell(root, kind, floor, finish, accent, display) {
+  box(root, 0x967253, 0, -.27, 0, 6.14, .22, 4.65)
+  box(root, floor, 0, -.12, 0, 6.02, .12, 4.55)
+  const shades = floorShades[finish]
+  for (let row = 0; row < 10; row++) {
+    const z = (row - 4.5) * .444
+    const woodFloor = finish === 'wood'
+    const columns = woodFloor ? 6 : 10
+    const width = 5.92 / columns
+    for (let col = 0; col < columns; col++) {
+      const shift = woodFloor && row % 2 ? width / 2 : 0
+      const start = -2.96 + col * width + shift
+      const end = Math.min(2.96, start + width)
+      box(root, shades[(col + row * 2) % 3], (start + end) / 2, -.033, z, end - start - .012, .066, .427)
+    }
+    if (woodFloor && row % 2) box(root, shades[2], -2.96 + width / 4, -.033, z, width / 2 - .012, .066, .427)
+  }
+
+  if (kind !== 'shop') {
+    if (['path', 'market', 'trail'].includes(display)) {
+      for (let i = 0; i < 7; i++) {
+        const x = Math.sin(i * .45) * .33
+        box(root, i % 2 ? 0xd7c4aa : 0xe7d5bd, x, .016, 1.93 - i * .55, .76, .032, .46)
+      }
+    }
+    if (display !== 'runway') {
+      for (const [x, z] of [[-2.72, -1.8], [2.68, -1.8], [-2.72, .35], [2.67, .6]]) {
+        for (let i = 0; i < 3; i++) {
+          round(root, display === 'shore' ? cream : leaf, x + i * .12, .05 + i * .016, z + (i % 2) * .13, .105, .065)
+        }
+      }
+    }
+    return
+  }
+
+  box(root, floor, 0, .96, -2.14, 5.95, 1.92, .14)
+  box(root, floor, -2.91, .71, 0, .14, 1.42, 4.35)
+  for (const y of [.1, .66]) {
+    box(root, accent, 0, y, -2.05, 5.84, .1, .095)
+    box(root, accent, -2.82, y, 0, .095, .1, 4.33)
+  }
+  box(root, cream, 0, 1.94, -2.14, 6.05, .09, .22)
+  box(root, cream, -2.91, 1.44, 0, .22, .09, 4.43)
+  for (const x of [-2.62, -.88, .88, 2.62]) {
+    box(root, accent, x, 1.17, -2.055, .075, 1.42, .085)
+  }
+  for (const x of [-1.8, 0, 1.8]) {
+    const y = 1.49
+    if (display === 'acoustic') {
+      for (let slat = 0; slat < 7; slat++) {
+        box(root, slat % 2 ? accent : slate, x + (slat - 3) * .14, y, -2.035, .095, .57, .085)
+      }
+    } else {
+      box(root, accent, x, y, -2.052, 1.17, .57, .09)
+      const glass = display === 'windows' || display === 'mirror'
+      box(root, glass ? 0xa5cbd1 : cream, x, y, -1.997, 1.04, .44, .028)
+      if (glass) {
+        box(root, cream, x, y, -1.97, .045, .44, .038)
+        box(root, cream, x, y, -1.97, 1.04, .045, .038)
+      } else {
+        for (let row = 0; row < 3; row++) {
+          box(root, row % 2 ? accent : wood, x, y + (row - 1) * .11, -1.975, .72 - row * .13, .031, .02)
+        }
+      }
+    }
+  }
+}
+
 function prop(root, id, x, z) {
   const group = new Group()
   group.position.set(x, 0, z)
@@ -47,7 +154,10 @@ function prop(root, id, x, z) {
   const r = (color, x, y, z, size, height) => round(group, color, x, y, z, size, height)
   const p = (color, x, y, z, size, height) => pot(group, color, x, y, z, size, height)
   const table = (width = 1.1) => {
-    b(wood, 0, .29, 0, width * .72, .58, .43)
+    for (const x of [-width * .34, width * .34]) {
+      for (const z of [-.23, .23]) b(wood, x, .29, z, .09, .58, .09)
+    }
+    b(wood, 0, .49, 0, width * .85, .12, .48)
     b(cream, 0, .61, 0, width, .08, .67)
   }
   switch (id) {
@@ -58,8 +168,18 @@ function prop(root, id, x, z) {
         b(cream, 0, y, .2, 1.15, .06, .38)
         for (const [i, color] of [coral, teal, cream, slate].entries()) b(color, -.42 + i * .23, y + .13, .28, .15, .2, .16)
       }
+      for (const x of [-.59, .59]) b(cream, x, .77, .39, .05, 1.54, .06)
+      b(cream, 0, 1.53, .22, 1.22, .08, .42)
+      if (id === 'fridge') b(teal, .42, .82, .44, .044, .25, .06)
       break
-    case 'counter': table(2.4); break
+    case 'counter':
+      table(2.4)
+      b(wood, 0, .28, .21, 2.21, .49, .1)
+      for (const x of [-.72, 0, .72]) b(cream, x, .3, .273, .62, .32, .034)
+      b(slate, .78, .72, -.12, .32, .16, .22)
+      b(teal, .78, .83, -.16, .25, .14, .06)
+      for (const x of [-.74, -.48]) p(coral, x, .72, -.04, .1, .14)
+      break
     case 'table': table(); break
     case 'computer':
     case 'books':
@@ -92,6 +212,10 @@ function prop(root, id, x, z) {
       table(1.32)
       for (const x of [-.55, .55]) b(wood, x, 1.07, -.24, .08, 1.05, .08)
       b(coral, 0, 1.58, -.05, 1.46, .13, .85)
+      for (const x of [-.52, -.26, 0, .26, .52]) {
+        b(cream, x, 1.651, -.05, .12, .02, .85)
+        b(coral, x, 1.48, .36, .21, .14, .045)
+      }
       break
     case 'fish':
       for (const x of [-.36, 0, .36]) r(0x7ba6bc, x, .74, .11, .17, .08)
@@ -125,7 +249,15 @@ function prop(root, id, x, z) {
       break
     case 'mic': p(slate, 0, .66, 0, .035, 1.29); r(slate, 0, 1.33, 0, .084); break
     case 'disco': r(0xc8afea, 0, 1.84, 0, .3); break
-    case 'pond': r(0x77adb9, 0, .015, 0, .64, .035); break
+    case 'pond':
+      r(0x77adb9, 0, .025, 0, .64, .045)
+      for (let i = 0; i < 10; i++) {
+        const angle = i * Math.PI / 5
+        r(i % 2 ? cream : slate, Math.cos(angle) * .63, .055, Math.sin(angle) * .63, .105, .055)
+      }
+      p(leaf, -.19, .067, .11, .1, .02)
+      r(coral, -.19, .1, .11, .041)
+      break
     case 'bath':
       b(cream, 0, .15, 0, 2.15, .3, 1.3)
       b(0x7bbdc1, 0, .31, 0, 1.92, .035, 1.08)
@@ -144,7 +276,11 @@ function prop(root, id, x, z) {
     case 'mountain':
       partMountain(group)
       break
-    case 'crate': b(wood, 0, .23, 0, .64, .46, .57); break
+    case 'crate':
+      b(wood, 0, .21, 0, .64, .42, .57)
+      for (const y of [.11, .24, .37]) b(cream, 0, y, .293, .59, .09, .026)
+      for (const x of [-.27, .27]) b(wood, x, .21, .316, .065, .42, .033)
+      break
   }
 }
 
@@ -196,11 +332,9 @@ function actor(root, id, index, total) {
 export function buildLocation({ id, people }) {
   const [kind, floor, props] = scenes[id]
   const root = new Group()
-  box(root, floor, 0, -.14, 0, 5.95, .28, 4.48)
-  if (kind === 'shop') {
-    box(root, floor, 0, .93, -2.13, 5.95, 1.86, .14)
-    box(root, cream, -2.91, .53, 0, .13, 1.06, 4.35)
-  }
+  const [finish, accent, display, furnishing] = finishes[id]
+  buildShell(root, kind, floor, finish, accent, display)
   for (const [name, x, z] of props) prop(root, name, x, z)
-  return { root, targets: people.map((person, index) => actor(root, person, index, people.length)) }
+  prop(root, furnishing, -2.22, 1.52)
+  return { root, detailed: true, targets: people.map((person, index) => actor(root, person, index, people.length)) }
 }
