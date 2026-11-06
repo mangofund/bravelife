@@ -7,7 +7,7 @@
 				"h5": { "titleNView": false }
 			}
 		},
-		// #ifdef MP-WEIXIN
+		// #ifdef H5 || MP-WEIXIN
 		{
 			"path": "pages/settings/settings",
 			"style": {

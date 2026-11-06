@@ -12,31 +12,31 @@
     <view class="actions">
       <view v-if="saved" class="btn" @click="onContinue">继续人生</view>
       <view class="btn" :class="{ ghost: saved }" @click="onNew">开始新的人生</view>
-      <!-- #ifdef MP-WEIXIN -->
+      <!-- #ifdef H5 || MP-WEIXIN -->
       <navigator class="btn ghost" url="/pages/settings/settings">设置</navigator>
       <!-- #endif -->
-      <!-- #ifndef MP-WEIXIN -->
+      <!-- #ifndef H5 || MP-WEIXIN -->
       <view class="themes">
         <view v-for="t in THEMES" :key="t.id" class="theme-chip" :class="{ on: settings.theme === t.id }" @click="onTheme(t.id)">
           {{ t.icon }} {{ t.name }}
         </view>
       </view>
       <!-- #endif -->
-      <!-- #ifdef MP-WEIXIN -->
+      <!-- #ifdef H5 || MP-WEIXIN -->
       <view class="btn ghost" @click="goAccount">{{ account.user ? displayName(account.user) : '登录 / 注册' }}</view>
       <view class="support-row">
+        <!-- #ifdef H5 -->
+        <a class="support-link" href="/guide.html">游戏介绍与存档说明</a>
+        <!-- #endif -->
         <navigator class="support-link" url="/pages/feedback/feedback">
           <text class="support-icon" aria-hidden="true">🎧</text>
           <text>用户反馈</text>
         </navigator>
       </view>
       <!-- #endif -->
-      <!-- #ifndef MP-WEIXIN -->
+      <!-- #ifndef H5 || MP-WEIXIN -->
       <view class="btn ghost" @click="goAccount">{{ account.user ? '☁️ ' + displayName(account.user) + ' · 云存档已开启' : '登录 / 注册（云端保存进度）' }}</view>
       <navigator class="foot feedback-link" url="/pages/feedback/feedback">玩家反馈</navigator>
-      <!-- #ifdef H5 -->
-      <a href="/guide.html" style="color:inherit;font-size:14px">游戏介绍与存档说明</a>
-      <!-- #endif -->
       <text class="foot">{{ account.user ? '进度会自动同步到云端' : '游客模式 · 进度保存在本机，登录后可上传' }}</text>
       <!-- #endif -->
     </view>
@@ -191,7 +191,32 @@ function onNew() {
   padding: 12rpx 0;
   text-decoration: underline;
 }
-/* #ifdef MP-WEIXIN */
+/* #ifdef H5 */
+.title-page.narrow {
+  max-width: none;
+  height: auto;
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding: clamp(24px, 8vh, 80px) 20px 24px;
+  gap: 32px;
+}
+.title-page .logo {
+  max-width: 480px;
+  box-sizing: border-box;
+}
+.title-page .actions {
+  max-width: 400px;
+}
+.title-page .support-row {
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.title-page .support-link {
+  font-size: 14px;
+  text-decoration: none;
+}
+/* #endif */
+/* #ifdef H5 || MP-WEIXIN */
 .support-row {
   display: flex;
   justify-content: flex-end;
