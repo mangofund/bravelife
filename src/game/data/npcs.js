@@ -1,3 +1,5 @@
+import { NEIGHBORS } from './neighbors.js'
+
 // 可结识的 NPC：在固定地点的固定时段出现；likes 为喜欢的礼物
 // 他们和主角同龄，是一起长大的同学；youth 是主角和父母同住期间（18 岁前）的地点、时段和台词
 // 好感度阶段：认识 0 → 朋友 20 → 好友 50 → 可表白 70 → 恋人 → 求婚需 90 + 婚戒
@@ -52,6 +54,8 @@ export const NPCS = [
     youth: { location: 'beach', hours: [10, 18], job: '湘南的少年', intro: '抱着一块旧冲浪板的晒黑少年，说话带着海边口音。', lines: ['东京的孩子都这么白吗？', '浪来了！你会游泳吗？', '我爸要我以后去开渔船……我才不要。'] }
   }
 ]
+
+NPCS.push(...NEIGHBORS)
 
 export const NPC_MAP = NPCS.reduce((m, n) => {
   m[n.id] = n

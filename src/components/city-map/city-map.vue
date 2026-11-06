@@ -38,6 +38,7 @@
           <text v-if="loc.people" class="people">👥</text>
         </view>
         <text class="label">{{ loc.name }}</text>
+        <text v-if="loc.neighbor" class="neighbor-label">{{ loc.neighbor.icon }} {{ loc.neighbor.name }}</text>
         <text v-if="loc.soon" class="tip">即将开放</text>
         <text v-else-if="!loc.open" class="tip">休息中</text>
       </view>
@@ -102,13 +103,17 @@ let walking = false
 let timer = null
 
 const spots = computed(() =>
-  LOCATIONS.filter((l) => locVisible(l.id)).map((l) => ({
-    id: l.id, name: l.name, icon: l.icon, x: l.x, y: l.y,
-    soon: !!l.soon,
-    open: isOpen(l, state.hour),
-    here: state.location === l.id,
-    people: !l.soon && npcsAt(l.id).length > 0
-  }))
+  LOCATIONS.filter((l) => locVisible(l.id)).map((l) => {
+    const people = !l.soon && isOpen(l, state.hour) ? npcsAt(l.id) : []
+    return {
+      id: l.id, name: l.name, icon: l.icon, x: l.x, y: l.y,
+      soon: !!l.soon,
+      open: isOpen(l, state.hour),
+      here: state.location === l.id,
+      people: people.length > 0,
+      neighbor: people.find(npc => npc.route)
+    }
+  })
 )
 
 function onImgError(id) {
@@ -348,6 +353,18 @@ onBeforeUnmount(() => {
 </script>
 
 <style>
+.neighbor-label {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translate(-50%, -65%);
+  padding: 4rpx 12rpx;
+  border-radius: 999rpx;
+  background: var(--card);
+  color: var(--ink);
+  white-space: nowrap;
+  font-size: max(var(--readable-min, 0px), 22rpx);
+}
 .map-scroll {
   width: 100%;
   background: var(--paper-deep);

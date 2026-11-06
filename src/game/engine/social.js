@@ -16,20 +16,40 @@ function touch(id) {
   state.social[id].last = state.day
 }
 
-export function talk(id) {
+export function talk(id, reply) {
   const err = here(id)
   if (err) return fail(err)
   const npc = NPC_MAP[id]
-  if (!rel(id)) {
+  const connection = rel(id)
+  if (npc.route && !connection?.streetMemory && reply !== undefined &&
+      (!Number.isInteger(reply) || !npc.choices[reply])) return fail('请选择一个回应')
+  if (!connection) {
     state.social[id] = { aff: 5, last: state.day, status: 'none' }
+    if (npc.route && reply !== undefined) {
+      state.social[id].streetMemory = { reply, followedUp: false }
+    }
     passTime(0.25)
     logTalk()
     markDaily('talk:' + id)
+    if (npc.route) return finish(npc.name + '：“' + (npc.choices[reply]?.[1] || npc.opening) + '”')
     pushMessage(npc.name, '很高兴认识你！我是' + npc.name + '，' + spotOf(npc).job + '。有空常来找我聊天吧。')
     return finish('认识了 ' + npc.icon + npc.name)
   }
   if (dailyUsed('talk:' + id)) return fail('今天已经和' + npc.name + '聊过了')
+  if (npc.route && !connection.streetMemory && reply === undefined) return fail(npc.opening)
   markDaily('talk:' + id)
+  let streetLine
+  if (npc.route) {
+    const memory = connection.streetMemory
+    if (!memory) {
+      connection.streetMemory = { reply, followedUp: false }
+      streetLine = npc.choices[reply][1]
+    } else if (!memory.followedUp && npc.choices[memory.reply]) {
+      memory.followedUp = true
+      streetLine = npc.choices[memory.reply][2]
+      pushMessage(npc.name, streetLine)
+    }
+  }
   const gain = round1(3 + state.skills.cha * 0.05)
   passTime(0.5)
   logTalk()
@@ -37,7 +57,7 @@ export function talk(id) {
   addStats({ mood: 4 })
   touch(id)
   const lines = spotOf(npc).lines
-  const line = lines[Math.floor(Math.random() * lines.length)]
+  const line = streetLine || lines[Math.floor(Math.random() * lines.length)]
   return finish(npc.name + '：“' + line + '” 好感+' + gain)
 }
 

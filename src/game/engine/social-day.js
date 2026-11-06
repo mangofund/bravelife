@@ -5,6 +5,12 @@ import { isMinor } from './calendar.js'
 
 // NPC 此刻所在的人生阶段：主角 18 岁前，大家都还是学生
 export function spotOf(n) {
+  if (n.route) {
+    // 固定到游戏日，重开页面时不会把人随机换走。
+    const seed = Math.imul(state.day + n.id.charCodeAt(0), 2654435761) >>> 0
+    const [location, from, to] = n.route[seed % n.route.length]
+    return { ...n, location, hours: [from, to] }
+  }
   return isMinor() && n.youth ? n.youth : n
 }
 

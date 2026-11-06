@@ -18,8 +18,15 @@
         <view class="aff-track"><view class="aff-fill" :style="{ width: p.aff + '%' }" /></view>
         <text class="muted">{{ p.aff }}</text>
       </view>
+      <view v-if="p.opening" class="street-dialogue">
+        <text class="block">{{ p.streetLine || p.opening }}</text>
+        <view v-if="!p.hasReply && !p.chatted" class="ops">
+          <button v-for="(choice, index) in p.choices" :key="choice[0]" class="btn mini ghost" @click="socialAction(() => talk(p.id, index))">{{ choice[0] }}</button>
+        </view>
+        <text v-if="p.chatted" class="muted">今天已经打过招呼，改天再聊。</text>
+      </view>
       <view class="ops">
-        <view class="btn mini" @click="socialAction(() => talk(p.id), false)">{{ p.known ? '聊天' : '打招呼' }}</view>
+        <view v-if="!p.opening || (p.hasReply && !p.chatted)" class="btn mini" @click="socialAction(() => talk(p.id))">{{ p.known ? '聊天' : '打招呼' }}</view>
         <block v-if="p.known">
           <view class="btn mini ghost" @click="toggleGift(p.id)">送礼</view>
           <view class="btn mini ghost" :class="{ disabled: p.aff < 20 }" @click="socialAction(() => goDate(p.id), false)">约会 {{ fmtMoney(DATE_COST) }}</view>
@@ -44,6 +51,7 @@ import { state, fmtMoney, npcsAt, rel, stageName, talk, giftList, giveGift, goDa
 import { NPC_MAP, DATE_COST, CONFESS_MIN } from '../../game/data/npcs.js'
 import { play } from '../../game/audio.js'
 import { actionAudio } from '../../game/action-audio.js'
+import { dailyUsed } from '../../game/engine/core.js'
 import { ITEMS } from '../../game/data/world.js'
 
 const props = defineProps({ locId: { type: String, required: true } })
@@ -52,10 +60,15 @@ const giftFor = ref('')
 const people = computed(() =>
   npcsAt(props.locId).map((n) => {
     const r = rel(n.id)
+    const memory = r?.streetMemory
+    const choice = n.choices?.[memory?.reply]
     // 认识之前不暴露喜好
     const likes = r && r.aff >= 20 ? n.likes.map((k) => ITEMS[k].icon + ITEMS[k].name).join('、') : '再熟一点才知道'
     return {
       id: n.id, name: n.name, icon: n.icon, job: n.job, intro: n.intro,
+      opening: n.opening, choices: n.choices, hasReply: !!choice,
+      streetLine: choice?.[memory?.followedUp ? 2 : 1],
+      chatted: !!n.opening && dailyUsed('talk:' + n.id),
       known: !!r, aff: r ? Math.round(r.aff) : 0, status: r ? r.status : 'none', stage: stageName(r), likes
     }
   })
@@ -82,6 +95,10 @@ function onGift(id, itemId) {
 </script>
 
 <style>
+.street-dialogue {
+  margin-top: 16rpx;
+  line-height: 1.5;
+}
 .person {
   margin-bottom: 16rpx;
 }
