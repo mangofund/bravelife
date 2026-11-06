@@ -12,13 +12,12 @@
         <view v-if="sheet" class="location-scene"><location-sheet docked :loc-id="sheet" @close="closeSheetByUser" @gohome="goHome" @go="onGo" /></view>
         <city-map v-else-if="tab === 'map'" @open="onOpen" @arrive-home="goHome" />
         <home-view v-else-if="tab === 'home'" wide @tool="openHomeTool" />
-        <scroll-view v-else-if="tab === 'status'" scroll-y class="desktop-record"><view class="record-title">人物志 <text>经历、能力与人生目标</text></view><view class="record-grid"><game-hud /><side-status /></view></scroll-view>
         <scroll-view v-else scroll-y class="phone-scene"><phone-view :key="phoneApp" :initial-app="phoneApp" hide-apps /></scroll-view>
         </view>
       </view>
       <view class="desktop-commandbar">
         <view class="desktop-objective"><text class="objective-label">近况</text><guide-bar compact :style="{ background: 'transparent' }" /></view>
-        <view class="desktop-commandrow"><view class="command-seal"><text>勇敢人生</text><text>生活指令</text></view><view class="desktop-commands"><view v-for="c in desktopCommands" :key="c.id" class="desktop-command-shell" @click.stop><button :id="'command-' + c.id" class="desktop-command" :class="{ active: commandActive(c) || (c.id === 'contacts' && socialMenu) }" :aria-label="c.name" :aria-expanded="c.id === 'contacts' ? socialMenu : undefined" @click="runCommand(c)"><text class="command-icon">{{ c.icon }}</text><text>{{ c.name }}</text><text v-if="c.id === 'contacts'" class="menu-caret">{{ socialMenu ? '▾' : '▴' }}</text></button><view v-if="c.id === 'contacts' && socialMenu" class="relation-flyout social-quick-menu"><button v-for="a in PHONE_APPS" :key="a.id" :class="{ active: popup === 'phone' && phoneApp === a.id }" @click="openPhone(a.id)"><text>{{ a.icon }}</text><text>{{ a.name }}</text><text v-if="a.id === 'msg' && state.unread" class="menu-unread">{{ state.unread }}</text></button></view><view v-if="c.id === 'room' && homeMenu" class="relation-flyout home-quick-menu"><button @click="closePopupByUser">🏠 家园</button><button @click="openHomeTool('inventory')">📦 仓库</button><button @click="openHomeTool('food')">🍱 生活</button><button @click="openHomeTool('pets')">🐾 宠物</button></view></view></view><view class="desktop-time"><button aria-label="暂停或继续" @click="togglePause">{{ settings.speed ? '暂停' : '继续' }}</button><view class="time-speeds"><button v-for="v in SPEEDS.filter(x => x > 0)" :key="v" :class="{ active: settings.speed === v }" @click="setSpeed(v)">{{ v }}×</button></view></view></view>
+        <view class="desktop-commandrow"><view class="command-seal"><text>勇敢人生</text><text>生活指令</text></view><view class="desktop-commands"><view v-for="c in desktopCommands" :key="c.id" class="desktop-command-shell" @click.stop><button :id="'command-' + c.id" class="desktop-command" :class="{ active: commandActive(c) || (c.id === 'contacts' && socialMenu) }" :aria-label="c.name" :aria-expanded="c.id === 'contacts' ? socialMenu : undefined" @click="runCommand(c)"><text class="command-icon">{{ c.icon }}</text><text>{{ c.name }}</text><text v-if="c.id === 'contacts'" class="menu-caret">{{ socialMenu ? '▾' : '▴' }}</text></button><view v-if="c.id === 'contacts' && socialMenu" class="relation-flyout social-quick-menu"><button v-for="a in relationApps" :key="a.id" :class="{ active: popup === 'phone' && phoneApp === a.id }" @click="openPhone(a.id)"><text>{{ a.icon }}</text><text>{{ a.name }}</text><text v-if="a.id === 'msg' && state.unread" class="menu-unread">{{ state.unread }}</text></button></view><view v-if="c.id === 'room' && homeMenu" class="relation-flyout home-quick-menu"><button @click="closePopupByUser">🏠 家园</button><button @click="openHomeTool('inventory')">📦 仓库</button><button @click="openHomeTool('food')">🍱 生活</button><button @click="openHomeTool('pets')">🐾 宠物</button></view></view></view><view class="desktop-time"><button aria-label="暂停或继续" @click="togglePause">{{ settings.speed ? '暂停' : '继续' }}</button><view class="time-speeds"><button v-for="v in SPEEDS.filter(x => x > 0)" :key="v" :class="{ active: settings.speed === v }" @click="setSpeed(v)">{{ v }}×</button></view></view></view>
       </view>
     </block>
 
@@ -37,7 +36,7 @@
         </view>
       </view>
       <view class="tabs" :class="{ 'popup-nav': !!popup || socialMenu || homeMenu }" @click.stop>
-        <view v-if="socialMenu" class="relation-flyout social-quick-menu mobile-relation-flyout"><button v-for="a in PHONE_APPS" :key="a.id" :class="{ active: popup === 'phone' && phoneApp === a.id }" @click="openPhone(a.id)"><text>{{ a.icon }}</text><text>{{ a.name }}</text><text v-if="a.id === 'msg' && state.unread" class="menu-unread">{{ state.unread }}</text></button></view>
+        <view v-if="socialMenu" class="relation-flyout social-quick-menu mobile-relation-flyout"><button v-for="a in relationApps" :key="a.id" :class="{ active: popup === 'phone' && phoneApp === a.id }" @click="openPhone(a.id)"><text>{{ a.icon }}</text><text>{{ a.name }}</text><text v-if="a.id === 'msg' && state.unread" class="menu-unread">{{ state.unread }}</text></button></view>
         <view v-if="homeMenu" class="relation-flyout home-quick-menu mobile-relation-flyout"><button @click="closePopupByUser">🏠 家园</button><button @click="openHomeTool('inventory')">📦 仓库</button><button @click="openHomeTool('food')">🍱 生活</button><button @click="openHomeTool('pets')">🐾 宠物</button></view>
         <view v-for="t in TABS" :key="t.id" :id="'mobile-' + t.id" class="tab" :class="{ on: popup === t.id || (t.id === 'phone' && socialMenu) || (tab === t.id && !popup) }" @click="switchTab(t.id)">
           <text class="tab-icon">{{ t.icon }}</text>
@@ -53,7 +52,7 @@
       <scroll-view scroll-y class="function-popup-body">
         <phone-view v-if="popup === 'phone'" :key="phoneApp" :initial-app="phoneApp" hide-apps />
         <shop-view v-else-if="popup === 'shop'" />
-        <view v-else-if="popup === 'status'" class="popup-record"><game-hud /><side-status /></view>
+        <phone-view v-else-if="popup === 'me'" initial-app="me" hide-apps />
         <home-view v-else :key="popup" :tool="popup === 'inventory' ? 'inventory' : popup === 'pets' ? 'pets' : 'food'" @place="placeFromWarehouse" />
       </scroll-view>
       <text class="function-popup-tip">{{ ui.homeTip ? ui.homeTip.text : '点击窗口外收起' }}</text>
@@ -152,7 +151,6 @@ import HomeView from '../../components/home-view/home-view.vue'
 import PhoneView from '../../components/phone-view/phone-view.vue'
 import LocationSheet from '../../components/location-sheet/location-sheet.vue'
 import EventModal from '../../components/event-modal/event-modal.vue'
-import SideStatus from '../../components/side-status/side-status.vue'
 import StoryModal from '../../components/story-modal/story-modal.vue'
 import InnerOs from '../../components/inner-os/inner-os.vue'
 import ShopView from '../../components/shop-view.vue'
@@ -177,12 +175,14 @@ import { planEarnings } from '../../game/earn-preview.js'
 import { applyJob, doAction, eventById, keepInvite, locVisible, npcsAt, sleep, spotOf, talk, travel, useItem, wait, work } from '../../game/index.js'
 // #endif
 
+const relationApps = PHONE_APPS.filter(app => app.id !== 'me')
+
 const TABS = [
   { id: 'map', name: '地图', icon: '🗺️' },
   { id: 'home', name: '家园', icon: '🏠' },
   { id: 'shop', name: '商店', icon: '🛍️' },
   { id: 'life', name: '生活', icon: '☕' },
-  { id: 'status', name: '人物', icon: '🪪' },
+  { id: 'me', name: '我的', icon: '🪪' },
   { id: 'phone', name: '关系', icon: '👥' }
 ]
 
@@ -209,7 +209,7 @@ const homeCanvasCovered = computed(() => {
 })
 const mainGuide = computed(() => tab.value === 'home' ? ui.homeScene : 'map')
 const instance = getCurrentInstance()
-const popupTitle = computed(() => popup.value === 'phone' ? (PHONE_APPS.find(a=>a.id===phoneApp.value)?.name || '关系') : ({shop:'商店',status:'人物',inventory:'家园仓库',life:'生活',pets:'宠物'})[popup.value] || '生活')
+const popupTitle = computed(() => popup.value === 'phone' ? (PHONE_APPS.find(a=>a.id===phoneApp.value)?.name || '关系') : ({shop:'商店',me:'我的',inventory:'家园仓库',life:'生活',pets:'宠物'})[popup.value] || '生活')
 watch(popup, value => { ui.popupActive = !!value })
 watch(() => ui.width, () => closePopup())
 function closePopupByUser(){
@@ -282,7 +282,7 @@ const desktopNeeds = computed(() => [
 const desktopCommands = [
   {id:'map',name:'地图',icon:'舆'}, {id:'room',name:'家园',icon:'居'},
   {id:'shop',name:'商店',icon:'市'}, {id:'life',name:'生活',icon:'食'},
-  {id:'contacts',name:'关系',icon:'缘'}, {id:'status',name:'人物',icon:'志'}
+  {id:'contacts',name:'关系',icon:'缘'}, {id:'me',name:'我的',icon:'我'}
 ]
 function commandActive(c){
   if(c.id==='map')return tab.value==='map'&&!popup.value
@@ -453,7 +453,7 @@ function navigationAudio(id){
   if(id==='phone' || id==='home') {
     const open=id==='phone'?socialMenu.value:homeMenu.value
     play(open?'closePanel':'openPanel')
-  } else if(['shop','life','status'].includes(id)) {
+  } else if(['shop','life','me'].includes(id)) {
     if(popup.value!==id) play('openPanel')
   } else if(tab.value!==id) playTabSwitch()
   else if(popup.value || socialMenu.value || homeMenu.value) play('closePanel')
@@ -463,7 +463,7 @@ function switchTab(id){
   returnPopup.value=null
   if(id==='phone'){popup.value='';homeMenu.value=false;socialMenu.value=!socialMenu.value;return}
   if(id==='home'){popup.value='';socialMenu.value=false;homeMenu.value=!homeMenu.value;sheet.value='';tab.value='home';ui.homeScene='room';return}
-  if(['shop','life','status'].includes(id)){socialMenu.value=false;homeMenu.value=false;showPopup(id,'#mobile-'+id);return}
+  if(['shop','life','me'].includes(id)){socialMenu.value=false;homeMenu.value=false;showPopup(id,'#mobile-'+id);return}
   closePopup();sheet.value='';tab.value=id
 }
 
@@ -1293,7 +1293,7 @@ function onGo(id, mode) {
 .scene-layer{position:relative;flex:1;height:0;min-height:0;width:100%;overflow:hidden;box-sizing:border-box;border-left:6px solid #233248;border-right:6px solid #233248;background:var(--paper)}
 .desktop-commandbar{flex-shrink:0;background:linear-gradient(#2c3b4e,#1c2838);border-top:2px solid #ae925f;color:#e9ddbd;box-shadow:inset 0 0 0 1px #74809433}.desktop-objective{display:flex;align-items:center;min-height:28px;padding:0 16px;border-bottom:1px solid #8e7b553f}.objective-label{flex-shrink:0;padding-right:14px;font-family:serif;font-size: max(var(--readable-min, 0px), 11px);letter-spacing:3px;color:#d3b67c}.desktop-objective>view{flex:1;min-width:0}.desktop-commandrow{display:flex;align-items:stretch;gap:14px;padding:9px 18px;min-height:58px;box-sizing:border-box}.command-seal{width:92px;flex-shrink:0;display:flex;flex-direction:column;justify-content:center;gap:5px;border-right:1px solid #8c795655;color:#d2b77f}.command-seal>text:first-child{font-family:serif;font-size:16px;letter-spacing:2px}.command-seal>text:last-child{font-size: max(var(--readable-min, 0px), 9px);letter-spacing:4px;color:#9ba5b0}
 .desktop-commands{display:flex;flex:1;min-width:0;gap:6px;justify-content:center}.desktop-command{position:relative;flex:1;max-width:108px;min-width:0;margin:0;padding:5px 3px;line-height:1.4;display:flex;align-items:center;justify-content:center;gap:6px;background:#35465a;color:#e4d8b9;border:1px solid #8c7955;border-radius:3px;font-size: max(var(--readable-min, 0px), 12px);box-shadow:inset 0 0 0 1px #14203188}.desktop-command::after,.desktop-time button::after{border:0}.desktop-command:hover{background:#43556c;color:#fff4d6}.desktop-command.active{background:linear-gradient(#a47e47,#76532f);color:#fff1c9;border-color:#d6b77b}.command-icon{font-family:serif;font-size:18px;color:#ddc696}.command-badge{position:absolute;right:3px;top:1px;font-size: max(var(--readable-min, 0px), 9px);color:#ffd0b3}.desktop-time{display:flex;gap:8px;align-items:center;border-left:1px solid #8c795655;padding-left:14px;flex-shrink:0}.desktop-time button{margin:0;padding:5px 10px;background:#172536;border:1px solid #8c7955;border-radius:3px;color:#c6c9cb;font-size: max(var(--readable-min, 0px), 11px);line-height:1.4}.time-speeds{display:flex;gap:3px}.time-speeds button{padding:5px 8px}.time-speeds button.active{background:#a78b54;color:#172536;border-color:#d4ba80}
-.game{height:100dvh}.location-scene,.phone-scene,.desktop-record{height:100%;min-height:0;background:var(--paper);box-sizing:border-box;padding:18px 24px}.record-title{font-family:serif;font-size:25px;font-weight:700;letter-spacing:4px;margin-bottom:18px}.record-title>text{font-family:sans-serif;font-size: max(var(--readable-min, 0px), 12px);color:var(--muted);letter-spacing:1px;margin-left:20px}.record-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;max-width:1200px;margin:0 auto}
+.game{height:100dvh}.location-scene,.phone-scene{height:100%;min-height:0;background:var(--paper);box-sizing:border-box;padding:18px 24px}
 @media(max-width:1200px){.desktop-topbar{grid-template-columns:145px minmax(0,1fr) 135px;gap:14px;padding-left:14px;padding-right:14px}.desktop-resources{gap:12px}.desktop-funds{min-width:110px}.resource-value{font-size:16px}.desktop-need{width:70px}.command-seal{display:none}.desktop-commandrow{gap:8px;padding-left:10px;padding-right:10px}.desktop-command{gap:4px;font-size: max(var(--readable-min, 0px), 11px)}.desktop-time{padding-left:8px}.desktop-time button{padding:5px 6px}}
 .desktop-command-shell { flex:1; max-width:150px; min-width:0; position:relative; display:flex; }
 .desktop-command-shell>.desktop-command { max-width:none; width:100%; height:100%; box-sizing:border-box; }
@@ -1305,7 +1305,7 @@ function onGo(id, mode) {
 .function-backdrop{position:fixed;inset:0;z-index:70;background:transparent;pointer-events:auto}
 .function-popup{position:fixed;z-index:90;display:flex;flex-direction:column;box-sizing:border-box;overflow:hidden;border:1px solid #b29a6a;border-radius:10px;background:#f8f1de;box-shadow:0 10px 30px #18243544;pointer-events:auto;color:var(--ink)}
 .function-popup-head{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid #b29a6a66;flex-shrink:0;font-size:17px;font-weight:700}.function-popup-head button{margin:0;padding:2px 10px;font-size:15px;line-height:1.6;background:transparent;color:var(--ink)}.function-popup-head button::after{border:0}
-.function-popup-body{flex:1;height:0;min-height:0}.function-popup-tip{display:block;flex-shrink:0;padding:7px 12px;border-top:1px solid #b29a6a44;font-size: max(var(--readable-min, 0px), 10px);color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.popup-record{padding:10px}.function-popup .phone{padding:12px}.function-popup .shop-view{padding:10px}
+.function-popup-body{flex:1;height:0;min-height:0}.function-popup-tip{display:block;flex-shrink:0;padding:7px 12px;border-top:1px solid #b29a6a44;font-size: max(var(--readable-min, 0px), 10px);color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.function-popup .phone{padding:12px}.function-popup .shop-view{padding:10px}
 
 /* Keep scene actors below menus and their input backdrop. */
 .content, .scene-layer { display: flex; flex-direction: column; }
