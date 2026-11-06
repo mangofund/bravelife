@@ -1,4 +1,5 @@
 import { state, isOpen } from './engine/core.js'
+import { bestBed } from './engine/time.js'
 import { travelOptions } from './engine/transport.js'
 import { locVisible } from './engine/courage.js'
 import { isMinor } from './engine/calendar.js'
@@ -11,16 +12,16 @@ export function freePreviewMode(destination) {
     .sort((a, b) => a.hours - b.hours)[0]
 }
 
-export function previewArrival(destination) {
+export function previewArrival(destination, { nap = 0, minimumEnergy = 35 } = {}) {
   if (!locVisible(destination)) return null
   const mode = destination === state.location ? null : freePreviewMode(destination)
   if (destination !== state.location && !mode) return null
   const hours = mode?.hours || 0
-  const hour = state.hour + hours
-  const energy = state.stats.energy - hours * 2.5 -
+  const hour = state.hour + nap + hours
+  const energy = Math.min(100, state.stats.energy + nap * 11 * bestBed()) - hours * 2.5 -
     (mode ? Math.round((MODE_MAP[mode.id].energyPerHour || 0) * hours) : 0)
-  const hunger = state.stats.hunger - hours * (isMinor() ? 1.2 : 3)
-  if (hour >= 24 || energy < 35 || hunger < 20 || !isOpen(LOCATION_MAP[destination], hour)) return null
+  const hunger = state.stats.hunger - nap * 1.5 - hours * (isMinor() ? 1.2 : 3)
+  if (hour >= 24 || energy < minimumEnergy || hunger < 20 || !isOpen(LOCATION_MAP[destination], hour)) return null
   return { hour, hours, energy, hunger }
 }
 
@@ -29,13 +30,17 @@ export function previewArrival(destination) {
 export function previewInvite() {
   const invite = state.invite
   if (!invite || invite.done || invite.day !== state.day) return null
-  const arrival = previewArrival(invite.loc)
-  if (!arrival) return null
-  const start = Math.max(arrival.hour, invite.from)
-  const wait = start - arrival.hour
-  if (start >= invite.to || !isOpen(LOCATION_MAP[invite.loc], start) ||
-      arrival.energy - wait * 2.5 < 35 || arrival.hunger - wait * (isMinor() ? 1.2 : 3) < 30) return null
-  return { invite, wait }
+  const minimumEnergy = 25
+  for (const nap of state.location === 'home' ? [0, 2] : [0]) {
+    const arrival = previewArrival(invite.loc, { nap, minimumEnergy })
+    if (!arrival) continue
+    const start = Math.max(arrival.hour, invite.from)
+    const wait = start - arrival.hour
+    if (start >= invite.to || !isOpen(LOCATION_MAP[invite.loc], start) ||
+        arrival.energy - wait * 2.5 < minimumEnergy || arrival.hunger - wait * (isMinor() ? 1.2 : 3) < 30) continue
+    return { invite, wait, nap }
+  }
+  return null
 }
 
 

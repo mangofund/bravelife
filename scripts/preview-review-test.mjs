@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
-import { newGame, state, travel, keepInvite } from '../src/game/index.js'
+import { newGame, state, travel, keepInvite, sleep } from '../src/game/index.js'
+import { sow } from '../src/game/engine/garden.js'
 import { previewInvite } from '../src/game/free-preview.js'
 import { reviewPreviewStep } from '../src/game/preview-review.js'
 
@@ -40,3 +41,24 @@ try {
   Math.random = random
 }
 console.log('PASS: exact invitation, missed-invite detection and transport-specific events')
+
+
+state.day = 27
+state.hour = 17.639094
+state.location = 'home'
+Object.assign(state.stats, { energy: 28.1, hunger: 46.9 })
+state.social.aoi = { aff: 44.9, status: 'none', last: 27 }
+state.invite = { npc: 'aoi', loc: 'izakaya', from: 18, to: 22, day: 27, done: false }
+assert.equal(previewInvite().nap, 2)
+assert.equal(sleep(false), true)
+assert.equal(previewInvite().nap, 0)
+assert.equal(travel('izakaya', 'walk'), true)
+assert.equal(keepInvite(), true)
+assert.equal(state.social.aoi.aff, 54.9)
+
+state.location = 'home'
+state.garden.seeds.radish = 1
+assert.equal(sow(0, 'radish'), true)
+assert.equal(state.garden.plots[0].crop, 'radish')
+assert.equal(state.garden.seeds.radish, 0)
+console.log('PASS: reported late-day invite and sowing without a rendered plot')

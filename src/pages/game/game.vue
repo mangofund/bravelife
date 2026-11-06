@@ -170,6 +170,7 @@ import AuthorIssues from '../../components/author-issues.vue'
 import { api, getToken } from '../../game/api.js'
 import { beginRehearsal, commitRehearsal, endRehearsal, isRehearsing, dailyUsed } from '../../game/engine/core.js'
 import { reviewPreviewStep } from '../../game/preview-review.js'
+import { sow } from '../../game/engine/garden.js'
 import { freePreviewMode, previewArrival, previewFood, previewInvite } from '../../game/free-preview.js'
 import { NPCS, NPC_MAP } from '../../game/data/npcs.js'
 import { planEarnings } from '../../game/earn-preview.js'
@@ -1054,8 +1055,9 @@ function planPreview() {
   }
   const appointment = previewInvite()
   if (appointment) {
-    const { invite, wait: waitHours } = appointment
+    const { invite, wait: waitHours, nap } = appointment
     const name = NPC_MAP[invite.npc].name
+    if (nap) return [['小睡两小时，仍能赶上' + name + '的邀约', () => { closePopup(); goHome(); return sleep(false) }]]
     if (current !== invite.loc) return previewTravel(invite.loc, '赶赴' + name + '的邀约')
     if (waitHours > 0.001) return [['在约定地点等' + name, () => wait(waitHours)]]
     return [['赴约 · ' + name, () => {
@@ -1134,7 +1136,7 @@ function planPreviewGarden() {
     ['回家查看菜园', () => { closePopup(); goHome() }],
     ['打开菜园面板', openPreviewGarden],
     ['选择萝卜种子', () => clickPreviewControl('garden-seed-radish')],
-    ['点击空地播种', () => clickPreviewControl('garden-plot-' + plot), () => !!state.garden.plots[plot]]
+    ['在第 ' + (plot + 1) + ' 块空地播种萝卜', () => sow(plot, 'radish'), () => state.garden.plots[plot]?.crop === 'radish']
   )
   if (state.garden.pets.dog && state.garden.feed.dog && state.garden.pets.dog.fedUntil <= Date.now()) {
     const food = state.garden.feed.dog
