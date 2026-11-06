@@ -9,8 +9,20 @@
         </view>
         <button class="close" @click="emit('close')">{{ docked ? '返回地图' : '✕' }}</button>
       </view>
-      <scroll-view scroll-y class="body">
+      <scroll-view scroll-y class="body" :scroll-into-view="personAnchor">
         <text class="desc">{{ loc.desc }}</text>
+
+        <!-- #ifdef H5 || MP-WEIXIN -->
+        <view v-if="loc.id !== 'home'" class="location-model">
+          <image v-if="!modelReady || sceneCovered" class="location-model-fallback" :src="art(loc.id)" mode="aspectFit" />
+          <scene-stage v-if="!modelFailed && !sceneCovered" :key="loc.id" kind="location"
+            :model="sceneModel" :anchors="sceneAnchors" @ready="modelReady = true" @failure="modelFailed = true"
+            @pick="focusPerson" />
+        </view>
+        <view v-if="sceneModel.people.length" class="location-people">
+          <button v-for="person in scenePeople" :key="person.id" class="btn mini ghost" @click="focusPerson(person.id)">{{ person.icon }} {{ person.name }}</button>
+        </view>
+        <!-- #endif -->
 
         <view v-if="loc.soon" class="notice">这里还在建设中，敬请期待。</view>
 
@@ -70,7 +82,9 @@
               </view>
             </block>
 
-            <people-panel :loc-id="loc.id" />
+            <view id="location-people-panel">
+              <people-panel :loc-id="loc.id" :selected-person="selectedPerson" />
+            </view>
             <job-panel v-if="loc.career" :career-id="loc.career" />
             <furniture-shop v-if="loc.special === 'furniture'" />
             <estate-panel v-if="loc.special === 'estate'" />
@@ -87,7 +101,11 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
+// #ifdef H5 || MP-WEIXIN
+import SceneStage from '../scene-stage/scene-stage.vue'
+// #endif
+import { art } from '../../game/themes.js'
 import JobPanel from './job-panel.vue'
 import PeoplePanel from './people-panel.vue'
 import FurnitureShop from './furniture-shop.vue'
@@ -96,13 +114,14 @@ import ElectionPanel from './election-panel.vue'
 import VehiclePanel from './vehicle-panel.vue'
 import CouragePanel from './courage-panel.vue'
 import {
-  state, isOpen, openText, fmtMoney, fmtHours, fmtHour, describe, travelOptions, doAction, omikuji, buyItem, wait
+  state, isOpen, openText, fmtMoney, fmtHours, fmtHour, describe, travelOptions, doAction, omikuji, buyItem, wait, npcsAt
 } from '../../game/index.js'
 import { LOCATION_MAP } from '../../game/data/locations.js'
 import { ITEMS } from '../../game/data/world.js'
 
 const props = defineProps({
   locId: { type: String, required: true },
+  sceneCovered: Boolean,
   // 宽屏时固定在右栏显示，不弹出遮罩
   docked: { type: Boolean, default: false },
   // 网页宽屏地点详情：覆盖地图、任务和两侧布局
@@ -114,6 +133,30 @@ const loc = computed(() => LOCATION_MAP[props.locId])
 const here = computed(() => state.location === props.locId)
 const open = computed(() => isOpen(loc.value, state.hour))
 const options = computed(() => (here.value || loc.value.soon ? [] : travelOptions(props.locId)))
+
+const sceneAnchors = []
+const scenePeople = computed(() => here.value && open.value && !loc.value.soon && loc.value.id !== 'home' ? npcsAt(props.locId) : [])
+const scenePeopleKey = computed(() => scenePeople.value.map(person => person.id).join(','))
+const sceneModel = computed(() => ({ id: props.locId, people: scenePeopleKey.value ? scenePeopleKey.value.split(',') : [] }))
+const modelReady = ref(false)
+const modelFailed = ref(false)
+const personAnchor = ref('')
+const selectedPerson = ref('')
+watch(() => [props.locId, props.sceneCovered], () => {
+  modelReady.value = false
+  modelFailed.value = false
+  personAnchor.value = ''
+  selectedPerson.value = ''
+})
+
+async function focusPerson(id) {
+  personAnchor.value = ''
+  await nextTick()
+  if (scenePeople.value.some(person => person.id === id)) {
+    selectedPerson.value = id
+    personAnchor.value = 'location-people-panel'
+  }
+}
 
 function arrive(hours) {
   return fmtHour((state.hour + hours) % 24)
@@ -139,6 +182,26 @@ function onAction(id) {
 </script>
 
 <style>
+.location-model {
+  position: relative;
+  height: clamp(220px, 39vh, 390px);
+  margin: 12px 0;
+  overflow: hidden;
+  border-radius: 16px;
+  background: radial-gradient(ellipse at center, var(--card), var(--paper));
+}
+.location-model-fallback {
+  width: 100%;
+  height: 100%;
+}
+.location-people {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.location-people .btn { margin: 0; }
+
 .mask {
   position: fixed;
   left: 0;

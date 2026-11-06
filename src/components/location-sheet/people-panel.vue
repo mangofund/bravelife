@@ -5,7 +5,7 @@
       <text>{{ inviteName }} 约你今天在这里见面</text>
       <view class="btn mini" @click="socialAction(() => keepInvite())">赴约</view>
     </view>
-    <view v-for="p in people" :key="p.id" class="card person">
+    <view v-for="p in people" :key="p.id" class="card person" :class="{ 'person-selected': p.id === selectedPerson }">
       <view class="row">
         <text class="p-icon">{{ p.icon }}</text>
         <view class="p-main">
@@ -54,11 +54,13 @@ import { actionAudio } from '../../game/action-audio.js'
 import { dailyUsed } from '../../game/engine/core.js'
 import { ITEMS } from '../../game/data/world.js'
 
-const props = defineProps({ locId: { type: String, required: true } })
+const props = defineProps({ locId: { type: String, required: true }, selectedPerson: { type: String, default: '' } })
 const giftFor = ref('')
 
 const people = computed(() =>
-  npcsAt(props.locId).map((n) => {
+  npcsAt(props.locId)
+    .sort((a, b) => Number(b.id === props.selectedPerson) - Number(a.id === props.selectedPerson))
+    .map((n) => {
     const r = rel(n.id)
     const memory = r?.streetMemory
     const choice = n.choices?.[memory?.reply]
@@ -99,6 +101,7 @@ function onGift(id, itemId) {
   margin-top: 16rpx;
   line-height: 1.5;
 }
+.person-selected { outline: 2px solid var(--accent); }
 .person {
   margin-bottom: 16rpx;
 }

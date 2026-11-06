@@ -12,17 +12,17 @@ function part(group, geometry, color, x, y, z) {
   return mesh
 }
 
-function box(group, color, x, y, z, w, h, d) {
+export function box(group, color, x, y, z, w, h, d) {
   return part(group, new BoxGeometry(w, h, d), color, x, y, z)
 }
 
-function round(group, color, x, y, z, radius, height = radius) {
+export function round(group, color, x, y, z, radius, height = radius) {
   const mesh = part(group, new SphereGeometry(radius, 9, 6), color, x, y, z)
   mesh.scale.y = height / radius
   return mesh
 }
 
-function pot(group, color, x, y, z, radius, h) {
+export function pot(group, color, x, y, z, radius, h) {
   return part(group, new CylinderGeometry(radius, radius * .77, h, 8), color, x, y, z)
 }
 

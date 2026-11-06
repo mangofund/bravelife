@@ -9,7 +9,7 @@
       </view>
       <view class="scene-layer">
         <view class="guided-scene">
-        <view v-if="sheet" class="location-scene"><location-sheet docked :loc-id="sheet" @close="closeSheetByUser" @gohome="goHome" @go="onGo" /></view>
+        <view v-if="sheet" class="location-scene"><location-sheet docked :loc-id="sheet" :scene-covered="homeCanvasCovered" @close="closeSheetByUser" @gohome="goHome" @go="onGo" /></view>
         <city-map v-else-if="tab === 'map'" @open="onOpen" @arrive-home="goHome" />
         <home-view v-else-if="tab === 'home'" wide @tool="openHomeTool" />
         <scroll-view v-else scroll-y class="phone-scene"><phone-view :key="phoneApp" :initial-app="phoneApp" hide-apps /></scroll-view>
@@ -29,7 +29,7 @@
       </view>
       <view class="content">
         <view class="guided-scene">
-        <location-sheet v-if="sheet" docked :loc-id="sheet" @close="closeSheetByUser" @gohome="goHome" @go="onGo" />
+        <location-sheet v-if="sheet" docked :loc-id="sheet" :scene-covered="homeCanvasCovered" @close="closeSheetByUser" @gohome="goHome" @go="onGo" />
         <city-map v-else-if="tab === 'map'" @open="onOpen" @arrive-home="goHome" />
         <home-view v-else-if="tab === 'home'" :scene-covered="homeCanvasCovered" @tool="openHomeTool" />
         <scroll-view v-else scroll-y class="pane"><phone-view :key="phoneApp" :initial-app="phoneApp" hide-apps /></scroll-view>

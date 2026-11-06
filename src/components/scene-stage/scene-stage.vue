@@ -19,7 +19,7 @@ import { state } from '../../game/engine/core.js'
 import { ui } from '../../game/ui.js'
 // #ifdef MP-WEIXIN
 import { getCurrentInstance } from 'vue'
-import { createSceneView, buildRoom, buildGarden, addScenePets as installPets } from '../../game/scene3d/index.js'
+import { createSceneView, buildRoom, buildGarden, buildLocation, addScenePets as installPets } from '../../game/scene3d/index.js'
 // #endif
 import { petHabitat } from '../../game/pet-behavior.js'
 
@@ -131,7 +131,7 @@ function renderFrame(time) {
     if (rebuilt) {
       const model = build(props.model)
       view.setModel(model)
-      updatePets = addScenePets(model.root, props.kind, props.model, state.garden.pets)
+      updatePets = props.kind === 'location' ? undefined : addScenePets(model.root, props.kind, props.model, state.garden.pets)
       dirty = false
     }
     // #ifdef MP-WEIXIN
@@ -253,11 +253,11 @@ watch(() => [ui.gameVisible, ...['cat', 'dog'].map(kind => petHabitat(kind, stat
 onMounted(async () => {
   try {
     // #ifdef H5
-    const { createSceneView, buildRoom, buildGarden, addScenePets: installPets } = await import('../../game/scene3d/index.js')
+    const { createSceneView, buildRoom, buildGarden, buildLocation, addScenePets: installPets } = await import('../../game/scene3d/index.js')
     if (!active) return
     addScenePets = installPets
     document.addEventListener('visibilitychange', schedule)
-    build = props.kind === 'room' ? buildRoom : buildGarden
+    build = { room: buildRoom, garden: buildGarden, location: buildLocation }[props.kind]
     canvas = document.createElement('canvas')
     canvas.style.cssText = 'display:block;width:100%;height:100%;touch-action:none'
     surface.value.appendChild(canvas)
@@ -273,12 +273,12 @@ onMounted(async () => {
     if (!canvas || !measured.width || !measured.height) throw new Error('Native canvas unavailable')
     nativeSize = measured
     addScenePets = installPets
-    build = props.kind === 'room' ? buildRoom : buildGarden
+    build = { room: buildRoom, garden: buildGarden, location: buildLocation }[props.kind]
     view = createSceneView(canvas, fail, {
       native: true, pixelRatio: wx.getWindowInfo?.().pixelRatio || 1
     })
     // #endif
-    habitatTimer = setInterval(() => {
+    if (props.kind !== 'location') habitatTimer = setInterval(() => {
       if (visible() && (state.garden.pets.cat || state.garden.pets.dog)) schedule()
     }, 2000)
     schedule()
