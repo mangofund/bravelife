@@ -170,7 +170,7 @@ import AuthorIssues from '../../components/author-issues.vue'
 import { api, getToken } from '../../game/api.js'
 import { beginRehearsal, commitRehearsal, endRehearsal, isRehearsing, dailyUsed } from '../../game/engine/core.js'
 import { reviewPreviewStep } from '../../game/preview-review.js'
-import { freePreviewMode, previewArrival, previewInvite } from '../../game/free-preview.js'
+import { freePreviewMode, previewArrival, previewFood, previewInvite } from '../../game/free-preview.js'
 import { NPCS, NPC_MAP } from '../../game/data/npcs.js'
 import { planEarnings } from '../../game/earn-preview.js'
 import { applyJob, doAction, eventById, keepInvite, locVisible, npcsAt, sleep, spotOf, talk, travel, useItem, wait, work } from '../../game/index.js'
@@ -1041,6 +1041,17 @@ function planPreview() {
   if (earnGoal) return planEarningsStep()
 
   const current = state.location
+  const { energy, hunger, mood } = state.stats
+  const spendable = Math.max(0, state.money - previewOpeningBalance)
+  if (hunger < (current === 'konbini' ? 62 : 55)) {
+    const food = previewFood(spendable)
+    if (food?.item) return [['吃背包里的' + food.name, () => useItem(food.item)]]
+    if (food?.meal && (energy >= 35 || hunger < 20)) {
+      if (current !== 'konbini') return previewTravel('konbini', '饱腹偏低，免费前往便利店补给')
+      return [[(food.emergency ? '紧急补给：' : '用试玩盈余：') + food.meal.name + ' · ' + fmtMoney(food.meal.cost),
+        () => doAction('konbini', food.meal.id)]]
+    }
+  }
   const appointment = previewInvite()
   if (appointment) {
     const { invite, wait: waitHours } = appointment
@@ -1053,21 +1064,9 @@ function planPreview() {
     }]]
   }
 
-  const { energy, hunger, mood } = state.stats
   if (energy < 35) {
     if (current !== 'home') return previewTravel('home', '精力偏低，先回家休息')
     return [['在家睡一觉，恢复精力', () => { closePopup(); goHome(); return sleep(true) }]]
-  }
-
-  const spendable = Math.max(0, state.money - previewOpeningBalance)
-  if (hunger < (current === 'konbini' ? 62 : 55)) {
-    if (state.bag.onigiri > 0) return [['吃背包里的饭团，节省开支', () => useItem('onigiri')]]
-    if (spendable >= 150 && locVisible('konbini')) {
-      if (current !== 'konbini') return previewTravel('konbini', '饱腹偏低，免费前往便利店')
-      const meal = spendable >= 600 ? 'bento' : 'onigiri'
-      return [[meal === 'bento' ? '用试玩盈余买便当' : '用试玩盈余买饭团',
-        () => doAction('konbini', meal)]]
-    }
   }
 
   if (state.job && hunger >= 20) {
@@ -1076,7 +1075,9 @@ function planPreview() {
   }
 
   if (hunger < 20) {
-    previewMessage.value = '饱腹太低，背包无饭团且试玩盈余不足。可接管或改用按目标代玩。'
+    previewMessage.value = state.money < LOCATION_MAP.konbini.actions[0].cost
+      ? '饱腹过低，背包无可用食物，余额也不足以买饭团。请接管补给。'
+      : '饱腹过低，当前无法安全免费到达便利店。请接管补给。'
     return []
   }
 

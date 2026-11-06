@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { newGame, npcsAt, state, talk } from '../src/game/index.js'
-import { previewArrival } from '../src/game/free-preview.js'
+import { previewArrival, previewFood } from '../src/game/free-preview.js'
 
 globalThis.uni = { setStorageSync() {}, showToast() {} }
 newGame({ name: '试玩', background: 'normal', startAge: 22 })
@@ -21,3 +21,19 @@ state.day++
 assert.equal(talk('haruka'), true)
 assert.ok(state.social.haruka.aff > met)
 console.log('PASS: closed-on-arrival routes, low-energy routes and next-day NPC follow-up')
+
+
+state.location = 'konbini'
+state.bag = { bento: 1 }
+state.stats.hunger = 15
+state.money = 1000
+assert.equal(previewFood(0).item, 'bento')
+state.bag = {}
+assert.equal(previewFood(0).meal.id, 'onigiri')
+assert.equal(previewFood(0).emergency, true)
+state.stats.hunger = 30
+assert.equal(previewFood(0), null)
+state.stats.hunger = 15
+state.money = 149
+assert.equal(previewFood(0), null)
+console.log('PASS: existing food, emergency meal with no run profit, and actual cash limit')

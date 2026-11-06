@@ -3,6 +3,7 @@ import { travelOptions } from './engine/transport.js'
 import { locVisible } from './engine/courage.js'
 import { isMinor } from './engine/calendar.js'
 import { LOCATION_MAP } from './data/locations.js'
+import { ITEMS } from './data/world.js'
 import { MODE_MAP } from './data/transport.js'
 
 export function freePreviewMode(destination) {
@@ -35,4 +36,23 @@ export function previewInvite() {
   if (start >= invite.to || !isOpen(LOCATION_MAP[invite.loc], start) ||
       arrival.energy - wait * 2.5 < 35 || arrival.hunger - wait * (isMinor() ? 1.2 : 3) < 30) return null
   return { invite, wait }
+}
+
+
+export function previewFood(spendable) {
+  const food = Object.entries(ITEMS).find(([id, item]) =>
+    state.bag[id] > 0 && item.kind === 'food' && item.effects.hunger > 0)
+  if (food) return { item: food[0], name: food[1].name }
+
+  const meals = LOCATION_MAP.konbini.actions
+  const emergency = state.stats.hunger < 20
+  const budget = Math.min(state.money, emergency ? Math.max(spendable, meals[0].cost) : spendable)
+  const meal = [...meals].reverse().find(action => action.cost <= budget)
+  if (!meal || !locVisible('konbini')) return null
+  if (state.location !== 'konbini') {
+    const mode = freePreviewMode('konbini')
+    if (!mode || state.stats.energy <= mode.hours * 2.5 +
+        Math.round((MODE_MAP[mode.id].energyPerHour || 0) * mode.hours)) return null
+  }
+  return { meal, emergency: meal.cost > spendable }
 }
