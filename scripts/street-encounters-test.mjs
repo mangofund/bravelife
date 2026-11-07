@@ -9,6 +9,7 @@ globalThis.uni = {
 const game = await import('../src/game/index.js')
 const { NEIGHBORS } = await import('../src/game/data/neighbors.js')
 const { state } = game
+const { previewStreetReply } = await import('../src/game/free-preview.js')
 
 game.newGame({ name: '测试', background: 'normal', wish: 'rich' })
 for (const npc of NEIGHBORS) {
@@ -42,4 +43,24 @@ assert(game.talk(npc.id))
 assert.equal(game.rel(npc.id).streetMemory.followedUp, true)
 assert(state.messages.some(message => message.text === npc.choices[1][2]))
 assert(game.rel(npc.id).aff > 5)
+for (const legacy of [false, true]) {
+  game.newGame({ name: '代玩测试', background: 'normal' })
+  meet()
+  if (legacy) {
+    assert.equal(game.talk(npc.id), true)
+    state.day++
+    meet()
+  }
+  const reply = previewStreetReply(npc)
+  assert.equal(reply, 0)
+  assert.equal(game.talk(npc.id, reply), true)
+  assert.equal(game.load(), true)
+  assert.deepEqual(game.rel(npc.id).streetMemory, { reply: 0, followedUp: false })
+  state.day++
+  meet()
+  assert.equal(previewStreetReply(npc), undefined)
+  assert.equal(game.talk(npc.id, previewStreetReply(npc)), true)
+  assert.equal(game.rel(npc.id).streetMemory.followedUp, true)
+  assert(state.messages.some(message => message.text === npc.choices[0][2]))
+}
 console.log('Street encounters passed')

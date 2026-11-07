@@ -61,3 +61,7 @@ export function previewFood(spendable) {
   }
   return { meal, emergency: meal.cost > spendable }
 }
+
+export function previewStreetReply(npc) {
+  if (npc.route && npc.choices?.length && !state.social[npc.id]?.streetMemory) return 0
+}

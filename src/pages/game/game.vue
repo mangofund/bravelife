@@ -169,7 +169,7 @@ import { api, getToken } from '../../game/api.js'
 import { beginRehearsal, commitRehearsal, endRehearsal, isRehearsing, dailyUsed } from '../../game/engine/core.js'
 import { reviewPreviewStep } from '../../game/preview-review.js'
 import { sow } from '../../game/engine/garden.js'
-import { freePreviewMode, previewArrival, previewFood, previewInvite } from '../../game/free-preview.js'
+import { freePreviewMode, previewArrival, previewFood, previewInvite, previewStreetReply } from '../../game/free-preview.js'
 import { NPCS, NPC_MAP } from '../../game/data/npcs.js'
 import { planEarnings } from '../../game/earn-preview.js'
 import { applyJob, doAction, eventById, keepInvite, locVisible, npcsAt, sleep, spotOf, talk, travel, useItem, wait, work } from '../../game/index.js'
@@ -1025,8 +1025,10 @@ function previewRelationship() {
   if (!next) return null
   const { npc, destination } = next
   if (destination !== state.location) return previewTravel(destination, '到达时' + npc.name + '在场')
-  return [[(state.social[npc.id] ? '回访' : '认识') + npc.name, () => {
-    if (!talk(npc.id)) return false
+  const reply = previewStreetReply(npc)
+  const label = (state.social[npc.id] ? '回访' : '认识') + npc.name
+  return [[reply === undefined ? label : label + ' · ' + npc.choices[reply][0], () => {
+    if (!talk(npc.id, reply)) return false
     previewContact = npc.id
     previewContactDay = state.day
     return true
